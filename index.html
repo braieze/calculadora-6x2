@@ -55,6 +55,7 @@
             <div id="auth-controls" class="flex space-x-2 mt-2 md:mt-0 items-center">
                 <div id="user-info" class="text-sm text-gray-600">Cargando...</div>
                 <button id="google-login-btn" class="flex items-center px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-blue-700 transition duration-150">
+                    <!-- Icono de Google SVG -->
                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8c-.7 4.3-3.6 7.9-7.9 10.1v7H44c.4-3.4 2.8-6.4 5.9-8.5v-2c-3-2.1-5.4-5.1-5.9-8.5z" fill="#4285F4"/><path d="M24 44.5h20.5v-7h-7c-2.3 2.1-5 3.7-7.7 4.7v2.3c3 0 5.8-.8 8.1-2.2v-2z" fill="#34A853"/><path d="M24 3.5V11H4v7h20v8.5h-11.8c.7 4.3 3.6 7.9 7.9 10.1v7c-8.9-3.2-14.9-12-14.9-22.6C9.1 12 14.1 6.5 24 3.5z" fill="#FBBC05"/><path d="M24 3.5V11h20v-7H24z" fill="#EA4335"/></svg>
                     Google
                 </button>
@@ -66,7 +67,7 @@
         
         <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
 
-        <!-- Panel de Configuración (El resto del contenido permanece igual) -->
+        <!-- Panel de Configuración -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Mes</label>
@@ -153,6 +154,20 @@
     <!-- Script de Firebase y Lógica de la Aplicación -->
     <script type="module">
         // =====================================================================
+        // CONFIGURACIÓN DE FIREBASE (INTEGRADO DIRECTAMENTE)
+        // =====================================================================
+        
+        // ** CONFIGURACIÓN PROPORCIONADA POR EL USUARIO **
+        const HARDCODED_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw",
+            authDomain: "calculadora-6x2.firebaseapp.com",
+            projectId: "calculadora-6x2",
+            storageBucket: "calculadora-6x2.firebasestorage.app",
+            messagingSenderId: "238926197886",
+            appId: "1:238926197886:web:d05857b007dcb305e9d42f"
+        };
+        
+        // =====================================================================
         // CONFIGURACIÓN, CONSTANTES Y ESTADO GLOBAL
         // =====================================================================
 
@@ -161,12 +176,9 @@
         const HOLIDAY_WORKED_EQUIV_HOURS = 32;
         const HOLIDAY_FREE_EQUIV_HOURS = 8;
         
-        // Variables de entorno de Canvas
+        // Variables de entorno de Canvas (se usan para identificación del entorno)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // **IMPORTANTE:** Usar la configuración de Firebase inyectada por el entorno
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         
         // Instancias de Firebase y Estado de Autenticación
         let app;
@@ -297,7 +309,6 @@
         }
         
         function updateAuthUI() {
-            // VERIFICACIÓN DE SEGURIDAD CRÍTICA
             if (!isAuthReady) {
                 userInfoEl.textContent = 'Cargando Autenticación...';
                 googleLoginBtn.classList.remove('hidden');
@@ -305,15 +316,7 @@
                 return;
             }
             
-            // Si la instancia de auth no existe (porque Firebase falló), solo mostramos el estado local
-            if (!auth) {
-                userInfoEl.textContent = `Sesión: ${userName} (Local)`;
-                googleLoginBtn.classList.remove('hidden');
-                logoutBtn.classList.add('hidden');
-                return;
-            }
-
-            const user = auth.currentUser;
+            const user = auth?.currentUser; // Usar optional chaining si auth puede ser null
             
             if (userId && user && !user.isAnonymous) {
                 // Usuario autenticado (Google)
@@ -387,45 +390,31 @@
 
         // 1. Inicialización y Autenticación
         const initFirebase = async () => {
-            updateStatus('info', 'Intentando conectar a Firebase para persistencia...');
-            
-            if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
-                 console.error("Firebase Config está vacío o incompleto.");
-                 isFirebaseActive = false;
-                 // Asegurar que userId se inicializa para modo local
-                 userId = crypto.randomUUID(); 
-                 isAuthReady = true; 
-                 userName = `Local`;
-                 updateStatus('error', 'Error: La configuración de Firebase está incompleta. Usando modo local sin persistencia.');
-                 calculateSchedule(false);
-                 updateUIFromState();
-                 return;
-            }
+            updateStatus('info', 'Conectando a Firebase para autenticación y persistencia de datos...');
 
             try {
-                app = initializeApp(firebaseConfig); 
+                // Inicializar Firebase con la configuración proporcionada
+                app = initializeApp(HARDCODED_FIREBASE_CONFIG); 
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
                 // setLogLevel('Debug'); // Descomentar para depuración
 
-                // Intentar autenticación con el token del entorno si está presente.
+                // Autenticar con el token de entorno (si existe)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                     // Si no hay token del entorno, Firebase usará el estado persistente o iniciará como anónimo.
-                    console.log("No hay token inicial. El estado será manejado por onAuthStateChanged.");
-                }
+                } 
 
+                // Listener del estado de autenticación (Auth State Listener)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        userName = user.displayName || user.email || (user.isAnonymous ? 'Temporal (Token)' : 'Usuario');
+                        userName = user.displayName || user.email || (user.isAnonymous ? 'Temporal' : 'Usuario');
                         isAuthReady = true;
                         updateStatus('success', `Sesión iniciada. Bienvenido, ${userName}!`);
                         setupDataListeners(); 
                     } else {
-                        // Si el usuario cierra sesión (Google Sign-Out), volvemos a anónimo (para mantener la compatibilidad del entorno)
+                        // Si el usuario cierra sesión, o no hay token de entorno, iniciamos sesión anónima
                         signInAnonymously(auth).then(anonUser => {
                             userId = anonUser.user.uid;
                             userName = 'Temporal (Anónimo)';
@@ -433,10 +422,10 @@
                             updateStatus('info', 'Sesión iniciada anónimamente.');
                             setupDataListeners();
                         }).catch(e => {
-                            // Fallback total si la autenticación anónima falla
+                            // Fallback si la autenticación anónima falla
                             console.error("Fallo de autenticación anónima:", e);
                             userId = crypto.randomUUID(); 
-                            userName = 'Local';
+                            userName = 'Local (Error)';
                             isAuthReady = true;
                             isFirebaseActive = false;
                             updateStatus('error', 'Error de sesión. Usando ID local sin persistencia.');
@@ -448,7 +437,7 @@
 
             } catch (error) {
                 console.error("Error crítico al inicializar Firebase o al autenticar:", error);
-                updateStatus('error', `Error Crítico: ${error.code || error.message}. Usando modo local.`);
+                updateStatus('error', `Error Crítico: ${error.code || error.message}. La aplicación no tendrá persistencia.`);
                 isFirebaseActive = false;
                 userId = crypto.randomUUID(); 
                 isAuthReady = true; 
@@ -471,16 +460,14 @@
             updateStatus('info', 'Iniciando sesión con Google...');
             try {
                 const provider = new GoogleAuthProvider();
-                // Solicitar que se mantenga la sesión
                 await signInWithPopup(auth, provider);
                 // onAuthStateChanged se encargará de actualizar el estado y los datos
             } catch (error) {
-                // Aquí capturamos el auth/unauthorized-domain si ocurre
                 console.error("Error al iniciar sesión con Google:", error);
                 if (error.code === 'auth/popup-closed-by-user') {
                     updateStatus('info', 'Ventana de Google cerrada. Intenta de nuevo.');
                 } else if (error.code === 'auth/unauthorized-domain') {
-                    updateStatus('error', 'Error de dominio no autorizado. Revise la consola de Firebase.');
+                    updateStatus('error', 'Error de dominio no autorizado (auth/unauthorized-domain). Verifica tu configuración en la consola de Firebase.');
                 } else {
                     updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
                 }
@@ -507,6 +494,7 @@
             if (!configRef) return;
 
             const dataToSave = { ...appState.config };
+            // Asegurar que los datos numéricos se guardan como números
             dataToSave.valorHora = Number(dataToSave.valorHora);
             dataToSave.discountRate = Number(dataToSave.discountRate);
             dataToSave.month = Number(dataToSave.month); 
@@ -565,7 +553,7 @@
                         };
                         updateUIFromState();
                     } else {
-                        saveConfig(); // Guardar por primera vez
+                        saveConfig(); // Guardar por primera vez si no existe el documento
                     }
                 }, (error) => {
                     console.error("Error fetching config:", error);
@@ -587,10 +575,10 @@
                     } else {
                         appState.extraHours = {}; 
                         appState.manualHolidays = {};
-                        // No es necesario guardar aquí, ya que el cálculo forzará la persistencia de los nuevos valores
+                        // Al no existir, reiniciamos el estado local para ese mes/año
                     }
                     updateUIFromState();
-                    // Volver a calcular para reflejar los datos recién cargados (si ya había un cálculo previo)
+                    // Volver a calcular para reflejar los datos recién cargados o vaciados
                     if (appState.calculationResult) calculateSchedule(false); 
                 }, (error) => {
                     console.error("Error fetching month data:", error);
@@ -617,10 +605,10 @@
             const newDocId = `${newConfig.year}-${String(newConfig.month).padStart(2, '0')}`;
 
             appState.config = newConfig;
-            saveConfig();
-            
-            if (oldDocId !== newDocId && isFirebaseActive) {
-                // Si el mes/año cambió y estamos activos en Firebase, cambiamos el listener de datos.
+            saveConfig(); // Guardar la nueva configuración
+
+            if (isFirebaseActive && oldDocId !== newDocId) {
+                // Si el mes/año cambió y estamos activos en Firebase, cambiamos el listener de datos para el nuevo mes.
                 setupDataListeners(); 
             } else {
                 updateUIFromState();
@@ -632,6 +620,7 @@
         
         window.handleExtraChange = function(dateKey, inputElement) {
             const hours = parseFloat(inputElement.value) || 0;
+            // Usamos el formato de display (DD/MM/YYYY) como clave en Firestore
             appState.extraHours[dateKey] = hours;
             saveData(); 
             calculateSchedule(false);
@@ -648,7 +637,7 @@
         }
 
         // =====================================================================
-        // LÓGICA DE CÁLCULO (Mis funciones de negocio)
+        // LÓGICA DE CÁLCULO
         // =====================================================================
         
         calculateButtonEl.addEventListener('click', () => calculateSchedule(true));
@@ -677,6 +666,7 @@
             let dailyResults = [];
             let francosDates = [];
             
+            // Ciclo 6x2 (24 días de rotación)
             const masterCycle = [
                 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 
                 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 
@@ -687,21 +677,22 @@
             if (initialTurn === 'Noche') baseOffset = 8;
             else if (initialTurn === 'Tarde') baseOffset = 16;
             
+            // Calcular el desplazamiento inicial basado en la diferencia de días
             const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
             let startOffset = (baseOffset + diffDays) % 24; 
-            if (startOffset < 0) startOffset += 24; 
+            if (startOffset < 0) startOffset += 24; // Asegurar offset positivo
 
             let dayCounter = 0;
             const daysInMonth = new Date(year, month, 0).getDate();
 
             while (dayCounter < daysInMonth) {
                 const dayOfWeek = currentDate.getDay(); 
-                // Usamos formato DD/MM/YYYY para la clave de datos (compatible con el input)
                 const dateKeyForSave = formatDateForDisplay(currentDate); 
                 const dateKeyForInput = formatDateForInput(currentDate);
                 
+                // Usar el estado de Feriado Manual cargado de Firebase (o local)
                 const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true; 
                 
                 const cycleStatus = masterCycle[startOffset]; 
@@ -724,7 +715,7 @@
                     if (isHolidayManual) {
                         turnBaseName = `FERIADO - ${cycleStatus}`;
                         realHours = 8; 
-                        equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
+                        equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS; // 32 Horas equivalentes
                     } else {
                         const equivalences = getTurnEquivalencies(dayOfWeek, cycleStatus);
                         realHours = equivalences.realHours;
@@ -759,6 +750,7 @@
                 let dayExtraEquivalent = 0;
                 
                 if (dayExtraReal > 0) {
+                    // La hora extra se paga 1.5 veces el valor. Se traduce a 1.5 horas equivalentes por cada hora real.
                     dayExtraEquivalent = (dayExtraReal * EXTRA_HOUR_MULTIPLIER);
                     totalExtraHoursReal += dayExtraReal;
                 }
@@ -798,7 +790,7 @@
         }
         
         // =====================================================================
-        // RENDERIZADO DE RESULTADOS (Se mantiene igual, solo llama a las funciones)
+        // RENDERIZADO DE RESULTADOS
         // =====================================================================
 
         function renderCalculationResults() {
@@ -879,16 +871,12 @@
             }).join('');
         }
         
-        // Función de generación de PDF (Se mantiene igual)
+        // Función de generación de PDF
         generatePdfButtonEl.addEventListener('click', generatePDFReport);
         function generatePDFReport() {
             const result = appState.calculationResult;
             if (!result) return updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
 
-            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-                 return updateStatus('error', 'Error al cargar librerías de PDF. Recargue la página.');
-            }
-            
             const { jsPDF } = window.jspdf; 
             const doc = new jsPDF();
             
