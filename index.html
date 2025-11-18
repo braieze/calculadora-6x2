@@ -19,18 +19,17 @@
     <div id="root" class="min-h-screen flex items-center justify-center p-4">
         </div>
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin defer></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin defer></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
 
-    <script type="text/babel">
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-auth.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.1/firebase-firestore.js" defer></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" defer></script>
+    <script type="text/babel" defer>
         // Acceso a las librerías cargadas por CDN
         const { useState, useEffect, useCallback } = React;
         const { jsPDF } = window.jspdf;
