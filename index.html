@@ -35,78 +35,82 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- BLOQUE 1: INICIALIZACIÓN DE FIREBASE (type="module") -->
-    <!-- Este bloque carga dependencias con 'import' y expone 'db' y 'auth' globalmente. NO CONTIENE JSX. -->
+    <!-- ESTE BLOQUE CONTIENE LA CONFIGURACIÓN DE FIREBASE PROVISTA POR EL USUARIO -->
     <script type="module">
         // Importaciones de Firebase v9 Modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-auth.js";
+        // REMOVIDO GoogleAuthProvider y signInWithPopup para evitar el error 'auth/unauthorized-domain'
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js";
         
-        // setLogLevel('debug'); // Descomentar para depuración
+        // --- CONFIGURACIÓN DE FIREBASE (HARDCODEADA PARA GARANTIZAR CONEXIÓN) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw",
+            authDomain: "calculadora-6x2.firebaseapp.com",
+            projectId: "calculadora-6x2",
+            storageBucket: "calculadora-6x2.firebasestorage.app",
+            messagingSenderId: "238926197886",
+            appId: "1:238926197886:web:d05857b007dcb305e9d42f"
+        };
+        // --------------------------------------------------------------------------
 
-        // Variables globales (Accedidas por el entorno)
-        window.__app_id = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
-        const __firebase_config = typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : '{}';
+        // Variables globales requeridas (usa el projectId como fallback para __app_id)
+        window.__app_id = typeof window.__app_id !== 'undefined' ? window.__app_id : firebaseConfig.projectId;
         const __initial_auth_token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
 
-        let firebaseConfig = {};
-        try {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } catch(e) {
-            console.error("Error al parsear __firebase_config:", e);
-        }
-        
-        // Declaraciones de servicio
         let app, db, auth;
         window.firebaseInitialized = false;
 
         try {
-            // CRITICAL FIX: Check if projectId exists before initialization
-            if (!firebaseConfig || !firebaseConfig.projectId) {
-                console.warn("ADVERTENCIA: Configuración de Firebase incompleta (Falta projectId). Ejecución sin persistencia de datos (Firestore/Auth).");
-                window.db = null;
-                window.auth = null;
-            } else {
-                // 1. Inicializar Firebase
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                window.firebaseInitialized = true;
+            // 1. Inicializar Firebase con la configuración explícita
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            window.firebaseInitialized = true;
+            
+            // 2. HACER GLOBALES las instancias para que el bloque React/Babel las use
+            window.db = db;
+            window.auth = auth;
+            window.getAuth = getAuth; 
+            window.signInWithCustomToken = signInWithCustomToken;
+            window.signInAnonymously = signInAnonymously;
+            window.onAuthStateChanged = onAuthStateChanged;
+            window.doc = doc;
+            window.setDoc = setDoc;
+            window.onSnapshot = onSnapshot;
+
+            console.log("Firebase v9 inicializado y globalizado con configuración fija.");
+
+            // 3. Autenticación Inicial (Robustecida con fallback anónimo)
+            const handleInitialAuth = async () => {
+                let signedIn = false;
                 
-                // 2. HACER GLOBALES las instancias para que el bloque React/Babel las use
-                window.db = db;
-                window.auth = auth;
-                window.getAuth = getAuth; 
-                window.signInWithCustomToken = signInWithCustomToken;
-                window.signInAnonymously = signInAnonymously;
-                window.onAuthStateChanged = onAuthStateChanged;
-                window.GoogleAuthProvider = GoogleAuthProvider;
-                window.signInWithPopup = signInWithPopup;
-                window.doc = doc;
-                window.setDoc = setDoc;
-                window.onSnapshot = onSnapshot;
-
-                console.log("Firebase v9 inicializado y globalizado.");
-
-                // 3. Autenticación Inicial
-                const handleInitialAuth = async () => {
+                // 3a. Intentar con Custom Token (si está disponible)
+                if (__initial_auth_token) {
                     try {
-                        if (__initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        signedIn = true;
                     } catch (e) {
-                        console.error("Error de autenticación inicial:", e);
+                        // Captura el error de Custom Token (e.g., auth/custom-token-mismatch)
+                        console.warn("Fallo en signInWithCustomToken. Intentando Anónimo. Error:", e);
                     }
-                };
+                }
                 
-                handleInitialAuth();
-            }
+                // 3b. Intentar o asegurar el inicio de sesión anónimo si no hay usuario
+                if (!signedIn) {
+                    try {
+                        await signInAnonymously(auth);
+                        console.log("Sesión anónima iniciada exitosamente.");
+                    } catch (e) {
+                        console.error("Error al intentar sign-in anónimo:", e);
+                    }
+                }
+            };
+            
+            handleInitialAuth();
 
         } catch (e) {
-            console.error("Error al inicializar Firebase en el bloque module:", e);
+            console.error("Error al inicializar Firebase con la configuración fija:", e);
         }
     </script>
     
@@ -115,7 +119,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <!-- BLOQUE 2: LÓGICA DE REACT/JSX (type="text/babel") -->
-    <!-- Este bloque usa Babel para transformar JSX. Accede a Firebase a través de 'window'. -->
     <script type="text/babel">
         // Acceso a React y jsPDF desde el ámbito global (asumen que ya cargaron)
         const { useState, useEffect, useCallback, useMemo } = window.React;
@@ -124,10 +127,9 @@
         // Acceso a Firebase desde el ámbito global
         const db = window.db;
         const auth = window.auth;
-        const isFirebaseInitialized = window.firebaseInitialized; // Nuevo flag
+        const isFirebaseInitialized = window.firebaseInitialized; 
         const __app_id = window.__app_id;
-        const GoogleAuthProvider = window.GoogleAuthProvider;
-        const signInWithPopup = window.signInWithPopup;
+        // REMOVIDO: GoogleAuthProvider, signInWithPopup, para evitar errores de dominio.
         const onAuthStateChanged = window.onAuthStateChanged;
         const doc = window.doc;
         const setDoc = window.setDoc;
@@ -240,30 +242,8 @@
             </div>
         );
 
-        const AuthScreen = ({ signIn }) => (
-            <div className="p-8 max-w-sm w-full bg-white shadow-xl rounded-xl text-center">
-                <h1 className="text-3xl font-bold text-indigo-700 mb-4">Calculadora 6x2</h1>
-                <p className="text-gray-600 mb-8">Inicia sesión para guardar tu configuración y horas extra.</p>
-                <button
-                    onClick={signIn}
-                    className="w-full py-3 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center"
-                >
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 12.06c0-.82-.07-1.62-.2-2.4h-1.32v2.4h-1.32v2.4h1.32v2.4c0 .82.07 1.62.2 2.4h1.32v-2.4h1.32v-2.4h-1.32v-2.4zm-2.4-5.32c.13.82.2 1.62.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32V4.34h-1.32v2.4zm-3.26 12.7c-.13-.82-.2-1.62-.2-2.4h-1.32v2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4z"></path></svg>
-                    Continuar con Google
-                </button>
-            </div>
-        );
+        // REMOVIDO AuthScreen ya que el sign-in anónimo se realiza automáticamente al inicio.
         
-        const FirebaseErrorScreen = () => (
-            <div className="p-8 max-w-lg w-full bg-white shadow-xl rounded-xl text-center border-4 border-red-500">
-                <h1 className="text-3xl font-bold text-red-700 mb-4">Error de Inicialización de Firebase</h1>
-                <p className="text-red-600 mb-4">La aplicación no puede acceder a la base de datos (Firestore) ni a la autenticación.</p>
-                <p className="text-gray-700">Esto se debe a que la **configuración de Firebase** provista por el entorno es incompleta o incorrecta (falta el `projectId`).</p>
-                <p className="text-gray-700 mt-2 font-semibold">Por favor, asegúrate de que el entorno esté configurado correctamente para permitir la persistencia de datos.</p>
-            </div>
-        );
-
-
         const App = () => {
             const [user, setUser] = useState(null);
             const [userId, setUserId] = useState(null);
@@ -286,7 +266,8 @@
             // 1. Inicialización y Autenticación
             useEffect(() => {
                 if (!isFirebaseInitialized) {
-                    setIsAuthReady(true); // Permitir que se muestre FirebaseErrorScreen
+                    setStatus({ type: 'error', message: "Error crítico: Firebase no se pudo inicializar." });
+                    setIsAuthReady(true);
                     return;
                 }
 
@@ -296,13 +277,17 @@
                     return;
                 }
                 
+                // onAuthStateChanged se dispara después de signInAnonymously en el bloque de inicialización
                 const unsubscribe = onAuthStateChanged(auth, (user) => { 
                     if (user) {
                         setUser(user);
                         setUserId(user.uid);
+                        setStatus(null); // Limpiar mensaje de error si la conexión es exitosa
                     } else {
                         setUser(null);
                         setUserId(null);
+                        // Si el usuario es null aquí, algo falló en handleInitialAuth.
+                        setStatus({ type: 'error', message: "Autenticación fallida. Intenta recargar." });
                     }
                     setIsAuthReady(true);
                     console.log("Estado de autenticación listo.");
@@ -311,22 +296,8 @@
                 return () => unsubscribe();
             }, []);
             
-            // Función de Login
-            const signInWithGoogle = useCallback(async () => {
-                if (!auth) return;
-                setIsLoading(true);
-
-                try {
-                    const provider = new GoogleAuthProvider();
-                    await signInWithPopup(auth, provider); 
-                } catch (error) {
-                    console.error("Google Sign-In Error:", error);
-                    setStatus({ type: 'error', message: `Fallo en el inicio de sesión: ${error.code || error.message}` });
-                } finally {
-                    setIsLoading(false);
-                }
-            }, []);
-
+            // REMOVIDO signInWithGoogle
+            
             // Rutas de Firestore
             const getConfigDocRef = useCallback(() => {
                 if (!db || !userId) return null;
@@ -632,7 +603,7 @@
                 doc.setFillColor(217, 234, 211); doc.rect(15, 58, 180, 10, 'F');
                 doc.text('NETO (EN MANO):', 20, 65); doc.text(formatCurrency(totalNeto), 190, 65, null, null, 'right');
                 doc.setFont('helvetica', 'normal'); doc.setFontSize(10); 
-                if(user?.email) doc.text(`Usuario: ${user.email}`, 15, 75);
+                if(user?.email) doc.text(`Usuario: ${user.email}`, 15, 75); // Mostrar email si existe (si no es anónimo)
 
                 // Detalle Diario (Tabla)
                 doc.setFontSize(12); doc.text('Detalle Diario (Horas y Equivalencias)', 15, 85);
@@ -695,12 +666,13 @@
                 return <div className="p-4 w-full h-full"><LoadingSpinner /></div>;
             }
             
-            if (!isFirebaseInitialized) {
-                 return <FirebaseErrorScreen />;
-            }
-            
             if (!user) {
-                 return <AuthScreen signIn={signInWithGoogle} />;
+                 return (
+                    <div className="p-8 max-w-lg w-full bg-white shadow-xl rounded-xl text-center border-4 border-red-500">
+                        <h1 className="text-3xl font-bold text-red-700 mb-4">Error Crítico de Conexión</h1>
+                        <p className="text-gray-700">La aplicación no pudo asegurar un ID de usuario. Por favor, revisa la consola para ver los detalles del fallo de autenticación anónima.</p>
+                    </div>
+                 );
             }
 
             const resultToShow = finalCalculationResult || calculationResult;
@@ -709,7 +681,7 @@
                 <div className="p-4 md:p-6 max-w-4xl w-full bg-white shadow-xl rounded-xl">
                     <div className="flex justify-between items-center border-b pb-2 mb-4">
                         <h1 className="text-2xl font-bold text-indigo-700">
-                            Calculadora 6x2 (v7)
+                            Calculadora 6x2 (v8)
                         </h1>
                         <button onClick={() => auth.signOut()} className="text-sm text-red-600 hover:text-red-800 font-semibold transition duration-150">
                             Cerrar Sesión
@@ -717,10 +689,11 @@
                     </div>
 
                     <div className="text-sm mb-4 p-2 bg-indigo-50 rounded-lg">
+                        {/* Como el usuario es anónimo, mostramos el UID como su identificador único */}
                         <p className="font-medium text-indigo-600">
-                            Usuario: {user.email}
+                            Usuario Anónimo (Guardado de datos privado)
                         </p>
-                        <p className="text-xs text-indigo-500">Tu ID: {userId}</p>
+                        <p className="text-xs text-indigo-500">Tu ID Único: {userId}</p>
                     </div>
                     
                     {/* --- Panel de Configuración --- */}
