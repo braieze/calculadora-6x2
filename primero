@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Turnos 6x2</title>
+    <!-- Tailwind CSS CDN para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Estilos esenciales -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        /* Aseguramos que el contenedor de la app tome la altura mínima de la pantalla */
+        #root { min-height: 100vh; }
+        /* Animación del spinner */
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="root" class="min-h-screen flex items-center justify-center p-4">
+        <!-- Contenido de React se inyecta aquí -->
+    </div>
+
+    <!-- Dependencias de React y Babel deben estar ANTES del script principal -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Dependencias de Firebase (Versiones CDN) -->
+    <!-- Estas definen la variable global `firebase` -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    
+    <!-- Dependencias para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <script type="text/babel">
+        // Acceso a las librerías cargadas por CDN
+        const { useState, useEffect, useCallback } = React;
+        // La variable 'firebase' ahora se usa directamente ya que está definida globalmente
+        const { jsPDF } = window.jspdf;
+
+        // --- MOCK DE CONFIGURACIÓN DE FIREBASE ---
+        // ATENCIÓN: Esta configuración es para DEMO web.
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY", 
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+        const appId = 'demo-calculator-app';
+        const initialAuthToken = null; 
+
+        // Inicialización y servicios
+        let app, db, auth;
+
+        // --- UTILITIES Y LÓGICA DE NEGOCIO ---
+
+        const getYesterdayDate = () => {
+            const date = new Date();
+            date.setDate(date.getDate() - 1);
+            return date.toISOString().split('T')[0];
+        };
+
+        const getTurnEquivalencies = (dayOfWeek, turnType) => {
+            let realHours = 8;
+            let equivalentHours = 8;
+            let turnBaseName = turnType;
+
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) { 
+                switch (turnType) {
+                    case 'Mañana':
+                    case 'Tarde':
+                        equivalentHours = 8;
+                        break;
+                    case 'Noche':
+                        equivalentHours = 12; 
+                        break;
+                }
+            } else if (dayOfWeek === 6) { 
+                switch (turnType) {
+                    case 'Mañana':
+                        realHours = 8;
+                        equivalentHours = 9; 
+                        break;
+                    case 'Tarde':
+                        realHours = 9;
+                        equivalentHours = 12; 
+                        break;
+                    case 'Noche':
+                        realHours = 8;
+                        equivalentHours = 16; 
+                        break;
+                }
+            } else if (dayOfWeek === 0) { 
+                turnBaseName = 'Domingo ' + turnType;
+                switch (turnType) {
+                    case 'Mañana':
+                    case 'Tarde':
+                        realHours = 8;
+                        equivalentHours = 24; 
+                        break;
+                    case 'Noche':
+                        realHours = 8;
+                        equivalentHours = 28; 
+                        break;
+                }
+            }
+
+            return { realHours, equivalentHours, turnBaseName };
+        };
+
+        // --- COMPONENTES PRINCIPALES ---
+
+        const LoadingSpinner = () => (
+            <div className="flex flex-col items-center justify-center h-full">
+                <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="mt-3 text-sm text-gray-600">Conectando con la base de datos...</p>
+            </div>
+        );
+
+        const App = () => {
+            const [userId, setUserId] = useState(null);
+            const [isAuthReady, setIsAuthReady] = useState(false);
+            const [config, setConfig] = useState({
+                month: new Date().getMonth() + 1,
+                year: new Date().getFullYear(),
+                valorHora: 3758,
+                lastFrancoDate: getYesterdayDate(), 
+                initialTurn: 'Mañana',
+                discountRate: 0.18,
+            });
+            const [calculationResult, setCalculationResult] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            const [status, setStatus] = useState(null);
+
+            // 1. Inicialización y Autenticación de Firebase
+            useEffect(() => {
+                // Verificamos si la variable global 'firebase' existe antes de usarla
+                if (typeof firebase === 'undefined') {
+                    console.error("Firebase library failed to load.");
+                    setStatus({ type: 'error', message: "Error crítico: La librería de Firebase no se cargó correctamente." });
+                    setIsAuthReady(true);
+                    return;
+                }
+
+                try {
+                    // Accedemos directamente a las propiedades del objeto global 'firebase'
+                    if (!app) {
+                        app = firebase.initializeApp(firebaseConfig);
+                        db = firebase.firestore.getFirestore(app);
+                        auth = firebase.auth.getAuth(app);
+                    }
+                } catch (e) {
+                    console.error("Firebase Initialization Error:", e);
+                    setStatus({ type: 'error', message: "Error al inicializar Firebase. Revisa la configuración (mock)." });
+                    setIsAuthReady(true); 
+                    return;
+                }
+
+                const signInUser = async () => {
+                    try {
+                        await firebase.auth.signInAnonymously(auth);
+                    } catch (error) {
+                        console.error("Authentication Error:", error);
+                    }
+                };
+
+                const unsubscribe = firebase.auth.onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        setUserId(user.uid);
+                    } else {
+                        let localId = localStorage.getItem('temp_user_id');
+                        if (!localId) {
+                            localId = 'anon-' + Math.random().toString(36).substring(2, 9);
+                            localStorage.setItem('temp_user_id', localId);
+                        }
+                        setUserId(localId);
+                    }
+                    setIsAuthReady(true);
+                });
+
+                signInUser();
+                return () => unsubscribe();
+            }, []);
+
+            // 2. Carga de Configuración del Usuario (Listener Firestore)
+            useEffect(() => {
+                if (!isAuthReady || !userId || !db || typeof firebase.firestore.doc !== 'function') return;
+
+                // Path de la colección privada: /artifacts/{appId}/users/{userId}/config/salary
+                const userDocRef = firebase.firestore.doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
+                
+                const unsubscribe = firebase.firestore.onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setConfig(prev => ({
+                            ...prev,
+                            ...data,
+                            valorHora: Number(data.valorHora) || prev.valorHora,
+                            discountRate: Number(data.discountRate) || prev.discountRate,
+                        }));
+                        setStatus({ type: 'info', message: "Configuración personal cargada." });
+                    }
+                }, (error) => {
+                    console.error("Error fetching config:", error);
+                    setStatus({ type: 'error', message: "Error al cargar/sincronizar la configuración. Es posible que las reglas de Firebase no permitan la lectura." });
+                });
+
+                return () => unsubscribe();
+            }, [isAuthReady, userId]);
+
+
+            // 3. Guardar Configuración
+            const saveConfig = useCallback((newConfig) => {
+                if (!isAuthReady || !userId || !db || typeof firebase.firestore.doc !== 'function') return;
+                
+                const userDocRef = firebase.firestore.doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
+                firebase.firestore.setDoc(userDocRef, { 
+                    ...newConfig, 
+                    valorHora: Number(newConfig.valorHora), 
+                    discountRate: Number(newConfig.discountRate) 
+                }, { merge: true })
+                    .catch(error => {
+                        console.error("Error saving config:", error);
+                        setStatus({ type: 'error', message: "Error al guardar la configuración. Revisa tus credenciales de Firebase." });
+                    });
+            }, [isAuthReady, userId]);
+
+            // 4. Manejador de Cambios de Formulario
+            const handleChange = (e) => {
+                const { name, value, type } = e.target;
+                const newValue = (type === 'number' || name === 'valorHora' || name === 'discountRate') ? parseFloat(value) : value;
+
+                setConfig(prev => {
+                    const updatedConfig = { ...prev, [name]: newValue };
+                    saveConfig(updatedConfig); 
+                    return updatedConfig;
+                });
+            };
+
+            // --- LÓGICA CENTRAL DE CÁLCULO ---
+
+            const calculateSchedule = useCallback(() => {
+                if (!isAuthReady) {
+                    setStatus({ type: 'error', message: "Autenticación no lista. Intente de nuevo." });
+                    return;
+                }
+
+                const { month, year, valorHora, lastFrancoDate, initialTurn, discountRate } = config;
+                
+                if (!month || !year || !valorHora || !lastFrancoDate || !initialTurn || !discountRate) {
+                    setStatus({ type: 'error', message: "Faltan campos obligatorios para calcular." });
+                    return;
+                }
+
+                setIsLoading(true);
+                setStatus({ type: 'info', message: "Calculando horario y salario..." });
+
+                const hourlyRate = parseFloat(valorHora) || 0;
+                
+                const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
+                const dayAfterFranco = new Date(lastFrancoDay2.getTime());
+                dayAfterFranco.setDate(dayAfterFranco.getDate() + 1); 
+                
+                const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                let currentDate = new Date(year, month - 1, 1, 0, 0, 0); 
+                
+                let dailyResults = [];
+                let francosDates = [];
+                let totalEquivalentHours = 0;
+                
+                const masterCycle = [
+                    'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 
+                    'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 
+                    'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'
+                ];
+                
+                let baseOffset = 0;
+                if (initialTurn === 'Noche') {
+                    baseOffset = 8;
+                } else if (initialTurn === 'Tarde') {
+                    baseOffset = 16;
+                }
+                
+                const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
+                let startOffset = (baseOffset + diffDays) % 24; 
+                if (startOffset < 0) startOffset += 24; 
+
+                let dayCounter = 0;
+                while (currentDate.getMonth() === month - 1 && dayCounter < 31) {
+                    const dayOfWeek = currentDate.getDay(); 
+                    const dateString = currentDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    
+                    const cycleStatus = masterCycle[startOffset]; 
+                    
+                    let turnBaseName = cycleStatus;
+                    let realHours = 0;
+                    let equivalentHours = 0;
+                    
+                    if (cycleStatus === 'Franco') {
+                        realHours = 0;
+                        equivalentHours = 0;
+                        francosDates.push(dateString);
+                    } else {
+                        const equivalences = getTurnEquivalencies(dayOfWeek, cycleStatus);
+                        realHours = equivalences.realHours;
+                        equivalentHours = equivalences.equivalentHours;
+                        turnBaseName = equivalences.turnBaseName;
+                    }
+                    
+                    const dailyBruto = equivalentHours * hourlyRate;
+                    totalEquivalentHours += equivalentHours;
+                    
+                    dailyResults.push({
+                        date: dateString,
+                        day: dayNames[dayOfWeek],
+                        turn: turnBaseName,
+                        realHours: realHours,
+                        equivHours: equivalentHours,
+                        dailyBruto: dailyBruto,
+                    });
+                    
+                    startOffset = (startOffset + 1) % 24;
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    dayCounter++;
+                }
+
+                const totalBruto = totalEquivalentHours * hourlyRate;
+                const totalDescuento = totalBruto * discountRate;
+                const totalNeto = totalBruto - totalDescuento;
+
+                setCalculationResult({
+                    dailyResults,
+                    francosDates,
+                    totalEquivalentHours,
+                    totalBruto,
+                    totalDescuento,
+                    totalNeto,
+                    discountRate: discountRate * 100,
+                });
+
+                setIsLoading(false);
+                setStatus({ type: 'success', message: `Cálculo de ${dailyResults.length} días completado. Neto estimado: ${formatCurrency(totalNeto)}` });
+                
+            }, [config, isAuthReady]);
+            
+            const formatCurrency = (amount) => {
+                return amount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+            };
+
+            // --- GENERACIÓN DE PDF PROFESIONAL ---
+            const generatePdf = () => {
+                if (!calculationResult) {
+                    setStatus({ type: 'error', message: "Primero debes generar el cálculo." });
+                    return;
+                }
+
+                const doc = new jsPDF({
+                    orientation: 'p',
+                    unit: 'mm',
+                    format: 'a4',
+                });
+                
+                const { totalBruto, totalDescuento, totalNeto, discountRate, dailyResults } = calculationResult;
+                
+                const monthName = new Date(config.year, config.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+                // Título
+                doc.setFontSize(18);
+                doc.text(`REPORTE SALARIAL MENSUAL`, 105, 15, null, null, 'center');
+                doc.setFontSize(12);
+                doc.text(`Cálculo para ${monthName}`, 105, 22, null, null, 'center');
+
+                // Resumen Financiero
+                doc.setFillColor(240, 240, 240);
+                doc.rect(15, 30, 180, 40, 'F'); 
+
+                doc.setFontSize(10);
+                doc.text('RESUMEN', 17, 35);
+                
+                doc.setFontSize(12);
+                doc.text('BRUTO TOTAL:', 20, 42);
+                doc.text(formatCurrency(totalBruto), 190, 42, null, null, 'right');
+                
+                doc.text(`DESCUENTO (${discountRate.toFixed(0)}%):`, 20, 50);
+                doc.setTextColor(217, 48, 37); 
+                doc.text(`- ${formatCurrency(totalDescuento)}`, 190, 50, null, null, 'right');
+                
+                doc.setTextColor(0, 0, 0); 
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.setFillColor(217, 234, 211); 
+                doc.rect(15, 58, 180, 10, 'F');
+                doc.text('NETO (EN MANO):', 20, 65);
+                doc.text(formatCurrency(totalNeto), 190, 65, null, null, 'right');
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.text(`ID de Usuario: ${userId}`, 15, 75);
+
+                // Detalle Diario (Tabla)
+                doc.setFontSize(12);
+                doc.text('Detalle de Turnos y Horas Equivalentes', 15, 85);
+                
+                const tableColumns = ["Fecha", "Día", "Turno Base", "H. Reales", "H. Eq.", "Monto Bruto"];
+                const tableRows = dailyResults.map(r => [
+                    r.date,
+                    r.day,
+                    r.turn,
+                    r.realHours || '-',
+                    r.equivHours || '-',
+                    r.dailyBruto ? formatCurrency(r.dailyBruto) : '-',
+                ]);
+
+                doc.autoTable({
+                    startY: 90,
+                    head: [tableColumns],
+                    body: tableRows,
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+                    headStyles: { fillColor: [207, 226, 243] }, 
+                    columnStyles: {
+                        0: { cellWidth: 20 }, 
+                        3: { cellWidth: 15, halign: 'center' }, 
+                        4: { cellWidth: 15, halign: 'center' }, 
+                        5: { halign: 'right' }, 
+                    },
+                    bodyStyles: (data) => {
+                        if (data.row.raw[2].includes('Franco')) {
+                            return { fillColor: [255, 242, 204] }; 
+                        }
+                        return {};
+                    }
+                });
+
+                // Footer
+                doc.setFontSize(8);
+                doc.text("Generado por la Calculadora de Rotación 6x2. Este es un estimado.", 105, doc.internal.pageSize.height - 10, null, null, 'center');
+
+                doc.save(`Reporte_Salarial_${monthName}.pdf`);
+                setStatus({ type: 'success', message: "PDF generado con éxito y descargado." });
+            };
+
+            const StatusMessage = ({ type, message }) => {
+                if (!message) return null;
+                const baseClass = "p-3 rounded-lg mt-4 font-semibold";
+                let colorClass = "";
+                switch (type) {
+                    case 'success': colorClass = "bg-green-100 text-green-700"; break;
+                    case 'error': colorClass = "bg-red-100 text-red-700"; break;
+                    case 'info': colorClass = "bg-blue-100 text-blue-700"; break;
+                    default: colorClass = "bg-gray-100 text-gray-700"; break;
+                }
+                return <div className={`${baseClass} ${colorClass}`}>{message}</div>;
+            };
+
+            // Si la autenticación no está lista, mostramos el spinner en el centro.
+            if (!isAuthReady) {
+                return <div className="p-4 w-full h-full"><LoadingSpinner /></div>;
+            }
+
+            return (
+                <div className="p-4 max-w-lg w-full bg-white shadow-xl rounded-xl">
+                    <h1 className="text-2xl font-bold text-indigo-700 border-b pb-2 mb-4">
+                        Calculadora de Rotación 6x2
+                    </h1>
+                    <div className="text-sm mb-4 p-2 bg-indigo-50 rounded-lg">
+                        <p className="font-medium text-indigo-600">ID de Usuario (Privado): {userId}</p>
+                        <p className="text-xs text-indigo-500">Tu configuración se guarda automáticamente.</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700">Mes a Calcular</label>
+                            <select name="month" value={config.month} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                    <option key={m} value={m}>{new Date(config.year, m - 1).toLocaleDateString('es-AR', { month: 'long' })}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700">Año</label>
+                            <input type="number" name="year" value={config.year} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Valor de la Hora Bruta ($)</label>
+                            <input type="number" name="valorHora" value={config.valorHora} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                        </div>
+                        
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Fecha del Último Franco (Día 2)</label>
+                            <input type="date" name="lastFrancoDate" value={config.lastFrancoDate} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                            <p className="text-xs text-gray-500 mt-1">Día de finalización de tus últimos dos francos.</p>
+                        </div>
+                        
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Turno que comenzó el día después del Franco</label>
+                            <select name="initialTurn" value={config.initialTurn} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                <option value="Mañana">Mañana</option>
+                                <option value="Noche">Noche</option>
+                                <option value="Tarde">Tarde</option>
+                            </select>
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Afiliación (Descuento)</label>
+                            <select name="discountRate" value={config.discountRate} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                <option value={0.18}>No Afiliado (18%)</option>
+                                <option value={0.21}>Afiliado (21%)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={calculateSchedule} 
+                        disabled={isLoading}
+                        className={`w-full py-2 mt-6 rounded-lg text-white font-bold transition duration-150 ${isLoading ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                    >
+                        {isLoading ? 'Calculando...' : 'Generar Cálculo y Horario'}
+                    </button>
+                    
+                    <StatusMessage type={status?.type} message={status?.message} />
+
+                    {calculationResult && (
+                        <div className="mt-6 border-t pt-4">
+                            <h2 className="text-xl font-bold text-indigo-700 mb-4">Resumen de Ganancias</h2>
+                            <div className="grid grid-cols-2 gap-4 text-sm font-medium">
+                                <div className="p-3 bg-gray-50 rounded-lg">
+                                    <p className="text-gray-500">Horas Equivalentes Totales:</p>
+                                    <p className="text-lg text-gray-900 font-extrabold">{calculationResult.totalEquivalentHours}</p>
+                                </div>
+                                <div className="p-3 bg-red-50 rounded-lg">
+                                    <p className="text-gray-500">Descuento ({calculationResult.discountRate.toFixed(0)}%):</p>
+                                    <p className="text-lg text-red-600 font-extrabold">{formatCurrency(calculationResult.totalDescuento)}</p>
+                                </div>
+                                <div className="col-span-1 p-3 bg-indigo-50 rounded-lg">
+                                    <p className="text-gray-500">Bruto Total:</p>
+                                    <p className="text-xl text-indigo-600 font-extrabold">{formatCurrency(calculationResult.totalBruto)}</p>
+                                </div>
+                                <div className="col-span-1 p-3 bg-green-100 rounded-lg shadow-md">
+                                    <p className="text-green-700 font-semibold">NETO (EN MANO) ESTIMADO:</p>
+                                    <p className="text-2xl text-green-800 font-extrabold">{formatCurrency(calculationResult.totalNeto)}</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 p-3 bg-yellow-50 rounded-lg text-sm">
+                                <strong className="text-yellow-800">🗓️ Francos del Mes:</strong>
+                                <p className="mt-1 text-yellow-700">{calculationResult.francosDates.join(', ') || 'No hay francos en el mes seleccionado.'}</p>
+                            </div>
+
+                            <button 
+                                onClick={generatePdf}
+                                className="w-full py-2 mt-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Descargar Reporte PDF Profesional
+                            </button>
+                            
+                            <details className="mt-4 p-3 border rounded-lg">
+                                <summary className="font-semibold cursor-pointer">Ver Detalle Diario</summary>
+                                <div className="overflow-x-auto mt-2">
+                                    <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-3 py-2 text-left text-gray-500">Fecha</th>
+                                                <th className="px-3 py-2 text-left text-gray-500">Día</th>
+                                                <th className="px-3 py-2 text-left text-gray-500">Turno</th>
+                                                <th className="px-3 py-2 text-right text-gray-500">H. Eq.</th>
+                                                <th className="px-3 py-2 text-right text-gray-500">Monto Bruto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {calculationResult.dailyResults.map((day, index) => (
+                                                <tr key={index} className={day.turn.includes('Franco') ? 'bg-yellow-50' : ''}>
+                                                    <td className="px-3 py-2 whitespace-nowrap">{day.date}</td>
+                                                    <td className="px-3 py-2 whitespace-nowrap">{day.day.substring(0, 3)}</td>
+                                                    <td className="px-3 py-2 whitespace-nowrap font-medium text-indigo-600">{day.turn}</td>
+                                                    <td className="px-3 py-2 whitespace-nowrap text-right">{day.equivHours || '-'}</td>
+                                                    <td className="px-3 py-2 whitespace-nowrap text-right">{formatCurrency(day.dailyBruto)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Renderizar la aplicación usando el método moderno de React 18
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
