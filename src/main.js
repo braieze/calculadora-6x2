@@ -1,3 +1,4 @@
+// --- Importaciones de los módulos (Rutas y nombres deben coincidir) ---
 import { initFirebase, signInAnonymouslyUser, signInWithGoogle, signOutUser, saveConfig, saveData, setupDataListeners } from './firebase.js';
 import { calculateSchedule } from './calcLogic.js';
 import { updateUIFromState, updateStatus, setLoading, updateAuthUI, generatePDFReport as renderPDF } from './uiRenderer.js';
