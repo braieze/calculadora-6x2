@@ -1,365 +1,203 @@
-import { 
-    initFirebase, 
-    signInAnonymouslyUser, 
-    signInWithGoogle, 
-    signOutUser, 
-    saveConfig, 
-    saveData, 
-    setupDataListeners, 
-    loadPreviousConfig,
-    setProfile
-} from './firebase.js';
+// --- Importaciones de los módulos (Rutas y nombres deben coincidir) ---
+import { initFirebase, signInAnonymouslyUser, signInWithGoogle, signOutUser, saveConfig, saveData, setupDataListeners } from './firebase.js';
 import { calculateSchedule } from './calcLogic.js';
-import { 
-    updateUIFromState, 
-    updateStatus, 
-    setLoading, 
-    updateAuthUI, 
-    generatePDFReport, 
-    openModal,
-    closeModal
-} from './uiRenderer.js';
+import { updateUIFromState, updateStatus, setLoading, updateAuthUI, generatePDFReport as renderPDF } from './uiRenderer.js';
 
-// Estado Global de la Aplicación
+// --- UTILIDADES DE INICIALIZACIÓN ---
+function getYesterdayDate() {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return date.toISOString().split('T')[0];
+}
+
+// --- ESTADO GLOBAL ---
 let appState = {
-    auth: null,
-    db: null,
-    userId: null,
-    unsubscribeListeners: null,
+    // Valores iniciales (se sobrescribirán con Firestore si hay datos)
     config: {
-        month: new Date().getMonth() + 1,
+        month: new Date().getDate() === 1 ? new Date().getMonth() : new Date().getMonth() + 1,
         year: new Date().getFullYear(),
-        valorHora: 0,
-        discountRate: 0.18,
-        lastFrancoDate: '',
+        valorHora: 3758,
+        lastFrancoDate: getYesterdayDate(),
         initialTurn: 'Mañana',
+        discountRate: 0.18,
     },
-    data: null, // Resultado del cálculo
-    profile: null, // Datos fijos del usuario (Categoría, Técnico)
+    extraHours: {},
+    manualHolidays: {},
+    calculationResult: null,
+    
+    // Estado de la Aplicación
+    userId: null,
+    userName: 'Usuario Local',
     isAuthReady: false,
-    isLoadingData: false, // Nuevo indicador de carga
+    isGoogleAuthenticated: false,
+    isFirebaseActive: true, 
+    isLoading: false,
+    status: null,
 };
 
-// -------------------- MANEJO DE PERFIL --------------------
+// --- MANEJADORES DE EVENTOS GLOBALES ---
 
-/**
- * Abre el modal de perfil y precarga los datos existentes.
- */
-function openProfileModal() {
-    if (appState.profile) {
-        document.getElementById('input-category').value = appState.profile.category || '';
-        document.getElementById('input-isTechnician').checked = appState.profile.isTechnician || false;
-    } else {
-        // Limpiar para nuevo registro
-        document.getElementById('input-category').value = '';
-        document.getElementById('input-isTechnician').checked = false;
-    }
-    openModal('profile-modal');
-}
-
-/**
- * Maneja el envío del formulario de perfil.
- * @param {Event} e - Evento de formulario.
- */
-async function handleProfileSubmit(e) {
-    e.preventDefault();
-    if (!appState.userId) return updateStatus('Error: Usuario no autenticado.', 'error');
-
-    const category = document.getElementById('input-category').value.trim();
-    const isTechnician = document.getElementById('input-isTechnician').checked;
+/** Maneja cambios en los inputs de configuración. */
+function handleConfigChange(inputEvent) {
+    const target = inputEvent.target;
+    const value = target.type === 'number' ? parseFloat(target.value) : target.value;
+    const name = target.name;
     
-    if (!category) {
-        return updateStatus('Por favor, ingrese una categoría laboral.', 'warning');
-    }
-
-    const newProfile = { category, isTechnician };
-
-    appState.isLoadingData = true;
-    setLoading(true);
-    await setProfile(appState.userId, newProfile); // Guarda en Firebase
-    appState.isLoadingData = false;
-    setLoading(false);
-
-    closeModal('profile-modal');
-    updateStatus('Perfil guardado exitosamente.', 'success');
-}
-
-
-// -------------------- MANEJO DE ESTADO Y FIREBASE --------------------
-
-/**
- * Carga la configuración del mes anterior y la aplica a la UI/Estado.
- * @param {number} year - Año seleccionado.
- * @param {number} month - Mes seleccionado.
- */
-async function loadInitialConfig(year, month) {
-    if (!appState.userId) return;
-
-    appState.isLoadingData = true;
-    setLoading(true);
+    const newConfig = { ...appState.config, [name]: value };
     
-    // 1. Intentar cargar la configuración del mes anterior
-    const prevConfig = await loadPreviousConfig(appState.userId, year, month);
+    // Si el mes o año cambia, puede necesitar cambiar el listener de datos.
+    const oldDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
+    const newDocId = `${newConfig.year}-${String(newConfig.month).padStart(2, '0')}`;
 
-    if (prevConfig) {
-        // Si hay config previa, usarla como base y sobrescribir el periodo
-        appState.config = { ...prevConfig, year, month };
-        updateStatus(`Configuración base cargada del mes anterior (${prevConfig.month}/${prevConfig.year}).`, 'info');
-    } else {
-        // Si no hay config previa, mantener los valores por defecto o los cargados por el listener
-        appState.config = { ...appState.config, year, month };
-        updateStatus('Usando configuración por defecto para el nuevo mes.', 'info');
-    }
-
-    // 2. Aplicar la configuración al UI (input fields)
-    syncInputsFromState();
-
-    appState.isLoadingData = false;
-    setLoading(false);
-}
-
-/**
- * Inicializa los listeners de datos de Firebase.
- * @param {string} userId - ID del usuario.
- */
-function initDataListeners(userId) {
-    // Si hay listeners activos, desuscribirse
-    if (appState.unsubscribeListeners) {
-        appState.unsubscribeListeners();
-    }
-
-    // Suscribirse a la configuración, datos y AHORA al perfil
-    appState.unsubscribeListeners = setupDataListeners(
-        userId,
-        { year: appState.config.year, month: appState.config.month },
-        (configData) => {
-            // Callback de Configuración
-            appState.config = { ...appState.config, ...configData };
-            syncInputsFromState(); // Sincroniza la UI
-        },
-        (dataResults) => {
-            // Callback de Resultados
-            appState.data = dataResults;
-            updateUIFromState(appState);
-        },
-        (profileData) => {
-            // Callback de Perfil
-            appState.profile = profileData;
-            
-            // Si el perfil no existe y el usuario está autenticado, forzar la apertura del modal
-            if (appState.isAuthReady && appState.userId && !profileData) {
-                updateStatus('¡Bienvenido! Por favor, configura tu perfil salarial.', 'warning');
-                openProfileModal();
-            } else {
-                 // Si ya tiene perfil, simplemente actualiza la UI o usa los datos
-                 updateUIFromState(appState);
-            }
-        }
-    );
-}
-
-/**
- * Callback de Firebase que se llama al cambiar el estado de autenticación.
- * @param {import('firebase/auth').User | null} user - Objeto de usuario de Firebase.
- */
-function handleAuthStateChange(user) {
-    appState.isAuthReady = true;
-    appState.auth = user;
-    appState.userId = user ? user.uid : null;
-
-    updateAuthUI(user); // Actualiza botones de Login/Logout/Usuario
-
-    if (user && user.uid) {
-        // Si el usuario está logueado, inicializar listeners y cargar configuración
-        initDataListeners(user.uid);
-        loadInitialConfig(appState.config.year, appState.config.month); 
-    } else {
-        // Usuario desconectado
-        if (appState.unsubscribeListeners) {
-            appState.unsubscribeListeners();
-            appState.unsubscribeListeners = null;
-        }
-        // *CORRECCIÓN CLAVE*: Asegurar que si la auth termina sin usuario (anónimo no persiste, logout), la UI se desbloquee.
-        setLoading(false); 
-        updateStatus('Inicia sesión para guardar y cargar tus datos.', 'info');
-        updateUIFromState(appState); // Refresca la UI (muestra valores por defecto si los hay)
-    }
-}
-
-
-// -------------------- MANEJO DE EVENTOS Y CÁLCULO --------------------
-
-/**
- * Sincroniza los inputs de la UI con el estado local.
- */
-function syncInputsFromState() {
-    // Solo sincronizar si no estamos cargando explícitamente la config anterior
-    document.getElementById('input-month').value = appState.config.month;
-    document.getElementById('input-year').value = appState.config.year;
-    // Usar toFixed(2) para asegurar que se muestre como número flotante
-    document.getElementById('input-valorHora').value = appState.config.valorHora.toFixed(2); 
-    document.getElementById('input-discountRate').value = appState.config.discountRate;
-    document.getElementById('input-lastFrancoDate').value = appState.config.lastFrancoDate;
-    document.getElementById('input-initialTurn').value = appState.config.initialTurn;
-}
-
-/**
- * Recolecta los datos de configuración de la UI.
- * @returns {Object} La nueva configuración.
- */
-function collectConfigFromUI() {
-    return {
-        month: parseInt(document.getElementById('input-month').value),
-        year: parseInt(document.getElementById('input-year').value),
-        // Asegurar que el valor sea un número, 0 si está vacío.
-        valorHora: parseFloat(document.getElementById('input-valorHora').value) || 0, 
-        discountRate: parseFloat(document.getElementById('input-discountRate').value) || 0.18,
-        lastFrancoDate: document.getElementById('input-lastFrancoDate').value,
-        initialTurn: document.getElementById('input-initialTurn').value,
-    };
-}
-
-/**
- * Función principal para iniciar el cálculo.
- */
-function startCalculation() {
-    if (!appState.userId) {
-        updateStatus('Debes iniciar sesión para realizar cálculos y guardar datos.', 'warning');
-        return;
-    }
-    
-    const newConfig = collectConfigFromUI();
-    
-    // 1. Guardar la nueva configuración (dispara onSnapshot)
     appState.config = newConfig;
-    saveConfig(appState.userId, newConfig);
+    
+    if (appState.isFirebaseActive && oldDocId !== newDocId) {
+        setupDataListeners(
+            appState.userId, 
+            appState.config, 
+            handleConfigUpdate, 
+            handleDataUpdate
+        );
+    } 
 
-    appState.isLoadingData = true;
-    setLoading(true);
-    updateStatus('Calculando y generando horario...', 'info');
-
-    try {
-        // 2. Ejecutar la lógica de cálculo
-        const calculationResults = calculateSchedule(appState.config, appState.data, appState.profile);
-
-        // 3. Guardar los resultados (esto dispara el onSnapshot y actualiza la UI)
-        saveData(appState.userId, calculationResults);
-
-        updateStatus('Cálculo finalizado y datos guardados.', 'success');
-    } catch (error) {
-        console.error("Error durante el cálculo:", error);
-        updateStatus(`Error en el cálculo: ${error.message}`, 'error');
-    } finally {
-        appState.isLoadingData = false;
-        setLoading(false);
-    }
+    if (appState.userId && appState.isFirebaseActive) saveConfig(appState.userId, appState.config);
+    
+    // Re-calcular y actualizar UI localmente
+    runCalculation(false);
 }
 
-/**
- * Maneja el cambio en los selectores de Mes/Año.
- * Debe recargar la configuración, el perfil y los datos del nuevo período.
- */
-function handlePeriodChange(e) {
-    const newConfig = collectConfigFromUI();
-    const isNewPeriod = newConfig.month !== appState.config.month || newConfig.year !== appState.config.year;
-
-    // Solo si el periodo ha cambiado
-    if (isNewPeriod && appState.userId) {
-        appState.config = newConfig; // Establecer el nuevo período en el estado
-        
-        // Cargar configuración anterior y establecer nuevos listeners para el nuevo período
-        initDataListeners(appState.userId);
-        loadInitialConfig(newConfig.year, newConfig.month);
-        
-        // La UI se actualizará automáticamente por initDataListeners -> onSnapshot
+/** Maneja cambios en la tabla de horas extra (dispara saveData). */
+function handleExtraChange(dateKey, value) {
+    const hours = parseFloat(value) || 0;
+    if (hours > 0) {
+        appState.extraHours[dateKey] = hours;
     } else {
-        // Si solo se cambia un valor sin cambiar el mes/año, solo actualizamos el estado (para guardar en config)
-        appState.config = newConfig;
-        saveConfig(appState.userId, newConfig);
+        delete appState.extraHours[dateKey];
     }
+    if (appState.userId && appState.isFirebaseActive) saveData(appState.userId, appState.config, appState.extraHours, appState.manualHolidays);
+    runCalculation(false);
+}
+
+/** Maneja cambios en la tabla de feriados (dispara saveData). */
+function handleHolidayChange(dateKey, checked) {
+    if (checked) {
+        appState.manualHolidays[dateKey] = true;
+    } else {
+        delete appState.manualHolidays[dateKey];
+    }
+    if (appState.userId && appState.isFirebaseActive) saveData(appState.userId, appState.config, appState.extraHours, appState.manualHolidays);
+    runCalculation(false);
+}
+
+// --- FUNCIONES DE ACTUALIZACIÓN DE ESTADO (DESDE FIREBASE) ---
+
+/** Callback para actualizar la configuración desde Firestore. */
+function handleConfigUpdate(data) {
+    appState.config = { 
+        ...appState.config, 
+        ...data,
+        valorHora: Number(data.valorHora) || appState.config.valorHora,
+        discountRate: Number(data.discountRate) || appState.config.discountRate,
+        month: Number(data.month) || appState.config.month,
+        year: Number(data.year) || appState.config.year,
+    };
+    runCalculation(false);
+}
+
+/** Callback para actualizar los datos del mes (extras/feriados) desde Firestore. */
+function handleDataUpdate(extras, holidayFlags) {
+    appState.extraHours = extras;
+    appState.manualHolidays = holidayFlags;
+    runCalculation(false);
 }
 
 
-// -------------------- INICIALIZACIÓN --------------------
+// --- LÓGICA DE CÁLCULO Y RENDERIZADO ---
 
-/**
- * Configura los eventos iniciales.
- */
+/** Ejecuta el cálculo y actualiza la UI. */
+function runCalculation(isInitial) {
+    if (isInitial) setLoading(true);
+
+    const result = calculateSchedule(appState.config, appState.extraHours, appState.manualHolidays);
+    
+    appState.calculationResult = result;
+
+    if (isInitial) {
+        setLoading(false);
+        updateStatus(result ? 'success' : 'error', result ? 'Cálculo generado. ¡Añade tus extras y feriados!' : 'Por favor, ingrese Valor Hora y Fecha de Último Franco válidos.');
+    }
+
+    // El último paso es renderizar la UI con el nuevo estado
+    updateUIFromState(appState, handleExtraChange, handleHolidayChange);
+}
+
+// --- FUNCIÓN DE INICIALIZACIÓN DE LA APLICACIÓN ---
+
+/** Listener principal de Firebase Auth. */
+function authStateChangedHandler(user) {
+    if (user) {
+        appState.userId = user.uid;
+        appState.userName = user.displayName || user.email || (user.isAnonymous ? 'Temporal' : 'Usuario');
+        appState.isGoogleAuthenticated = !user.isAnonymous && user.providerData.some(p => p.providerId === 'google.com');
+        appState.isAuthReady = true;
+        
+        updateStatus('success', `Sesión iniciada. Bienvenido, ${appState.userName}!`);
+        
+        // Configuramos los listeners de datos que dependen del userId
+        setupDataListeners(appState.userId, appState.config, handleConfigUpdate, handleDataUpdate);
+        
+    } else {
+        // Si no hay usuario (ej: después de un signOut), intentamos el anónimo
+        signInAnonymouslyUser(); 
+        appState.isGoogleAuthenticated = false;
+        appState.isAuthReady = true;
+        
+        // Ejecutamos cálculo inicial si no estamos usando Firebase (fallback)
+        if (!appState.isFirebaseActive) runCalculation(true);
+    }
+    
+    // Actualizar la UI de Auth
+    updateAuthUI(appState.userId, appState.userName, appState.isGoogleAuthenticated, signInWithGoogle, signOutUser);
+}
+
+
+/** Configura todos los listeners de la UI y lanza la inicialización. */
 function setupEventListeners() {
-    // Autenticación
-    document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
-    document.getElementById('logout-btn').addEventListener('click', signOutUser);
-    
-    // Perfil
-    document.getElementById('profile-btn').addEventListener('click', openProfileModal);
-    document.getElementById('profile-form').addEventListener('submit', handleProfileSubmit);
-    document.getElementById('close-profile-modal-btn').addEventListener('click', () => closeModal('profile-modal'));
-
-    // Configuración y Cálculo
-    document.getElementById('calculate-schedule-button').addEventListener('click', startCalculation);
-    document.getElementById('generate-pdf-button').addEventListener('click', () => generatePDFReport(appState));
-    
-    // Eventos de cambio para Mes y Año (para recargar config anterior)
-    document.getElementById('input-month').addEventListener('change', handlePeriodChange);
-    document.getElementById('input-year').addEventListener('change', handlePeriodChange);
-
-    // Eventos de cambio para guardar config al volar (resto de inputs)
-    const configInputs = ['input-valorHora', 'input-discountRate', 'input-lastFrancoDate', 'input-initialTurn'];
-    configInputs.forEach(id => {
-        document.getElementById(id).addEventListener('change', (e) => {
-            const newConfig = collectConfigFromUI();
-            appState.config = newConfig;
-            // Guardar inmediatamente la configuración modificada
-            if (appState.userId) {
-                saveConfig(appState.userId, newConfig); 
-            }
-        });
+    // Attach listeners to config inputs
+    document.querySelectorAll('.input-style').forEach(input => {
+        // Usamos el evento 'change' en lugar de 'input' para solo guardar y recalcular al terminar de editar
+        input.addEventListener('change', handleConfigChange);
     });
 
-    // Delegación de eventos para las casillas de feriado y horas extra (en la tabla de UI)
-    document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
-        if (e.target.dataset.field === 'isHoliday' || e.target.dataset.field === 'extraHours') {
-            const index = parseInt(e.target.dataset.index);
-            // Si es checkbox, es booleano; si no, es flotante
-            const value = e.target.type === 'checkbox' ? e.target.checked : parseFloat(e.target.value) || 0;
-            
-            if (appState.data && appState.data.schedule && index >= 0) {
-                appState.data.schedule[index][e.target.dataset.field] = value;
-                
-                // Recalcular y guardar los datos actualizados
-                const updatedResults = calculateSchedule(appState.config, appState.data, appState.profile); 
-                saveData(appState.userId, updatedResults);
-            }
+    document.getElementById('calculate-schedule-button').addEventListener('click', () => runCalculation(true));
+    
+    document.getElementById('generate-pdf-button').addEventListener('click', () => {
+        if (appState.calculationResult) {
+            renderPDF(appState.calculationResult, appState.config);
+        } else {
+            updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
         }
     });
-
-    // Inicializar selectores de Mes y Año
-    const monthSelect = document.getElementById('input-month');
-    const currentMonth = new Date().getMonth() + 1;
-    for (let i = 1; i <= 12; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = new Date(0, i, 0).toLocaleDateString('es-ES', { month: 'long' });
-        monthSelect.appendChild(option);
-    }
-    monthSelect.value = currentMonth;
-    
-    const yearInput = document.getElementById('input-year');
-    const currentYear = new Date().getFullYear();
-    yearInput.value = currentYear;
-
-    // Sincronizar estado inicial
-    appState.config.month = currentMonth;
-    appState.config.year = currentYear;
-    syncInputsFromState();
 }
 
-// Iniciar la aplicación
-window.onload = function () {
-    // Si el token inicial no está definido, se intentará la autenticación anónima.
-    const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    initFirebase(initialToken, handleAuthStateChange);
+// --- INICIO ---
+window.onload = () => {
+    // 1. Configurar eventos de la UI
     setupEventListeners();
-    updateStatus('Esperando autenticación...', 'info');
-    // El loading se desbloquea dentro de handleAuthStateChange
+
+    // 2. Inicializar Firebase
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    const firebaseInitResult = initFirebase(initialAuthToken, authStateChangedHandler);
+    
+    if (firebaseInitResult && firebaseInitResult.error) {
+        appState.isFirebaseActive = false;
+        appState.userId = crypto.randomUUID(); 
+        appState.userName = 'Local (Error)';
+        appState.isAuthReady = true;
+        updateStatus('error', `Error Crítico: ${firebaseInitResult.message}. La aplicación funcionará sin persistencia.`);
+        runCalculation(true);
+    }
+    
+    // 3. Renderizar el estado inicial de la UI
+    updateUIFromState(appState, handleExtraChange, handleHolidayChange); 
 };
