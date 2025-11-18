@@ -297,14 +297,25 @@
         }
         
         function updateAuthUI() {
+            // VERIFICACIÓN DE SEGURIDAD CRÍTICA
             if (!isAuthReady) {
-                userInfoEl.textContent = 'Cargando...';
+                userInfoEl.textContent = 'Cargando Autenticación...';
+                googleLoginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                return;
+            }
+            
+            // Si la instancia de auth no existe (porque Firebase falló), solo mostramos el estado local
+            if (!auth) {
+                userInfoEl.textContent = `Sesión: ${userName} (Local)`;
                 googleLoginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
                 return;
             }
 
-            if (userId && auth.currentUser && !auth.currentUser.isAnonymous) {
+            const user = auth.currentUser;
+            
+            if (userId && user && !user.isAnonymous) {
                 // Usuario autenticado (Google)
                 userInfoEl.textContent = `Hola, ${userName} (${userId.substring(0, 4)}...)`;
                 googleLoginBtn.classList.add('hidden');
@@ -334,6 +345,7 @@
                 Array.from({ length: 12 }, (_, i) => i + 1).forEach(m => {
                     const option = document.createElement('option');
                     option.value = m;
+                    // El mes es m-1 porque Date usa 0-11
                     option.textContent = new Date(config.year, m - 1).toLocaleDateString('es-AR', { month: 'long' });
                     monthSelect.appendChild(option);
                 });
@@ -377,13 +389,14 @@
         const initFirebase = async () => {
             updateStatus('info', 'Intentando conectar a Firebase para persistencia...');
             
-            if (Object.keys(firebaseConfig).length === 0) {
-                 console.error("Firebase Config está vacío.");
+            if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.projectId) {
+                 console.error("Firebase Config está vacío o incompleto.");
                  isFirebaseActive = false;
+                 // Asegurar que userId se inicializa para modo local
                  userId = crypto.randomUUID(); 
                  isAuthReady = true; 
-                 userName = `Temporal`;
-                 updateStatus('error', 'Error: La configuración de Firebase está vacía. No se puede conectar.');
+                 userName = `Local`;
+                 updateStatus('error', 'Error: La configuración de Firebase está incompleta. Usando modo local sin persistencia.');
                  calculateSchedule(false);
                  updateUIFromState();
                  return;
@@ -421,6 +434,7 @@
                             setupDataListeners();
                         }).catch(e => {
                             // Fallback total si la autenticación anónima falla
+                            console.error("Fallo de autenticación anónima:", e);
                             userId = crypto.randomUUID(); 
                             userName = 'Local';
                             isAuthReady = true;
@@ -450,7 +464,10 @@
         logoutBtn.addEventListener('click', signOutUser);
 
         async function signInWithGoogle() {
-            if (!auth) return;
+            if (!auth) {
+                 updateStatus('error', 'Firebase Auth no está inicializado.');
+                 return;
+            }
             updateStatus('info', 'Iniciando sesión con Google...');
             try {
                 const provider = new GoogleAuthProvider();
@@ -458,8 +475,15 @@
                 await signInWithPopup(auth, provider);
                 // onAuthStateChanged se encargará de actualizar el estado y los datos
             } catch (error) {
+                // Aquí capturamos el auth/unauthorized-domain si ocurre
                 console.error("Error al iniciar sesión con Google:", error);
-                updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    updateStatus('info', 'Ventana de Google cerrada. Intenta de nuevo.');
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    updateStatus('error', 'Error de dominio no autorizado. Revise la consola de Firebase.');
+                } else {
+                    updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
+                }
             }
         }
         
@@ -467,7 +491,6 @@
             if (!auth) return;
             try {
                 await signOut(auth);
-                updateStatus('success', 'Sesión cerrada. Ahora estás en modo anónimo.');
                 // onAuthStateChanged se encargará de re-autenticar anónimamente
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
@@ -552,7 +575,8 @@
 
             // 3.2 Listener de Datos (Horas Extra y Feriados Manuales)
             if (unsubscribeData) unsubscribeData();
-            const monthDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
+            const config = appState.config;
+            const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
             const dataRef = getDataDocRef(monthDocId);
             if (dataRef) {
                 unsubscribeData = onSnapshot(dataRef, (docSnap) => {
@@ -563,8 +587,10 @@
                     } else {
                         appState.extraHours = {}; 
                         appState.manualHolidays = {};
+                        // No es necesario guardar aquí, ya que el cálculo forzará la persistencia de los nuevos valores
                     }
                     updateUIFromState();
+                    // Volver a calcular para reflejar los datos recién cargados (si ya había un cálculo previo)
                     if (appState.calculationResult) calculateSchedule(false); 
                 }, (error) => {
                     console.error("Error fetching month data:", error);
@@ -594,6 +620,7 @@
             saveConfig();
             
             if (oldDocId !== newDocId && isFirebaseActive) {
+                // Si el mes/año cambió y estamos activos en Firebase, cambiamos el listener de datos.
                 setupDataListeners(); 
             } else {
                 updateUIFromState();
@@ -671,10 +698,11 @@
 
             while (dayCounter < daysInMonth) {
                 const dayOfWeek = currentDate.getDay(); 
-                const dateString = formatDateForDisplay(currentDate);
-                const dateKey = formatDateForInput(currentDate);
+                // Usamos formato DD/MM/YYYY para la clave de datos (compatible con el input)
+                const dateKeyForSave = formatDateForDisplay(currentDate); 
+                const dateKeyForInput = formatDateForInput(currentDate);
                 
-                const isHolidayManual = appState.manualHolidays[dateString] === true; 
+                const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true; 
                 
                 const cycleStatus = masterCycle[startOffset]; 
                 
@@ -686,10 +714,10 @@
                     if (isHolidayManual) {
                         turnBaseName = `FERIADO - Franco`;
                         equivalentHours = HOLIDAY_FREE_EQUIV_HOURS; 
-                        francosDates.push(dateString + ' (Feriado)');
+                        francosDates.push(dateKeyForSave + ' (Feriado)');
                     } else {
                          turnBaseName = `Franco`;
-                         francosDates.push(dateString);
+                         francosDates.push(dateKeyForSave);
                     }
                 } 
                 else {
@@ -706,8 +734,8 @@
                 }
                 
                 dailyResults.push({
-                    date: dateString,
-                    dateKey: dateKey,
+                    date: dateKeyForSave,
+                    dateKey: dateKeyForInput, // Clave para el input de Fecha
                     day: dayNames[dayOfWeek],
                     turn: turnBaseName,
                     isHoliday: isHolidayManual,
@@ -725,7 +753,8 @@
             const hourlyRate = parseFloat(valorHora) || 0;
 
             const finalDailyResults = dailyResults.map(day => {
-                const dayExtraReal = appState.extraHours[day.date] || 0;
+                // Usamos la clave de display (DD/MM/YYYY) para buscar en extraHours
+                const dayExtraReal = appState.extraHours[day.date] || 0; 
                 
                 let dayExtraEquivalent = 0;
                 
@@ -773,7 +802,6 @@
         // =====================================================================
 
         function renderCalculationResults() {
-            // ... (Lógica de renderizado de resultados, omitida por brevedad en la respuesta, pero presente en el archivo) ...
              const result = appState.calculationResult;
             if (!result) {
                 resultsSectionEl.classList.add('hidden');
@@ -810,7 +838,8 @@
 
             // 3. Renderizar Tabla de Detalle Diario 
             tbodyEl.innerHTML = result.dailyResults.map(day => {
-                const dateKeyForSave = day.date; // DD/MM/YYYY
+                // Usamos la clave de display (DD/MM/YYYY) para guardar/cargar datos
+                const dateKeyForSave = day.date; 
                 const dayExtraReal = appState.extraHours[dateKeyForSave] || 0;
                 const isFeriadoManual = appState.manualHolidays[dateKeyForSave] === true;
                 
@@ -853,7 +882,6 @@
         // Función de generación de PDF (Se mantiene igual)
         generatePdfButtonEl.addEventListener('click', generatePDFReport);
         function generatePDFReport() {
-            // ... (Lógica de PDF, omitida por brevedad en la respuesta, pero presente en el archivo) ...
             const result = appState.calculationResult;
             if (!result) return updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
 
