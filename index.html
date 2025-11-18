@@ -29,43 +29,106 @@
         <!-- Contenido de React se inyecta aquí -->
     </div>
 
-    <!-- Dependencias (React, Babel, Firebase, jsPDF) CON 'defer' -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin defer></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react.development.js" crossorigin defer></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
-    <!-- Usamos las versiones compat de Firebase 9 -->
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore-compat.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js" defer></script>
+    <!-- Librerías de React, Babel y jsPDF -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- IMPORTANTE: Se eliminó 'defer' de esta etiqueta para evitar la página en blanco -->
-    <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
-        const { jsPDF } = window.jspdf;
-
-        // --- VARIABLES GLOBALES DEL ENTORNO CANVAS ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    <!-- BLOQUE 1: INICIALIZACIÓN DE FIREBASE (type="module") -->
+    <!-- Este bloque carga dependencias con 'import' y expone 'db' y 'auth' globalmente. NO CONTIENE JSX. -->
+    <script type="module">
+        // Importaciones de Firebase v9 Modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js";
         
-        // La clave API para Gemini - DEJAR EN BLANCO, EL ENTORNO LA INYECTA
-        const geminiApiKey = ""; 
+        // setLogLevel('debug'); // Descomentar para depuración
 
-        // Inicialización y servicios
+        // Variables globales (Accedidas por el entorno)
+        window.__app_id = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
+        const __firebase_config = typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : '{}';
+        const __initial_auth_token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : null;
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        
+        // Declaraciones de servicio
         let app, db, auth;
 
+        try {
+            // 1. Inicializar Firebase
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // 2. HACER GLOBALES las instancias para que el bloque React/Babel las use
+            window.db = db;
+            window.auth = auth;
+            window.getAuth = getAuth; // También hacemos accesibles las funciones necesarias
+            window.signInWithCustomToken = signInWithCustomToken;
+            window.signInAnonymously = signInAnonymously;
+            window.onAuthStateChanged = onAuthStateChanged;
+            window.GoogleAuthProvider = GoogleAuthProvider;
+            window.signInWithPopup = signInWithPopup;
+            window.doc = doc;
+            window.setDoc = setDoc;
+            window.onSnapshot = onSnapshot;
+
+            console.log("Firebase v9 inicializado y globalizado.");
+
+            // 3. Autenticación Inicial
+            const handleInitialAuth = async () => {
+                try {
+                    if (__initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.error("Error de autenticación inicial:", e);
+                }
+            };
+            
+            handleInitialAuth();
+
+        } catch (e) {
+            console.error("Error al inicializar Firebase en el bloque module:", e);
+        }
+    </script>
+    
+    <!-- Librerías de jsPDF, deben cargarse antes del script React/Babel para que estén disponibles -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- BLOQUE 2: LÓGICA DE REACT/JSX (type="text/babel") -->
+    <!-- Este bloque usa Babel para transformar JSX. Accede a Firebase a través de 'window'. -->
+    <script type="text/babel">
+        // Acceso a React y jsPDF desde el ámbito global (asumen que ya cargaron)
+        const { useState, useEffect, useCallback, useMemo } = window.React;
+        const { jsPDF } = window.jspdf;
+        
+        // Acceso a Firebase desde el ámbito global
+        const db = window.db;
+        const auth = window.auth;
+        const __app_id = window.__app_id;
+        const GoogleAuthProvider = window.GoogleAuthProvider;
+        const signInWithPopup = window.signInWithPopup;
+        const onAuthStateChanged = window.onAuthStateChanged;
+        const doc = window.doc;
+        const setDoc = window.setDoc;
+        const onSnapshot = window.onSnapshot;
+
+
         // --- CONSTANTES DE NEGOCIO ---
-        const EXTRA_HOUR_MULTIPLIER = 1.5; // 1 hora real extra = 1.5 horas equivalentes (50%)
-        const HOLIDAY_WORKED_EQUIV_HOURS = 32; // Feriado trabajado = 32 horas
-        const HOLIDAY_FREE_EQUIV_HOURS = 8;    // Feriado no trabajado (Franco) = 8 horas
+        const EXTRA_HOUR_MULTIPLIER = 1.5;
+        const HOLIDAY_WORKED_EQUIV_HOURS = 32;
+        const HOLIDAY_FREE_EQUIV_HOURS = 8;
+        const GEMINI_API_KEY = ""; // Entorno inyecta esta clave
 
         // --- UTILITIES Y LÓGICA DE NEGOCIO ---
         const formatDateForInput = (date) => date.toISOString().split('T')[0];
         const formatDateForDisplay = (date) => date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        // Obtiene la fecha de ayer por defecto
         const getYesterdayDate = () => {
             const date = new Date();
             date.setDate(date.getDate() - 1);
@@ -77,37 +140,34 @@
             let equivalentHours = 8; 
             let turnBaseName = turnType;
             
-            if (dayOfWeek >= 1 && dayOfWeek <= 5) { // L-V
+            if (dayOfWeek >= 1 && dayOfWeek <= 5) { 
                 switch (turnType) {
                     case 'Mañana':
                     case 'Tarde': equivalentHours = 8; break;
-                    case 'Noche': equivalentHours = 12; break; // 8+4
+                    case 'Noche': equivalentHours = 12; break;
                 }
-            } else if (dayOfWeek === 6) { // Sábado
+            } else if (dayOfWeek === 6) { 
                 switch (turnType) {
-                    case 'Mañana': realHours = 8; equivalentHours = 9; break; // 8+1
-                    case 'Tarde': realHours = 9; equivalentHours = 12; break; // 8+4
-                    case 'Noche': realHours = 8; equivalentHours = 16; break; // 8+8
+                    case 'Mañana': realHours = 8; equivalentHours = 9; break;
+                    case 'Tarde': realHours = 9; equivalentHours = 12; break;
+                    case 'Noche': realHours = 8; equivalentHours = 16; break;
                 }
-            } else if (dayOfWeek === 0) { // Domingo
+            } else if (dayOfWeek === 0) { 
                 turnBaseName = 'Domingo ' + turnType;
                 switch (turnType) {
                     case 'Mañana':
-                    case 'Tarde': realHours = 8; equivalentHours = 24; break; // 16+8
-                    case 'Noche': realHours = 8; equivalentHours = 28; break; // 20+8
+                    case 'Tarde': realHours = 8; equivalentHours = 24; break;
+                    case 'Noche': realHours = 8; equivalentHours = 28; break;
                 }
             }
             return { realHours, equivalentHours, turnBaseName };
         };
         
-        // --- Gemini API Call para buscar Feriados ---
         const fetchHolidaysFromGemini = async (month, year) => {
             const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long' });
-            // Query en español e inglés para mejor grounding
             const userQuery = `Busca y lista todos los feriados oficiales inamovibles y trasladables de Argentina para el mes de ${monthName} de ${year}. Dame la respuesta únicamente como un array de strings en formato 'YYYY-MM-DD'. Si no hay feriados, devuelve un array vacío.`;
             
-            // Usamos Google Search Grounding para obtener datos actualizados
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
 
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
@@ -142,19 +202,16 @@
                     if (candidate && candidate.content?.parts?.[0]?.text) {
                         const jsonString = candidate.content.parts[0].text;
                         const parsedHolidays = JSON.parse(jsonString);
-                        // Filtramos para asegurarnos que sean strings de fecha válidos
                         return parsedHolidays.filter(h => /^\d{4}-\d{2}-\d{2}$/.test(h));
                     }
                 } catch (error) {
                     console.error(`Attempt ${attempts + 1} failed:`, error);
-                    // Exponential backoff
                     await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
                 }
                 attempts++;
             }
-            return []; // Devuelve vacío si falla después de varios intentos
+            return [];
         };
-
 
         // --- COMPONENTES ---
 
@@ -168,15 +225,15 @@
             </div>
         );
 
-        const AuthScreen = ({ signInWithGoogle }) => (
+        const AuthScreen = ({ signIn }) => (
             <div className="p-8 max-w-sm w-full bg-white shadow-xl rounded-xl text-center">
                 <h1 className="text-3xl font-bold text-indigo-700 mb-4">Calculadora 6x2</h1>
                 <p className="text-gray-600 mb-8">Inicia sesión para guardar tu configuración y horas extra.</p>
                 <button
-                    onClick={signInWithGoogle}
+                    onClick={signIn}
                     className="w-full py-3 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center"
                 >
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 12.06c0-.82-.07-1.62-.2-2.4h-1.32v2.4h-1.32v2.4h1.32v2.4c0 .82.07 1.62.2 2.4h1.32v-2.4h1.32v-2.4h-1.32v-2.4zm-2.4-5.32c.13.82.2 1.62.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32V4.34h-1.32v2.4zm-3.26 12.7c-.13-.82-.2-1.62-.2-2.4h-1.32v2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2 1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2 1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2 1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2 1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2 1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4z"></path></svg>
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 12.06c0-.82-.07-1.62-.2-2.4h-1.32v2.4h-1.32v2.4h1.32v2.4c0 .82.07 1.62.2 2.4h1.32v-2.4h1.32v-2.4h-1.32v-2.4zm-2.4-5.32c.13.82.2 1.62.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32V4.34h-1.32v2.4zm-3.26 12.7c-.13-.82-.2-1.62-.2-2.4h-1.32v2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4zm-1.84 0c-.13.82-.2-1.62-.2 2.4h-1.32v-2.4h1.32v2.4h1.32v-2.4h-1.32v-2.4z"></path></svg>
                     Continuar con Google
                 </button>
             </div>
@@ -194,7 +251,7 @@
                 lastFrancoDate: getYesterdayDate(),
                 initialTurn: 'Mañana',
                 discountRate: 0.18,
-                holidays: [] // Lista de feriados en formato 'YYYY-MM-DD'
+                holidays: [] 
             });
             
             const [extraHours, setExtraHours] = useState({});
@@ -204,49 +261,13 @@
             
             // 1. Inicialización y Autenticación
             useEffect(() => {
-                // Log de inicio para depuración
-                console.log("Iniciando useEffect de autenticación...");
+                if (!auth) {
+                    setStatus({ type: 'error', message: "Error: Firebase Auth no está disponible. Revisa la consola." });
+                    setIsAuthReady(true);
+                    return;
+                }
                 
-                // Usamos las versiones compat de Firebase 9 para mantener la sencillez del HTML
-                if (typeof firebase === 'undefined' || typeof firebase.initializeApp !== 'function') {
-                    console.error("Error crítico: La librería de Firebase no se cargó o no está disponible en el ámbito global.");
-                    setStatus({ type: 'error', message: "Error crítico: La librería de Firebase no se cargó." });
-                    setIsAuthReady(true);
-                    return;
-                }
-
-                try {
-                    if (!app) {
-                        app = firebase.initializeApp(firebaseConfig);
-                        db = firebase.firestore();
-                        auth = firebase.auth();
-                        console.log("Firebase inicializado con éxito.");
-                    }
-                    
-                    // Asegura la autenticación inicial con token o anónima
-                    const initialAuth = async () => {
-                        try {
-                            if (initialAuthToken) {
-                                await auth.signInWithCustomToken(initialAuthToken);
-                            } else {
-                                await auth.signInAnonymously();
-                            }
-                            console.log("Autenticación inicial intentada.");
-                        } catch (e) {
-                            console.error("Error de autenticación inicial:", e);
-                            // Continuar, ya que onAuthStateChanged manejará el estado
-                        }
-                    };
-                    initialAuth();
-
-                } catch (e) {
-                    console.error("Firebase Initialization Error:", e);
-                    setStatus({ type: 'error', message: "Error al inicializar Firebase. Revisa tu API Key." });
-                    setIsAuthReady(true);
-                    return;
-                }
-
-                const unsubscribe = auth.onAuthStateChanged((user) => { 
+                const unsubscribe = onAuthStateChanged(auth, (user) => { 
                     if (user) {
                         setUser(user);
                         setUserId(user.uid);
@@ -255,7 +276,7 @@
                         setUserId(null);
                     }
                     setIsAuthReady(true);
-                    console.log("Estado de autenticación listo. isAuthReady = true.");
+                    console.log("Estado de autenticación listo.");
                 });
 
                 return () => unsubscribe();
@@ -267,28 +288,34 @@
                 setIsLoading(true);
 
                 try {
-                    const provider = new firebase.auth.GoogleAuthProvider();
-                    // Usamos signInWithPopup ya que es un entorno web simple
-                    await auth.signInWithPopup(provider); 
-                    // onAuthStateChanged maneja el resto
+                    const provider = new GoogleAuthProvider();
+                    await signInWithPopup(auth, provider); 
                 } catch (error) {
                     console.error("Google Sign-In Error:", error);
                     setStatus({ type: 'error', message: `Fallo en el inicio de sesión: ${error.code || error.message}` });
+                } finally {
                     setIsLoading(false);
                 }
             }, []);
 
-            // 2. Carga de Configuración del Usuario (incluye Feriados)
+            // Rutas de Firestore
+            const getConfigDocRef = useCallback(() => {
+                return doc(db, 'artifacts', __app_id, 'users', userId, 'config', 'salary');
+            }, [userId]);
+            
+            const getExtrasDocRef = useCallback((monthDocId) => {
+                return doc(db, 'artifacts', __app_id, 'users', userId, 'data', monthDocId);
+            }, [userId]);
+
+            // 2. Carga y Sincronización de Configuración
             useEffect(() => {
                 if (!isAuthReady || !userId || !db) return;
                 
                 setStatus({ type: 'info', message: "Sincronizando configuración personal..." });
-                const userDocRef = db.collection('artifacts').doc(appId)
-                    .collection('users').doc(userId)
-                    .collection('config').doc('salary');
+                const configRef = getConfigDocRef();
                 
-                const unsubscribe = userDocRef.onSnapshot((docSnap) => {
-                    if (docSnap.exists) {
+                const unsubscribe = onSnapshot(configRef, (docSnap) => {
+                    if (docSnap.exists()) {
                         const data = docSnap.data();
                         setConfig(prev => ({ ...prev, ...data,
                             valorHora: Number(data.valorHora) || prev.valorHora,
@@ -313,13 +340,9 @@
                 if (!isAuthReady || !userId || !db) return;
 
                 const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
-                
-                // Colección 'data' para datos variables (horas extra)
-                const extrasDocRef = db.collection('artifacts').doc(appId)
-                                      .collection('users').doc(userId)
-                                      .collection('data').doc(monthDocId); 
+                const extrasRef = getExtrasDocRef(monthDocId);
 
-                const unsubscribe = extrasDocRef.onSnapshot((docSnap) => {
+                const unsubscribe = onSnapshot(extrasRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setExtraHours(docSnap.data().extras || {});
                     } else {
@@ -334,24 +357,22 @@
 
 
             // 4. Guardar Configuración (actualizado para incluir holidays)
-            const saveConfig = useCallback((newConfig) => {
+            const saveConfig = useCallback(async (newConfig) => {
                 if (!isAuthReady || !userId || !db) return;
                 
-                const userDocRef = db.collection('artifacts').doc(appId)
-                    .collection('users').doc(userId)
-                    .collection('config').doc('salary');
+                const configRef = getConfigDocRef();
 
-                userDocRef.set({ ...newConfig, 
-                    valorHora: Number(newConfig.valorHora), 
-                    discountRate: Number(newConfig.discountRate),
-                    // Asegurar que holidays sea un array
-                    holidays: Array.isArray(newConfig.holidays) ? newConfig.holidays : [],
-                }, { merge: true })
-                    .catch(error => {
-                        console.error("Error saving config:", error);
-                        setStatus({ type: 'error', message: "Error al guardar configuración." });
-                    });
-            }, [isAuthReady, userId]);
+                try {
+                    await setDoc(configRef, { ...newConfig, 
+                        valorHora: Number(newConfig.valorHora), 
+                        discountRate: Number(newConfig.discountRate),
+                        holidays: Array.isArray(newConfig.holidays) ? newConfig.holidays : [],
+                    }, { merge: true });
+                } catch(error) {
+                    console.error("Error saving config:", error);
+                    setStatus({ type: 'error', message: "Error al guardar configuración." });
+                }
+            }, [isAuthReady, userId, getConfigDocRef]);
 
             // 5. Manejador de Cambios de Formulario
             const handleChange = (e) => {
@@ -397,12 +418,9 @@
                 if (!isAuthReady || !userId || !db) return;
                 
                 const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
-                const extrasDocRef = db.collection('artifacts').doc(appId)
-                                      .collection('users').doc(userId)
-                                      .collection('data').doc(monthDocId);
+                const extrasRef = getExtrasDocRef(monthDocId);
                 
-                // Guardado optimista
-                extrasDocRef.set({ extras: newExtras }, { merge: true })
+                setDoc(extrasRef, { extras: newExtras }, { merge: true })
                     .catch(error => {
                         console.error("Error saving extras:", error);
                         setStatus({ type: 'error', message: "Error al guardar horas extra." });
@@ -448,10 +466,10 @@
                 let dayCounter = 0;
                 while (currentDate.getMonth() === month - 1 && dayCounter < 31) {
                     const dayOfWeek = currentDate.getDay(); 
-                    const dateString = formatDateForDisplay(currentDate); // DD/MM/YYYY para display
-                    const dateKey = formatDateForInput(currentDate); // YYYY-MM-DD para lookup
+                    const dateString = formatDateForDisplay(currentDate); 
+                    const dateKey = formatDateForInput(currentDate); 
                     
-                    const isHoliday = holidays.includes(dateKey); // Verificar si es Feriado
+                    const isHoliday = holidays.includes(dateKey); 
                     
                     const cycleStatus = masterCycle[startOffset]; 
                     
@@ -459,21 +477,19 @@
                     let realHours = 0;
                     let equivalentHours = 0;
                     
-                    // --- LÓGICA DE FERIADO (NUEVO) ---
+                    // --- LÓGICA DE FERIADO ---
                     if (isHoliday) {
                         turnBaseName = `Feriado - ${cycleStatus}`;
-                        realHours = cycleStatus !== 'Franco' ? 8 : 0; // Se asume 8hs si trabajas
+                        realHours = cycleStatus !== 'Franco' ? 8 : 0; 
                         
                         if (cycleStatus === 'Franco') {
-                            // Feriado no trabajado (Franco coincidente) -> 8 horas
                             equivalentHours = HOLIDAY_FREE_EQUIV_HOURS; 
                             francosDates.push(dateString);
                         } else {
-                            // Feriado trabajado (Turno Mañana/Tarde/Noche) -> 32 horas
                             equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
                         }
                     } 
-                    // --- LÓGICA NORMAL (Si NO es feriado) ---
+                    // --- LÓGICA NORMAL ---
                     else {
                         if (cycleStatus === 'Franco') {
                             francosDates.push(dateString);
@@ -487,7 +503,7 @@
                     
                     dailyResults.push({
                         date: dateString,
-                        dateKey: dateKey, // Agregamos la clave de búsqueda
+                        dateKey: dateKey,
                         day: dayNames[dayOfWeek],
                         turn: turnBaseName,
                         isHoliday: isHoliday,
@@ -518,8 +534,6 @@
                     
                     let dayExtraEquivalent = 0;
                     
-                    // Las horas extras se pagan al 50% extra (x1.5) ADICIONALMENTE,
-                    // sin importar el día, ya que el día base (Feriado, Domingo, etc.) ya tiene su altísimo pago.
                     if (day.turn !== 'Franco' && dayExtraReal > 0) {
                         dayExtraEquivalent = (dayExtraReal * EXTRA_HOUR_MULTIPLIER);
                     }
@@ -538,7 +552,6 @@
                     };
                 });
 
-                // Recalcular resumen financiero
                 const totalBruto = totalEquivalentHours * hourlyRate;
                 const totalDescuento = totalBruto * config.discountRate;
                 const totalNeto = totalBruto - totalDescuento;
@@ -562,8 +575,8 @@
 
             // 9. Generador de PDF
             const generatePdf = () => {
-                if (!finalCalculationResult) {
-                    setStatus({ type: 'error', message: "Primero debes generar el cálculo." });
+                if (!finalCalculationResult || !window.jspdf) {
+                    setStatus({ type: 'error', message: "Primero debes generar el cálculo o la librería PDF no está lista." });
                     return;
                 }
 
@@ -613,14 +626,11 @@
                     bodyStyles: (data) => {
                         const rowData = dailyResults[data.row.index];
                         if (rowData.isHoliday && rowData.turn.includes('Franco')) {
-                            // Feriado no trabajado (Franco) - Pago de 8hs
-                            return { fillColor: [255, 237, 196] }; // Amarillo más claro
+                            return { fillColor: [255, 237, 196] }; 
                         } else if (rowData.isHoliday) {
-                            // Feriado trabajado (Pago de 32hs)
-                            return { fillColor: [254, 202, 202] }; // Rojo claro
+                            return { fillColor: [254, 202, 202] }; 
                         } else if (rowData.turn.includes('Franco')) {
-                            // Franco normal
-                            return { fillColor: [255, 242, 204] }; // Amarillo suave
+                            return { fillColor: [255, 242, 204] }; 
                         }
                         return {};
                     }
@@ -650,7 +660,7 @@
             }
             
             if (!user) {
-                 return <AuthScreen signInWithGoogle={signInWithGoogle} />;
+                 return <AuthScreen signIn={signInWithGoogle} />;
             }
 
             const resultToShow = finalCalculationResult || calculationResult;
@@ -659,7 +669,7 @@
                 <div className="p-4 md:p-6 max-w-4xl w-full bg-white shadow-xl rounded-xl">
                     <div className="flex justify-between items-center border-b pb-2 mb-4">
                         <h1 className="text-2xl font-bold text-indigo-700">
-                            Calculadora 6x2 (v4)
+                            Calculadora 6x2 (v6)
                         </h1>
                         <button onClick={() => auth.signOut()} className="text-sm text-red-600 hover:text-red-800 font-semibold transition duration-150">
                             Cerrar Sesión
@@ -805,9 +815,9 @@
                                             {resultToShow.dailyResults.map((day) => {
                                                 let rowClass = day.turn.includes('Franco') ? 'bg-yellow-50' : 'hover:bg-gray-50';
                                                 if (day.isHoliday && day.turn.includes('Franco')) {
-                                                    rowClass = 'is-holiday'; // Feriado (no trabajado) - 8hs
+                                                    rowClass = 'is-holiday'; 
                                                 } else if (day.isHoliday) {
-                                                    rowClass = 'is-holiday-worked'; // Feriado (trabajado) - 32hs
+                                                    rowClass = 'is-holiday-worked'; 
                                                 }
 
                                                 return (
