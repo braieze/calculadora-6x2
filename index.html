@@ -52,12 +52,21 @@
             <h1 class="text-2xl font-bold text-indigo-700">
                 Calculadora Salarial 6x2
             </h1>
-            <div id="user-info" class="text-sm text-gray-600 mt-2 md:mt-0"></div>
+            <div id="auth-controls" class="flex space-x-2 mt-2 md:mt-0 items-center">
+                <div id="user-info" class="text-sm text-gray-600">Cargando...</div>
+                <button id="google-login-btn" class="flex items-center px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-blue-700 transition duration-150">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8c-.7 4.3-3.6 7.9-7.9 10.1v7H44c.4-3.4 2.8-6.4 5.9-8.5v-2c-3-2.1-5.4-5.1-5.9-8.5z" fill="#4285F4"/><path d="M24 44.5h20.5v-7h-7c-2.3 2.1-5 3.7-7.7 4.7v2.3c3 0 5.8-.8 8.1-2.2v-2z" fill="#34A853"/><path d="M24 3.5V11H4v7h20v8.5h-11.8c.7 4.3 3.6 7.9 7.9 10.1v7c-8.9-3.2-14.9-12-14.9-22.6C9.1 12 14.1 6.5 24 3.5z" fill="#FBBC05"/><path d="M24 3.5V11h20v-7H24z" fill="#EA4335"/></svg>
+                    Google
+                </button>
+                <button id="logout-btn" class="hidden px-3 py-1 bg-gray-500 text-white text-sm font-semibold rounded-lg shadow hover:bg-gray-600 transition duration-150">
+                    Salir
+                </button>
+            </div>
         </div>
         
         <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
 
-        <!-- Panel de Configuración -->
+        <!-- Panel de Configuración (El resto del contenido permanece igual) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Mes</label>
@@ -156,7 +165,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // **CORRECCIÓN:** Utilizar la configuración de Firebase inyectada por el entorno
+        // **IMPORTANTE:** Usar la configuración de Firebase inyectada por el entorno
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         
         // Instancias de Firebase y Estado de Autenticación
@@ -164,13 +173,13 @@
         let auth;
         let db;
         let userId = null;
+        let userName = 'Usuario Temporal';
         let isAuthReady = false;
         let isFirebaseActive = true; 
         
         // Estado Global de la Aplicación (Simulando React state)
         let appState = {
             config: {
-                // Usar el mes actual, pero si es el día 1, usar el mes anterior como default
                 month: new Date().getDate() === 1 ? new Date().getMonth() : new Date().getMonth() + 1,
                 year: new Date().getFullYear(),
                 valorHora: 3758,
@@ -178,8 +187,8 @@
                 initialTurn: 'Mañana',
                 discountRate: 0.18,
             },
-            extraHours: {},      // { "DD/MM/YYYY": 2, ... }
-            manualHolidays: {}, // { "DD/MM/YYYY": true, ... }
+            extraHours: {},
+            manualHolidays: {},
             calculationResult: null,
             isLoading: false,
             status: null,
@@ -193,6 +202,9 @@
         const resultsSectionEl = document.getElementById('results-section');
         const calculateButtonEl = document.getElementById('calculate-schedule-button');
         const generatePdfButtonEl = document.getElementById('generate-pdf-button');
+        const userInfoEl = document.getElementById('user-info');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
 
         // =====================================================================
         // UTILIDADES Y AYUDANTES DE UI
@@ -205,17 +217,14 @@
         }
 
         function formatDateForInput(date) {
-            // Formato YYYY-MM-DD para input[type="date"]
             return date.toISOString().split('T')[0];
         }
 
         function formatDateForDisplay(date) {
-            // Formato DD/MM/YYYY
             return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
         function formatCurrency(amount) {
-            // Asegura que amount sea numérico
             const number = parseFloat(amount) || 0;
             return number.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
         }
@@ -225,8 +234,6 @@
              return number.toLocaleString('es-AR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
         }
 
-
-        // Lógica de equivalencias de horas según el día y turno (6x2)
         function getTurnEquivalencies(dayOfWeek, turnType) {
             let realHours = 8;
             let equivalentHours = 8; 
@@ -289,6 +296,27 @@
             }
         }
         
+        function updateAuthUI() {
+            if (!isAuthReady) {
+                userInfoEl.textContent = 'Cargando...';
+                googleLoginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                return;
+            }
+
+            if (userId && auth.currentUser && !auth.currentUser.isAnonymous) {
+                // Usuario autenticado (Google)
+                userInfoEl.textContent = `Hola, ${userName} (${userId.substring(0, 4)}...)`;
+                googleLoginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                // Usuario anónimo (Canvas token) o no autenticado
+                userInfoEl.textContent = `Sesión: ${userName} (${userId ? userId.substring(0, 4) + '...' : 'Local'})`;
+                googleLoginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+            }
+        }
+        
         function updateUIFromState() {
             // 1. Actualizar Inputs
             const config = appState.config;
@@ -301,26 +329,26 @@
             // 2. Llenar opciones de meses
             const monthSelect = document.getElementById('input-month');
             
-            // Llenar solo si está vacío para evitar redibujado excesivo
             if (monthSelect.options.length === 0 || monthSelect.options.length !== 12) {
                  monthSelect.innerHTML = ''; 
                 Array.from({ length: 12 }, (_, i) => i + 1).forEach(m => {
                     const option = document.createElement('option');
                     option.value = m;
-                    // Obtener nombre del mes para el año configurado
                     option.textContent = new Date(config.year, m - 1).toLocaleDateString('es-AR', { month: 'long' });
                     monthSelect.appendChild(option);
                 });
             } 
             monthSelect.value = config.month;
 
-            // 3. Mostrar Resultados (se encarga de renderizar la tabla y el resumen)
+            // 3. Mostrar Resultados
             renderCalculationResults();
 
-            // 4. Actualizar Status
+            // 4. Actualizar Status y Loading
             updateStatus(appState.status?.type, appState.status?.message);
-            
             setLoading(appState.isLoading);
+            
+            // 5. Actualizar UI de Autenticación
+            updateAuthUI();
         }
 
         // =====================================================================
@@ -329,17 +357,19 @@
 
         // Importaciones de Firebase (Módulos)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, setLogLevel, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Rutas de Firestore
         function getConfigDocRef() {
             if (!db || !userId) return null;
+            // Colección privada: /artifacts/{appId}/users/{userId}/config/salary
             return doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
         }
         
         function getDataDocRef(monthDocId) {
             if (!db || !userId) return null;
+            // Colección privada: /artifacts/{appId}/users/{userId}/data/{monthDocId}
             return doc(db, 'artifacts', appId, 'users', userId, 'data', monthDocId);
         }
 
@@ -347,13 +377,12 @@
         const initFirebase = async () => {
             updateStatus('info', 'Intentando conectar a Firebase para persistencia...');
             
-            // Verificación para asegurar que la configuración no esté vacía
             if (Object.keys(firebaseConfig).length === 0) {
                  console.error("Firebase Config está vacío.");
                  isFirebaseActive = false;
                  userId = crypto.randomUUID(); 
                  isAuthReady = true; 
-                 document.getElementById('user-info').textContent = `ID Temporal: ${userId.substring(0, 8)}... (SIN CONFIGURACIÓN)`;
+                 userName = `Temporal`;
                  updateStatus('error', 'Error: La configuración de Firebase está vacía. No se puede conectar.');
                  calculateSchedule(false);
                  updateUIFromState();
@@ -364,47 +393,88 @@
                 app = initializeApp(firebaseConfig); 
                 auth = getAuth(app);
                 db = getFirestore(app);
-                // setLogLevel('Debug'); // Útil para debugging
+                
+                // setLogLevel('Debug'); // Descomentar para depuración
 
+                // Intentar autenticación con el token del entorno si está presente.
                 if (initialAuthToken) {
-                    // Usamos el token personalizado que garantiza la persistencia.
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    // Usamos signInAnonymously() como fallback si el token no está presente.
-                    await signInAnonymously(auth); 
+                     // Si no hay token del entorno, Firebase usará el estado persistente o iniciará como anónimo.
+                    console.log("No hay token inicial. El estado será manejado por onAuthStateChanged.");
                 }
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
+                        userName = user.displayName || user.email || (user.isAnonymous ? 'Temporal (Token)' : 'Usuario');
                         isAuthReady = true;
-                        document.getElementById('user-info').textContent = `UID: ${userId.substring(0, 8)}... (CON PERSISTENCIA)`;
-                        updateStatus('success', 'Conexión a Firebase Establecida. Datos cargados.');
+                        updateStatus('success', `Sesión iniciada. Bienvenido, ${userName}!`);
                         setupDataListeners(); 
                     } else {
-                        // Esto no debería suceder si signInAnonymously() fue exitoso.
-                        userId = crypto.randomUUID(); 
-                        isAuthReady = true; 
-                        document.getElementById('user-info').textContent = `ID Temporal: ${userId.substring(0, 8)}... (ERROR DE SESIÓN)`;
-                        updateStatus('error', 'Error de sesión. Usando ID temporal.');
-                        calculateSchedule(false);
+                        // Si el usuario cierra sesión (Google Sign-Out), volvemos a anónimo (para mantener la compatibilidad del entorno)
+                        signInAnonymously(auth).then(anonUser => {
+                            userId = anonUser.user.uid;
+                            userName = 'Temporal (Anónimo)';
+                            isAuthReady = true; 
+                            updateStatus('info', 'Sesión iniciada anónimamente.');
+                            setupDataListeners();
+                        }).catch(e => {
+                            // Fallback total si la autenticación anónima falla
+                            userId = crypto.randomUUID(); 
+                            userName = 'Local';
+                            isAuthReady = true;
+                            isFirebaseActive = false;
+                            updateStatus('error', 'Error de sesión. Usando ID local sin persistencia.');
+                            calculateSchedule(false);
+                        });
                     }
                     updateUIFromState();
                 });
 
             } catch (error) {
                 console.error("Error crítico al inicializar Firebase o al autenticar:", error);
-                // El error de mismatch ocurre aquí
-                updateStatus('error', `Error de Conexión: ${error.message}. Se está usando la configuración provista por el entorno.`);
-                // Forzamos el modo local si hay un error crítico
+                updateStatus('error', `Error Crítico: ${error.code || error.message}. Usando modo local.`);
                 isFirebaseActive = false;
                 userId = crypto.randomUUID(); 
                 isAuthReady = true; 
-                document.getElementById('user-info').textContent = `ID Temporal: ${userId.substring(0, 8)}... (SIN PERSISTENCIA)`;
+                userName = 'Local (Error)';
                 calculateSchedule(false);
                 updateUIFromState();
             }
         };
+
+        // --- FUNCIONES DE AUTENTICACIÓN CON GOOGLE ---
+        
+        googleLoginBtn.addEventListener('click', signInWithGoogle);
+        logoutBtn.addEventListener('click', signOutUser);
+
+        async function signInWithGoogle() {
+            if (!auth) return;
+            updateStatus('info', 'Iniciando sesión con Google...');
+            try {
+                const provider = new GoogleAuthProvider();
+                // Solicitar que se mantenga la sesión
+                await signInWithPopup(auth, provider);
+                // onAuthStateChanged se encargará de actualizar el estado y los datos
+            } catch (error) {
+                console.error("Error al iniciar sesión con Google:", error);
+                updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
+            }
+        }
+        
+        async function signOutUser() {
+            if (!auth) return;
+            try {
+                await signOut(auth);
+                updateStatus('success', 'Sesión cerrada. Ahora estás en modo anónimo.');
+                // onAuthStateChanged se encargará de re-autenticar anónimamente
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                updateStatus('error', `Error al cerrar sesión: ${error.message}`);
+            }
+        }
+
 
         // 2. Funciones de Carga y Guardado
         function saveConfig() {
@@ -416,11 +486,10 @@
             const dataToSave = { ...appState.config };
             dataToSave.valorHora = Number(dataToSave.valorHora);
             dataToSave.discountRate = Number(dataToSave.discountRate);
-            dataToSave.month = Number(dataToSave.month); // Asegurar que sean números
+            dataToSave.month = Number(dataToSave.month); 
             dataToSave.year = Number(dataToSave.year);
 
             setDoc(configRef, dataToSave, { merge: true })
-                .then(() => console.log("Configuración guardada en Firestore."))
                 .catch(error => {
                     console.error("Error saving config:", error);
                     updateStatus('error', "Error al guardar configuración.");
@@ -428,7 +497,6 @@
         }
         
         function saveData() {
-            // Guardar solo si Firebase está activo
             if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
             
             const config = appState.config;
@@ -436,7 +504,6 @@
             const dataRef = getDataDocRef(monthDocId);
             if (!dataRef) return;
             
-            // Guardamos las horas extra y los feriados manuales para el mes
             setDoc(dataRef, { 
                 extras: appState.extraHours,
                 holidayFlags: appState.manualHolidays
@@ -452,7 +519,11 @@
         let unsubscribeData = null;
 
         function setupDataListeners() {
-            if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
+            if (!isFirebaseActive || !isAuthReady || !userId || !db) {
+                // Si no hay Firebase activo o autenticación lista, solo usa los datos locales.
+                calculateSchedule(false);
+                return;
+            }
             
             // 3.1 Listener de Configuración
             if (unsubscribeConfig) unsubscribeConfig();
@@ -463,6 +534,7 @@
                         const data = docSnap.data();
                         appState.config = { 
                             ...appState.config, ...data,
+                            // Asegurarse de que los valores numéricos se mantengan
                             valorHora: Number(data.valorHora) || appState.config.valorHora,
                             discountRate: Number(data.discountRate) || appState.config.discountRate,
                             month: Number(data.month) || appState.config.month,
@@ -470,7 +542,7 @@
                         };
                         updateUIFromState();
                     } else {
-                        saveConfig(); // Si no existe, lo guardamos por primera vez
+                        saveConfig(); // Guardar por primera vez
                     }
                 }, (error) => {
                     console.error("Error fetching config:", error);
@@ -493,7 +565,6 @@
                         appState.manualHolidays = {};
                     }
                     updateUIFromState();
-                    // Recalcular si ya hay resultados para incluir las nuevas extras/feriados
                     if (appState.calculationResult) calculateSchedule(false); 
                 }, (error) => {
                     console.error("Error fetching month data:", error);
@@ -523,43 +594,36 @@
             saveConfig();
             
             if (oldDocId !== newDocId && isFirebaseActive) {
-                // Si cambiamos de mes/año, cambiamos el listener de datos
                 setupDataListeners(); 
             } else {
                 updateUIFromState();
-                calculateSchedule(false); // Recalculo inmediato
+                calculateSchedule(false);
             }
         }
 
-        // Se registra en el scope global para que los elementos HTML puedan llamarla
         window.handleConfigChange = handleConfigChange;
         
-        // Maneja el cambio de horas extra en la tabla
         window.handleExtraChange = function(dateKey, inputElement) {
             const hours = parseFloat(inputElement.value) || 0;
-            // dateKey es DD/MM/YYYY
             appState.extraHours[dateKey] = hours;
             saveData(); 
-            calculateSchedule(false); // Forzar recálculo
+            calculateSchedule(false);
         }
 
-        // Maneja el cambio de checkbox de feriado en la tabla
         window.handleHolidayChange = function(dateKey, checkboxElement) {
-            // dateKey es DD/MM/YYYY
             if (checkboxElement.checked) {
                 appState.manualHolidays[dateKey] = true;
             } else {
                 delete appState.manualHolidays[dateKey];
             }
             saveData();
-            calculateSchedule(false); // Forzar recálculo (SOLUCIÓN AL PROBLEMA DE LAS HORAS)
+            calculateSchedule(false);
         }
 
         // =====================================================================
-        // LÓGICA DE CÁLCULO
+        // LÓGICA DE CÁLCULO (Mis funciones de negocio)
         // =====================================================================
         
-        // Inicia el cálculo al hacer clic en el botón
         calculateButtonEl.addEventListener('click', () => calculateSchedule(true));
 
         function calculateSchedule(initialCalculation = true) {
@@ -567,11 +631,11 @@
 
             const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
             
-            // Validación básica
             if (!lastFrancoDate || !valorHora || isNaN(valorHora) || valorHora <= 0) {
                  if (initialCalculation) setLoading(false);
                  updateStatus('error', 'Por favor, ingrese un Valor de Hora Bruta y una Fecha de Último Franco válidos.');
                  appState.calculationResult = null;
+                 resultsSectionEl.classList.add('hidden');
                  updateUIFromState();
                  return;
             }
@@ -596,7 +660,6 @@
             if (initialTurn === 'Noche') baseOffset = 8;
             else if (initialTurn === 'Tarde') baseOffset = 16;
             
-            // Cálculo del offset: cuántos días han pasado desde el día después del último Franco
             const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
@@ -606,13 +669,11 @@
             let dayCounter = 0;
             const daysInMonth = new Date(year, month, 0).getDate();
 
-            // Iterar sobre todos los días del mes
             while (dayCounter < daysInMonth) {
                 const dayOfWeek = currentDate.getDay(); 
-                const dateString = formatDateForDisplay(currentDate); // DD/MM/YYYY (Key para Extras/Feriados)
-                const dateKey = formatDateForInput(currentDate); // YYYY-MM-DD
+                const dateString = formatDateForDisplay(currentDate);
+                const dateKey = formatDateForInput(currentDate);
                 
-                // --- Determinar si es Feriado (MANUAL) ---
                 const isHolidayManual = appState.manualHolidays[dateString] === true; 
                 
                 const cycleStatus = masterCycle[startOffset]; 
@@ -622,27 +683,21 @@
                 let equivalentHours = 0;
                 
                 if (cycleStatus === 'Franco') {
-                    // Es Franco (incluye Feriado en Franco)
                     if (isHolidayManual) {
-                         // Lógica de Feriado en Franco (8h equivalentes)
                         turnBaseName = `FERIADO - Franco`;
                         equivalentHours = HOLIDAY_FREE_EQUIV_HOURS; 
                         francosDates.push(dateString + ' (Feriado)');
                     } else {
-                        // Lógica de Franco Normal
                          turnBaseName = `Franco`;
                          francosDates.push(dateString);
                     }
                 } 
-                // Es Día de Trabajo (Turno)
                 else {
                     if (isHolidayManual) {
-                         // Lógica de Feriado Trabajado (32h equivalentes)
                         turnBaseName = `FERIADO - ${cycleStatus}`;
                         realHours = 8; 
                         equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
                     } else {
-                        // Lógica de Día Normal de Trabajo
                         const equivalences = getTurnEquivalencies(dayOfWeek, cycleStatus);
                         realHours = equivalences.realHours;
                         equivalentHours = equivalences.equivalentHours;
@@ -652,7 +707,7 @@
                 
                 dailyResults.push({
                     date: dateString,
-                    dateKey: dateKey, // YYYY-MM-DD
+                    dateKey: dateKey,
                     day: dayNames[dayOfWeek],
                     turn: turnBaseName,
                     isHoliday: isHolidayManual,
@@ -665,7 +720,6 @@
                 dayCounter++;
             }
             
-            // --- Cálculo Final con Horas Extra ---
             let totalEquivalentHours = 0;
             let totalExtraHoursReal = 0;
             const hourlyRate = parseFloat(valorHora) || 0;
@@ -676,12 +730,10 @@
                 let dayExtraEquivalent = 0;
                 
                 if (dayExtraReal > 0) {
-                    // La hora extra se suma como 1.5 veces el valor.
                     dayExtraEquivalent = (dayExtraReal * EXTRA_HOUR_MULTIPLIER);
                     totalExtraHoursReal += dayExtraReal;
                 }
                 
-                // Si el día es Feriado, ya tiene el cálculo especial, no se debe sumar la equivalencia base normal.
                 const finalEquivHours = day.equivHoursBase + dayExtraEquivalent;
                 const finalDailyBruto = finalEquivHours * hourlyRate;
 
@@ -717,11 +769,12 @@
         }
         
         // =====================================================================
-        // RENDERIZADO DE RESULTADOS
+        // RENDERIZADO DE RESULTADOS (Se mantiene igual, solo llama a las funciones)
         // =====================================================================
 
         function renderCalculationResults() {
-            const result = appState.calculationResult;
+            // ... (Lógica de renderizado de resultados, omitida por brevedad en la respuesta, pero presente en el archivo) ...
+             const result = appState.calculationResult;
             if (!result) {
                 resultsSectionEl.classList.add('hidden');
                 return;
@@ -796,18 +849,14 @@
                 `;
             }).join('');
         }
-
-        // =====================================================================
-        // GENERACIÓN DE PDF 
-        // =====================================================================
         
+        // Función de generación de PDF (Se mantiene igual)
         generatePdfButtonEl.addEventListener('click', generatePDFReport);
-
         function generatePDFReport() {
+            // ... (Lógica de PDF, omitida por brevedad en la respuesta, pero presente en el archivo) ...
             const result = appState.calculationResult;
             if (!result) return updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
 
-            // Acceso a jsPDF en el scope global
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
                  return updateStatus('error', 'Error al cargar librerías de PDF. Recargue la página.');
             }
@@ -820,7 +869,6 @@
             
             const title = `Reporte Salarial 6x2 - ${monthName}`;
             
-            // Header
             doc.setFontSize(16);
             doc.text(title, 14, 20);
             
@@ -829,7 +877,6 @@
             doc.text(`Desc. Afiliación: ${result.discountRate.toFixed(0)}%`, 14, 31);
             doc.text(`Horas Extra Reales: ${formatNumber(result.totalExtraHoursReal)}`, 14, 36);
 
-            // Resumen de Ganancias (Tabla de Resumen)
             doc.autoTable({
                 startY: 45,
                 head: [['Total Horas Eq.', 'Bruto Total', 'Descuento', 'NETO FINAL']],
@@ -848,7 +895,6 @@
                 styles: { fontSize: 10 }
             });
 
-            // Tabla de Detalle Diario
             const finalY = doc.autoTable.previous.finalY;
             doc.setFontSize(12);
             doc.text('Detalle Diario de Horas y Turnos', 14, finalY + 15);
@@ -857,7 +903,7 @@
                 d.date,
                 d.day.substring(0, 3),
                 d.turn,
-                appState.manualHolidays[d.date] === true ? 'Sí' : 'No', // Usar el estado actual de feriado
+                appState.manualHolidays[d.date] === true ? 'Sí' : 'No', 
                 formatNumber(d.equivHoursBase, 2),
                 d.extraReal > 0 ? formatNumber(d.extraReal, 1) : '',
                 formatNumber(d.equivHoursFinal, 2),
@@ -886,25 +932,21 @@
                     if (isHoliday) {
                         data.cell.styles.fontStyle = 'bold';
                         data.cell.styles.textColor = [185, 28, 28]; 
-                        data.cell.styles.fillColor = [254, 226, 226]; // Rojo más claro para feriado
+                        data.cell.styles.fillColor = [254, 226, 226];
                     }
                 },
                 styles: { fontSize: 8 }
             });
 
-            // Guardar PDF
             doc.save(`Reporte_6x2_${monthName.replace(/\s/g, '_')}.pdf`);
         }
-
+        
         // =====================================================================
         // INICIO DE LA APLICACIÓN
         // =====================================================================
         
         window.onload = () => {
-             // 1. Inicializar la UI con los valores por defecto/configurados
             updateUIFromState();
-            
-            // 2. Intentar inicializar Firebase y cargar datos (ahora con credenciales reales)
             initFirebase();
         };
 
