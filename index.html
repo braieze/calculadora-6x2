@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Salarial 6x2</title>
-    <!-- Carga de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Configuraciones de fuente */
@@ -38,15 +37,12 @@
         }
     </style>
 
-    <!-- CARGA DE LIBRERÍAS JSDPF Y AUTOTABLE -->
-    <!-- Estas librerías se usan solo para la descarga del reporte en PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
 </head>
 <body class="min-h-screen flex items-start justify-center p-4">
 
-    <!-- Contenedor Principal de la Aplicación -->
     <div id="app-container" class="w-full max-w-5xl bg-white rounded-xl card p-6 md:p-8 mt-4">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 mb-4">
             <h1 class="text-2xl font-bold text-indigo-700">
@@ -57,13 +53,11 @@
         
         <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
 
-        <!-- Panel de Configuración -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Mes</label>
                 <select id="input-month" name="month" class="input-style" onchange="handleConfigChange()">
-                    <!-- Opciones se llenarán con JS -->
-                </select>
+                    </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Año</label>
@@ -98,23 +92,19 @@
             Generar/Actualizar Horario y Calcular Salario
         </button>
 
-        <!-- Sección de Resultados (Oculta hasta el cálculo) -->
         <div id="results-section" class="hidden mt-6 border-t pt-6">
             <h2 class="text-xl font-bold text-indigo-700 mb-4">Resumen de Ganancias</h2>
             <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium mb-6">
-                <!-- Cards de resumen aquí -->
-            </div>
+                </div>
 
             <div id="francos-info" class="p-3 bg-yellow-50 rounded-lg text-sm mb-4">
-                <!-- Información de francos aquí -->
-            </div>
+                </div>
 
             <button id="generate-pdf-button" class="w-full py-2 mb-6 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Descargar Reporte PDF
             </button>
             
-            <!-- Tabla de Detalle Diario -->
             <h3 class="text-lg font-bold text-gray-800 mb-3 border-t pt-4">Detalle Diario, Feriados y Horas Extra</h3>
             <p class="text-xs text-red-600 mb-3">
                 ⚠️ Marca la casilla "Es Feriado" para aplicar la equivalencia de 32 Horas (si trabajas) o 8 Horas (si es Franco).
@@ -133,15 +123,13 @@
                         </tr>
                     </thead>
                     <tbody id="daily-detail-tbody" class="bg-white divide-y divide-gray-200">
-                        <!-- Filas de detalle diario aquí -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
 
     </div>
 
-    <!-- Script de Firebase y Lógica de la Aplicación -->
     <script type="module">
         // =====================================================================
         // CONFIGURACIÓN, CONSTANTES Y ESTADO GLOBAL
@@ -152,10 +140,21 @@
         const HOLIDAY_WORKED_EQUIV_HOURS = 32;
         const HOLIDAY_FREE_EQUIV_HOURS = 8;
         
-        // Variables de entorno de Canvas
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Variables de entorno de Canvas (Simulación para que sea portable)
+        // ** NOTA IMPORTANTE: Estas variables deben ser definidas ANTES de que
+        // se cargue este script 'module' si se usa en un entorno como Canvas.
+        // Aquí se definen valores por defecto para que el código sea ejecutable
+        // como un archivo HTML estático.
+        const appId = 'calc-6x2-prod'; 
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_DE_FIREBASE", // REEMPLAZAR
+            authDomain: "TU_AUTH_DOMAIN_DE_FIREBASE", // REEMPLAZAR
+            projectId: "TU_PROJECT_ID_DE_FIREBASE", // REEMPLAZAR
+            storageBucket: "TU_STORAGE_BUCKET_DE_FIREBASE", // REEMPLAZAR
+            messagingSenderId: "TU_MESSAGING_SENDER_ID_DE_FIREBASE", // REEMPLAZAR
+            appId: "TU_APP_ID_DE_FIREBASE" // REEMPLAZAR
+        };
+        const initialAuthToken = null; 
         
         // Instancias de Firebase y Estado de Autenticación
         let app;
@@ -174,7 +173,7 @@
                 initialTurn: 'Mañana',
                 discountRate: 0.18,
             },
-            extraHours: {},     // { "DD/MM/YYYY": 2, ... }
+            extraHours: {},      // { "DD/MM/YYYY": 2, ... }
             manualHolidays: {}, // { "DD/MM/YYYY": true, ... }
             calculationResult: null,
             isLoading: false,
@@ -201,6 +200,7 @@
         }
 
         function formatDateForInput(date) {
+            // Formato YYYY-MM-DD para input[type="date"]
             return date.toISOString().split('T')[0];
         }
 
@@ -212,6 +212,11 @@
         function formatCurrency(amount) {
             return amount.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
         }
+        
+        function formatNumber(amount, decimals = 2) {
+             return amount.toLocaleString('es-AR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
 
         // Lógica de equivalencias de horas según el día y turno (6x2)
         function getTurnEquivalencies(dayOfWeek, turnType) {
@@ -223,7 +228,7 @@
                 switch (turnType) {
                     case 'Mañana':
                     case 'Tarde': equivalentHours = 8; break;
-                    case 'Noche': equivalentHours = 12; break;
+                    case 'Noche': equivalentHours = 12; break; // Recargo Nocturno
                 }
             } else if (dayOfWeek === 6) { // Sábado
                 switch (turnType) {
@@ -235,8 +240,8 @@
                 turnBaseName = 'Domingo ' + turnType;
                 switch (turnType) {
                     case 'Mañana':
-                    case 'Tarde': realHours = 8; equivalentHours = 24; break;
-                    case 'Noche': realHours = 8; equivalentHours = 28; break;
+                    case 'Tarde': realHours = 8; equivalentHours = 24; break; // Recargo Dominical (Triple)
+                    case 'Noche': realHours = 8; equivalentHours = 28; break; // Recargo Dominical + Nocturno
                 }
             }
             return { realHours, equivalentHours, turnBaseName };
@@ -284,20 +289,27 @@
             document.getElementById('input-lastFrancoDate').value = config.lastFrancoDate;
             document.getElementById('input-initialTurn').value = config.initialTurn;
             document.getElementById('input-discountRate').value = config.discountRate;
-            document.getElementById('input-month').value = config.month;
-
+            
             // 2. Llenar opciones de meses
             const monthSelect = document.getElementById('input-month');
-            if (monthSelect.options.length === 0) {
+            const currentSelectedMonth = monthSelect.value;
+            
+            // Llenar solo si está vacío para evitar redibujado excesivo
+            if (monthSelect.options.length === 0 || monthSelect.options.length === 12) {
+                 // Vaciar y rellenar si el año cambió, o si es la primera carga
+                monthSelect.innerHTML = ''; 
                 Array.from({ length: 12 }, (_, i) => i + 1).forEach(m => {
                     const option = document.createElement('option');
                     option.value = m;
+                    // Obtener nombre del mes para el año configurado
                     option.textContent = new Date(config.year, m - 1).toLocaleDateString('es-AR', { month: 'long' });
                     monthSelect.appendChild(option);
                 });
                 monthSelect.value = config.month;
+            } else {
+                 monthSelect.value = config.month;
             }
-            
+
             // 3. Mostrar Resultados (se encarga de renderizar la tabla y el resumen)
             renderCalculationResults();
 
@@ -319,23 +331,30 @@
         // Rutas de Firestore
         function getConfigDocRef() {
             if (!db || !userId) return null;
+            // Estructura: artifacts/{appId}/users/{userId}/config/salary
             return doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
         }
         
         function getDataDocRef(monthDocId) {
             if (!db || !userId) return null;
-            // Documento que guarda tanto horas extra como flags de feriado para un mes específico
+            // Estructura: artifacts/{appId}/users/{userId}/data/{YYYY-MM}
             return doc(db, 'artifacts', appId, 'users', userId, 'data', monthDocId);
         }
 
         // 1. Inicialización y Autenticación
         const initFirebase = async () => {
-            setLogLevel('Debug');
+            // setLogLevel('Debug'); // Descomentar para debug de Firebase
             updateStatus('info', 'Inicializando Firebase...');
 
-            if (Object.keys(firebaseConfig).length === 0) {
-                console.error("Firebase config no está disponible.");
-                updateStatus('error', "Error de Configuración de Firebase.");
+            if (Object.keys(firebaseConfig).length === 0 || firebaseConfig.apiKey === "TU_API_KEY_DE_FIREBASE") {
+                console.error("Firebase config no está disponible o incompleta.");
+                updateStatus('error', "Error de Configuración: Reemplace las credenciales de Firebase.");
+                // Establecer autenticación temporal para que la aplicación funcione localmente sin persistencia
+                userId = crypto.randomUUID();
+                isAuthReady = true;
+                document.getElementById('user-info').textContent = `ID Temporal: ${userId.substring(0, 8)}... (Sin Persistencia)`;
+                updateUIFromState();
+                calculateSchedule(false);
                 return;
             }
 
@@ -344,11 +363,12 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Intenta autenticar
+                // Intenta autenticar (usando custom token si está disponible, sino anónimo)
+                // NOTA: Para implementar Google Sign-In, se debería usar signInWithPopup(auth, provider) aquí.
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    await signInAnonymously(auth);
+                    await signInAnonymously(auth); // Usado para la mayoría de los casos de uso simple/temporal
                 }
 
                 onAuthStateChanged(auth, (user) => {
@@ -356,15 +376,15 @@
                         userId = user.uid;
                         isAuthReady = true;
                         document.getElementById('user-info').textContent = `UID: ${userId.substring(0, 8)}...`;
-                        updateStatus('success', 'Conexión a Firebase Establecida.');
+                        updateStatus('success', 'Conexión a Firebase Establecida. Datos cargados.');
                         // Iniciar listeners de datos
                         setupDataListeners(); 
                     } else {
-                        // Fallback si la autenticación falla, aunque se intentó anónimamente
+                        // Fallback si la autenticación falla
                         userId = crypto.randomUUID(); 
                         isAuthReady = true; 
                         document.getElementById('user-info').textContent = `ID Temporal: ${userId.substring(0, 8)}...`;
-                        updateStatus('info', 'Sesión anónima iniciada. Datos temporales. Guarda tu ID si quieres conservar los datos.');
+                        updateStatus('info', 'Sesión anónima iniciada. Los datos NO se conservarán a largo plazo.');
                     }
                     updateUIFromState();
                 });
@@ -401,7 +421,7 @@
             if (!isAuthReady || !userId || !db) return;
             
             const config = appState.config;
-            // Usamos DD/MM/YYYY para las keys internas del objeto
+            // ID del documento: YYYY-MM
             const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
             const dataRef = getDataDocRef(monthDocId);
             if (!dataRef) return;
@@ -422,8 +442,8 @@
 
         function setupDataListeners() {
             if (!isAuthReady || !userId || !db) return;
-
-            // Listener de Configuración
+            
+            // 3.1 Listener de Configuración
             if (unsubscribeConfig) unsubscribeConfig();
             const configRef = getConfigDocRef();
             if (configRef) {
@@ -432,8 +452,11 @@
                         const data = docSnap.data();
                         appState.config = { 
                             ...appState.config, ...data,
+                            // Asegurar que los valores numéricos se mantengan como Number
                             valorHora: Number(data.valorHora) || appState.config.valorHora,
                             discountRate: Number(data.discountRate) || appState.config.discountRate,
+                            month: Number(data.month) || appState.config.month,
+                            year: Number(data.year) || appState.config.year,
                         };
                         updateUIFromState();
                     } else {
@@ -446,7 +469,7 @@
                 });
             }
 
-            // Listener de Datos (Horas Extra y Feriados Manuales)
+            // 3.2 Listener de Datos (Horas Extra y Feriados Manuales)
             if (unsubscribeData) unsubscribeData();
             const monthDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
             const dataRef = getDataDocRef(monthDocId);
@@ -465,6 +488,7 @@
                     if (appState.calculationResult) calculateSchedule(false); 
                 }, (error) => {
                     console.error("Error fetching month data:", error);
+                    updateStatus('error', "Error al cargar datos de mes.");
                 });
             }
         }
@@ -477,22 +501,37 @@
             const newConfig = {
                 month: parseInt(document.getElementById('input-month').value),
                 year: parseInt(document.getElementById('input-year').value),
+                // Usar parseFloat para valores de hora/descuento
                 valorHora: parseFloat(document.getElementById('input-valorHora').value) || appState.config.valorHora,
                 lastFrancoDate: document.getElementById('input-lastFrancoDate').value,
                 initialTurn: document.getElementById('input-initialTurn').value,
                 discountRate: parseFloat(document.getElementById('input-discountRate').value) || appState.config.discountRate,
             };
+            
+            // Verificar si el cambio de mes/año requiere re-suscribir el listener de datos mensuales
+            const oldDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
+            const newDocId = `${newConfig.year}-${String(newConfig.month).padStart(2, '0')}`;
+
             appState.config = newConfig;
             saveConfig();
-            // Esto es crucial: re-setear el listener de datos para el nuevo mes/año
-            setupDataListeners(); 
-            updateUIFromState();
-            calculateSchedule(false); 
+            
+            if (oldDocId !== newDocId) {
+                // Si cambiamos de mes/año, debemos resetear el listener para cargar los datos correctos
+                setupDataListeners(); 
+            } else {
+                 // Si solo cambió la hora/fecha franco/etc, sólo actualizamos la UI y recalculamos
+                updateUIFromState();
+                calculateSchedule(false);
+            }
         }
 
+        // Se registra en el scope global para que los elementos HTML puedan llamarla
+        window.handleConfigChange = handleConfigChange;
+        
         // Maneja el cambio de horas extra en la tabla
         window.handleExtraChange = function(dateKey, inputElement) {
             const hours = parseFloat(inputElement.value) || 0;
+            // Usar DD/MM/YYYY para las keys internas
             appState.extraHours[dateKey] = hours;
             saveData(); 
             // El onSnapshot de datos triggerá el recalculado.
@@ -512,41 +551,63 @@
         // =====================================================================
         // LÓGICA DE CÁLCULO
         // =====================================================================
+        
+        // Inicia el cálculo al hacer clic en el botón
+        calculateButtonEl.addEventListener('click', () => calculateSchedule(true));
 
         function calculateSchedule(initialCalculation = true) {
             if (initialCalculation) setLoading(true);
 
             const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
             
+            // Validación básica
+            if (!lastFrancoDate || !valorHora || isNaN(valorHora) || valorHora <= 0) {
+                 if (initialCalculation) setLoading(false);
+                 updateStatus('error', 'Por favor, ingrese un Valor de Hora Bruta y una Fecha de Último Franco válidos.');
+                 appState.calculationResult = null;
+                 updateUIFromState();
+                 return;
+            }
+
+            // Establecer el día de inicio (Día 1 del mes a calcular)
             let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
+            
+            // Obtener el punto de referencia del ciclo
             const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
             const dayAfterFranco = new Date(lastFrancoDay2.getTime());
-            dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
-            
+            dayAfterFranco.setDate(dayAfterFranco.getDate() + 1); // Día 1 del ciclo de 6x2
+
             const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
             let dailyResults = [];
             let francosDates = [];
             
+            // El ciclo maestro de 24 días (3 semanas de 8 días: 6 trabajo + 2 franco)
             const masterCycle = [
                 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 
                 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 
                 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'
             ];
             
+            // Calcular el offset inicial basado en el Turno Post-Franco configurado
             let baseOffset = 0;
             if (initialTurn === 'Noche') baseOffset = 8;
             else if (initialTurn === 'Tarde') baseOffset = 16;
             
+            // Calcular la diferencia en días entre el día de referencia y el inicio del mes a calcular
             const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
+            // El índice del ciclo donde debe empezar el mes
             let startOffset = (baseOffset + diffDays) % 24; 
             if (startOffset < 0) startOffset += 24; 
 
             let dayCounter = 0;
-            while (currentDate.getMonth() === month - 1 && dayCounter < 31) {
-                const dayOfWeek = currentDate.getDay(); 
-                const dateString = formatDateForDisplay(currentDate); // DD/MM/YYYY
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            // Iterar sobre todos los días del mes
+            while (dayCounter < daysInMonth) {
+                const dayOfWeek = currentDate.getDay(); // 0 (Dom) a 6 (Sáb)
+                const dateString = formatDateForDisplay(currentDate); // DD/MM/YYYY (Usado como Key para Extras/Feriados)
                 const dateKey = formatDateForInput(currentDate); // YYYY-MM-DD
                 
                 // --- Determinar si es Feriado (MANUAL) ---
@@ -563,7 +624,7 @@
                     realHours = cycleStatus !== 'Franco' ? 8 : 0; 
                     
                     if (cycleStatus === 'Franco') {
-                        // Feriado en Franco: 8 horas equivalentes
+                        // Feriado en Franco: 8 horas equivalentes de compensación
                         equivalentHours = HOLIDAY_FREE_EQUIV_HOURS; 
                         francosDates.push(dateString + ' (Feriado)');
                     } else {
@@ -571,7 +632,7 @@
                         equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
                     }
                 } 
-                // Lógica Normal
+                // Lógica Normal (No es Feriado)
                 else {
                     if (cycleStatus === 'Franco') {
                         francosDates.push(dateString);
@@ -600,6 +661,7 @@
             
             // --- Cálculo Final con Horas Extra ---
             let totalEquivalentHours = 0;
+            let totalExtraHoursReal = 0;
             const hourlyRate = parseFloat(valorHora) || 0;
 
             const finalDailyResults = dailyResults.map(day => {
@@ -611,6 +673,7 @@
                 if (dayExtraReal > 0) {
                     // La hora extra se suma como 1.5 veces el valor.
                     dayExtraEquivalent = (dayExtraReal * EXTRA_HOUR_MULTIPLIER);
+                    totalExtraHoursReal += dayExtraReal;
                 }
                 
                 const finalEquivHours = day.equivHoursBase + dayExtraEquivalent;
@@ -635,6 +698,7 @@
                 dailyResults: finalDailyResults,
                 francosDates,
                 totalEquivalentHours,
+                totalExtraHoursReal,
                 totalBruto,
                 totalDescuento,
                 totalNeto,
@@ -663,7 +727,7 @@
             summaryCardsEl.innerHTML = `
                 <div class="p-3 bg-gray-50 rounded-lg">
                     <p class="text-gray-500">H. Eq. Totales</p>
-                    <p class="text-lg text-gray-900 font-extrabold">${result.totalEquivalentHours.toFixed(2)}</p>
+                    <p class="text-lg text-gray-900 font-extrabold">${formatNumber(result.totalEquivalentHours)}</p>
                 </div>
                 <div class="p-3 bg-red-50 rounded-lg">
                     <p class="text-gray-500">Desc. (${result.discountRate.toFixed(0)}%)</p>
@@ -679,146 +743,160 @@
                 </div>
             `;
 
-            // 2. Renderizar Francos
+            // 2. Renderizar Información de Francos
             francosInfoEl.innerHTML = `
-                <strong class="text-yellow-800">🗓️ Francos del Mes:</strong>
-                <p class="mt-1 text-yellow-700">${result.francosDates.join(', ') || 'No hay francos programados.'}</p>
+                <p class="font-bold text-yellow-800">Días Francos en el Mes (${result.francosDates.length}):</p>
+                <p class="mt-1">${result.francosDates.join(' • ')}</p>
             `;
 
             // 3. Renderizar Tabla de Detalle Diario
-            tbodyEl.innerHTML = ''; // Limpiar tabla
-            result.dailyResults.forEach(day => {
-                let rowClass = day.turn.includes('Franco') && !day.isHoliday ? 'bg-yellow-50' : 'hover:bg-gray-50';
-                if (day.isHoliday && day.turn.includes('Franco')) {
-                    rowClass = 'bg-amber-100 border-l-4 border-amber-500'; // Feriado Libre (8h)
-                } else if (day.isHoliday) {
-                    rowClass = 'bg-red-100 border-l-4 border-red-500'; // Feriado Trabajado (32h)
+            tbodyEl.innerHTML = result.dailyResults.map(day => {
+                const isFranco = day.turn.includes('Franco');
+                const isFeriado = day.isHoliday;
+                
+                let rowClasses = 'hover:bg-gray-50';
+                if (isFranco) {
+                    rowClasses = 'bg-yellow-50 hover:bg-yellow-100 font-semibold';
+                } else if (isFeriado) {
+                    rowClasses = 'bg-red-50 hover:bg-red-100 font-extrabold text-red-700';
                 }
-                
-                const isWorkDay = !day.turn.includes('Franco') || day.isHoliday;
-                
-                // Input de Horas Extra
-                const extraHoursInput = isWorkDay ? `
-                    <input 
-                        type="number" 
-                        class="w-16 p-1 rounded-md border border-gray-300 text-center text-xs focus:ring-indigo-500 focus:border-indigo-500"
-                        min="0"
-                        step="0.5"
-                        placeholder="0"
-                        value="${appState.extraHours[day.date] || ''}"
-                        onblur="handleExtraChange('${day.date}', this)" 
-                    />
-                ` : '---';
 
-                // Checkbox de Feriado Manual
-                const holidayCheckbox = `
-                    <input 
-                        type="checkbox"
-                        class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                        ${appState.manualHolidays[day.date] ? 'checked' : ''}
-                        onchange="handleHolidayChange('${day.date}', this)"
-                    />
-                `;
+                // Usamos day.date (DD/MM/YYYY) para las keys de Firebase y la UI
+                const dateKeyForSave = day.date; 
 
-                const row = document.createElement('tr');
-                row.className = rowClass;
-                row.innerHTML = `
-                    <td class="px-3 py-2 whitespace-nowrap">${day.date} (${day.day.substring(0, 3)})</td>
-                    <td class="px-3 py-2 whitespace-nowrap font-medium text-indigo-600">${day.turn}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-center">${holidayCheckbox}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-right font-bold">${day.equivHoursBase.toFixed(2)}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-center">${extraHoursInput}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-right font-bold">${day.equivHoursFinal.toFixed(2)}</td>
-                    <td class="px-3 py-2 whitespace-nowrap text-right font-bold text-green-700">${formatCurrency(day.dailyBruto)}</td>
+                return `
+                    <tr class="${rowClasses}">
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-900">${day.date} - ${day.day.substring(0, 3)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-700">${day.turn}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                            <input type="checkbox" 
+                                class="form-checkbox h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                ${isFeriado ? 'checked' : ''}
+                                onchange="handleHolidayChange('${dateKeyForSave}', this)"
+                            >
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right">${formatNumber(day.equivHoursBase)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                            <input type="number" 
+                                value="${day.extraReal || ''}"
+                                class="w-16 text-center border rounded p-1 text-xs"
+                                step="0.5" min="0"
+                                onchange="handleExtraChange('${dateKeyForSave}', this)"
+                            >
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right font-bold ${isFeriado ? 'text-red-700' : ''}">${formatNumber(day.equivHoursFinal)}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right font-bold">${formatCurrency(day.dailyBruto)}</td>
+                    </tr>
                 `;
-                tbodyEl.appendChild(row);
-            });
+            }).join('');
         }
 
         // =====================================================================
         // GENERACIÓN DE PDF
         // =====================================================================
         
-        function generatePdf() {
+        generatePdfButtonEl.addEventListener('click', generatePDFReport);
+
+        function generatePDFReport() {
             const result = appState.calculationResult;
-            if (!result) {
-                updateStatus('error', "Por favor, primero genera el cálculo del horario.");
-                return;
-            }
+            if (!result) return updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
 
-            // FIX: Verificar la disponibilidad de jspdf de forma segura
-            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof doc.autoTable !== 'function') {
-                 updateStatus('error', "Error: Las librerías de PDF no están cargadas. Por favor, espera y vuelve a intentarlo.");
-                 return;
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            // @ts-ignore: Desactivar la verificación de tipos para window.jsPDF y autoTable
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF();
             
-            const { totalBruto, totalDescuento, totalNeto, discountRate, dailyResults } = result;
-            const config = appState.config;
-            const monthName = new Date(config.year, config.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-
-            // Título y Resumen
-            doc.setFontSize(18); doc.text(`REPORTE SALARIAL MENSUAL`, 105, 15, null, null, 'center');
-            doc.setFontSize(12); doc.text(`Cálculo para ${monthName}`, 105, 22, null, null, 'center');
-            doc.setFillColor(240, 240, 240); doc.rect(15, 30, 180, 40, 'F'); 
-            doc.setFontSize(10); doc.text('RESUMEN', 17, 35);
-            doc.setFontSize(12); doc.text('BRUTO TOTAL:', 20, 42); doc.text(formatCurrency(totalBruto), 190, 42, null, null, 'right');
-            doc.text(`DESCUENTO (${discountRate.toFixed(0)}%):`, 20, 50);
-            doc.setTextColor(217, 48, 37); doc.text(`- ${formatCurrency(totalDescuento)}`, 190, 50, null, null, 'right');
-            doc.setTextColor(0, 0, 0); 
-            doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-            doc.setFillColor(217, 234, 211); doc.rect(15, 58, 180, 10, 'F');
-            doc.text('NETO (EN MANO):', 20, 65); doc.text(formatCurrency(totalNeto), 190, 65, null, null, 'right');
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(10); 
-            if(userId) doc.text(`UID: ${userId}`, 15, 75); 
-
-            // Detalle Diario (Tabla)
-            doc.setFontSize(12); doc.text('Detalle Diario (Horas y Equivalencias)', 15, 85);
+            const { month, year } = appState.config;
+            const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
             
-            const tableColumns = ["Fecha", "Día", "Turno Base", "Feriado", "H. Base", "H. Extra", "H. Eq. Total", "Monto Bruto"];
-            const tableRows = dailyResults.map(r => [
-                r.date, r.day, r.turn, r.isHoliday ? '✅' : '❌', r.equivHoursBase.toFixed(2), 
-                r.extraReal.toFixed(2), r.equivHoursFinal.toFixed(2), formatCurrency(r.dailyBruto),
-            ]);
+            const title = `Reporte Salarial 6x2 - ${monthName}`;
+            
+            // Header
+            doc.setFontSize(16);
+            doc.text(title, 14, 20);
+            
+            doc.setFontSize(10);
+            doc.text(`Valor Hora Bruta: ${formatCurrency(appState.config.valorHora)}`, 14, 26);
+            doc.text(`Desc. Afiliación: ${result.discountRate.toFixed(0)}%`, 14, 31);
+            doc.text(`Horas Extra Reales: ${result.totalExtraHoursReal}`, 14, 36);
 
+            // Resumen de Ganancias (Tabla de Resumen)
             doc.autoTable({
-                startY: 90, head: [tableColumns], body: tableRows, theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-                headStyles: { fillColor: [207, 226, 243] }, 
+                startY: 45,
+                head: [['Total Horas Eq.', 'Bruto Total', 'Descuento', 'NETO FINAL']],
+                body: [[
+                    formatNumber(result.totalEquivalentHours),
+                    formatCurrency(result.totalBruto),
+                    formatCurrency(result.totalDescuento),
+                    formatCurrency(result.totalNeto),
+                ]],
+                theme: 'striped',
+                headStyles: { fillColor: [55, 48, 163] }, // Índigo 700
                 columnStyles: {
-                    0: { cellWidth: 16 }, 3: { cellWidth: 10, halign: 'center' }, 
-                    4: { cellWidth: 12, halign: 'center' }, 5: { cellWidth: 12, halign: 'center' }, 
-                    6: { cellWidth: 12, halign: 'center' }, 7: { halign: 'right' }, 
+                    0: { fontStyle: 'bold' },
+                    3: { fontStyle: 'bold', fillColor: [187, 247, 208] }, // Verde Claro
                 },
-                bodyStyles: (data) => {
-                    const rowData = dailyResults[data.row.index];
-                    if (rowData.isHoliday && rowData.turn.includes('Franco')) return { fillColor: [255, 237, 196] }; 
-                    if (rowData.isHoliday) return { fillColor: [254, 202, 202] }; 
-                    if (rowData.turn.includes('Franco') && !rowData.isHoliday) return { fillColor: [255, 242, 204] }; 
-                    return {};
-                }
+                styles: { fontSize: 10 }
             });
 
-            doc.setFontSize(8); doc.text("Generado por la Calculadora de Rotación 6x2.", 105, doc.internal.pageSize.height - 10, null, null, 'center');
-            doc.save(`Reporte_Salarial_${monthName}.pdf`);
-            updateStatus('success', "PDF generado con éxito y descargado.");
+            // Tabla de Detalle Diario
+            const finalY = doc.autoTable.previous.finalY;
+            doc.setFontSize(12);
+            doc.text('Detalle Diario de Horas y Turnos', 14, finalY + 15);
+            
+            const tableData = result.dailyResults.map(d => [
+                d.date,
+                d.day,
+                d.turn,
+                d.isHoliday ? 'Sí' : 'No',
+                formatNumber(d.equivHoursBase, 2),
+                d.extraReal > 0 ? formatNumber(d.extraReal, 1) : '',
+                formatNumber(d.equivHoursFinal, 2),
+                formatCurrency(d.dailyBruto)
+            ]);
+            
+            doc.autoTable({
+                startY: finalY + 20,
+                head: [['Fecha', 'Día', 'Turno', 'Feriado?', 'H. Eq. Base', 'H. Extra (R)', 'H. Eq. Total', 'Monto Bruto']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [75, 85, 99] }, // Gris Oscuro
+                columnStyles: {
+                    4: { halign: 'right' },
+                    5: { halign: 'center' },
+                    6: { halign: 'right', fontStyle: 'bold' },
+                    7: { halign: 'right', fontStyle: 'bold' },
+                },
+                didParseCell: (data) => {
+                    // Resaltar días francos en la tabla
+                    const turn = data.row.raw[2];
+                    if (turn.includes('Franco')) {
+                        data.cell.styles.fillColor = [255, 251, 235]; // Amarillo Claro
+                    }
+                    // Resaltar feriados
+                    const isHoliday = data.row.raw[3] === 'Sí';
+                     if (isHoliday) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [185, 28, 28]; // Rojo
+                    }
+                },
+                styles: { fontSize: 8 }
+            });
+
+            // Guardar PDF
+            doc.save(`Reporte_6x2_${monthName.replace(/\s/g, '_')}.pdf`);
         }
 
-
         // =====================================================================
-        // ASIGNACIÓN DE EVENT LISTENERS Y ARRANQUE
+        // INICIO DE LA APLICACIÓN
         // =====================================================================
-
+        
+        // Ejecutar al cargar la página
         window.onload = () => {
-            // Asignar listeners a botones de acción
-            calculateButtonEl.addEventListener('click', () => calculateSchedule(true));
-            generatePdfButtonEl.addEventListener('click', generatePdf);
+             // 1. Inicializar la UI con los valores por defecto/configurados
+            updateUIFromState();
             
-            // Inicialización de la aplicación
+            // 2. Intentar inicializar Firebase y cargar datos
             initFirebase();
-            updateUIFromState(); // Renderizar estado inicial de inputs
         };
 
     </script>
