@@ -1,203 +1,319 @@
-// --- Importaciones de los módulos (Rutas y nombres deben coincidir) ---
-import { initFirebase, signInAnonymouslyUser, signInWithGoogle, signOutUser, saveConfig, saveData, setupDataListeners } from './firebase.js';
-import { calculateSchedule } from './calcLogic.js';
-import { updateUIFromState, updateStatus, setLoading, updateAuthUI, generatePDFReport as renderPDF } from './uiRenderer.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, 
+    signInAnonymously, 
+    signInWithCustomToken, 
+    onAuthStateChanged, 
+    GoogleAuthProvider, 
+    signInWithPopup, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    onSnapshot, 
+    getDoc,
+    setLogLevel
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- UTILIDADES DE INICIALIZACIÓN ---
-function getYesterdayDate() {
-    const date = new Date();
-    date.setDate(date.getDate() - 1);
-    return date.toISOString().split('T')[0];
-}
+// Configuración global (MANDATORIO: No modificar estas variables)
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
-// --- ESTADO GLOBAL ---
-let appState = {
-    // Valores iniciales (se sobrescribirán con Firestore si hay datos)
-    config: {
-        month: new Date().getDate() === 1 ? new Date().getMonth() : new Date().getMonth() + 1,
-        year: new Date().getFullYear(),
-        valorHora: 3758,
-        lastFrancoDate: getYesterdayDate(),
-        initialTurn: 'Mañana',
-        discountRate: 0.18,
-    },
-    extraHours: {},
-    manualHolidays: {},
-    calculationResult: null,
-    
-    // Estado de la Aplicación
-    userId: null,
-    userName: 'Usuario Local',
-    isAuthReady: false,
-    isGoogleAuthenticated: false,
-    isFirebaseActive: true, 
-    isLoading: false,
-    status: null,
+let app;
+let db;
+let auth;
+
+/**
+ * Obtiene la referencia al documento de configuración de un usuario para un mes/año específico.
+ * Colección: /artifacts/{appId}/users/{userId}/configs
+ * @param {string} userId - ID del usuario.
+ * @param {number} year - Año de la configuración.
+ * @param {number} month - Mes de la configuración (1-12).
+ * @returns {import('firebase/firestore').DocumentReference}
+ */
+const getConfigDocRef = (userId, year, month) => {
+    const configPath = `/artifacts/${appId}/users/${userId}/configs`;
+    return doc(db, configPath, `${year}-${month}`);
 };
 
-// --- MANEJADORES DE EVENTOS GLOBALES ---
-
-/** Maneja cambios en los inputs de configuración. */
-function handleConfigChange(inputEvent) {
-    const target = inputEvent.target;
-    const value = target.type === 'number' ? parseFloat(target.value) : target.value;
-    const name = target.name;
-    
-    const newConfig = { ...appState.config, [name]: value };
-    
-    // Si el mes o año cambia, puede necesitar cambiar el listener de datos.
-    const oldDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
-    const newDocId = `${newConfig.year}-${String(newConfig.month).padStart(2, '0')}`;
-
-    appState.config = newConfig;
-    
-    if (appState.isFirebaseActive && oldDocId !== newDocId) {
-        setupDataListeners(
-            appState.userId, 
-            appState.config, 
-            handleConfigUpdate, 
-            handleDataUpdate
-        );
-    } 
-
-    if (appState.userId && appState.isFirebaseActive) saveConfig(appState.userId, appState.config);
-    
-    // Re-calcular y actualizar UI localmente
-    runCalculation(false);
-}
-
-/** Maneja cambios en la tabla de horas extra (dispara saveData). */
-function handleExtraChange(dateKey, value) {
-    const hours = parseFloat(value) || 0;
-    if (hours > 0) {
-        appState.extraHours[dateKey] = hours;
-    } else {
-        delete appState.extraHours[dateKey];
-    }
-    if (appState.userId && appState.isFirebaseActive) saveData(appState.userId, appState.config, appState.extraHours, appState.manualHolidays);
-    runCalculation(false);
-}
-
-/** Maneja cambios en la tabla de feriados (dispara saveData). */
-function handleHolidayChange(dateKey, checked) {
-    if (checked) {
-        appState.manualHolidays[dateKey] = true;
-    } else {
-        delete appState.manualHolidays[dateKey];
-    }
-    if (appState.userId && appState.isFirebaseActive) saveData(appState.userId, appState.config, appState.extraHours, appState.manualHolidays);
-    runCalculation(false);
-}
-
-// --- FUNCIONES DE ACTUALIZACIÓN DE ESTADO (DESDE FIREBASE) ---
-
-/** Callback para actualizar la configuración desde Firestore. */
-function handleConfigUpdate(data) {
-    appState.config = { 
-        ...appState.config, 
-        ...data,
-        valorHora: Number(data.valorHora) || appState.config.valorHora,
-        discountRate: Number(data.discountRate) || appState.config.discountRate,
-        month: Number(data.month) || appState.config.month,
-        year: Number(data.year) || appState.config.year,
-    };
-    runCalculation(false);
-}
-
-/** Callback para actualizar los datos del mes (extras/feriados) desde Firestore. */
-function handleDataUpdate(extras, holidayFlags) {
-    appState.extraHours = extras;
-    appState.manualHolidays = holidayFlags;
-    runCalculation(false);
-}
+/**
+ * Obtiene la referencia al documento de datos de resultados de un usuario para un mes/año específico.
+ * Colección: /artifacts/{appId}/users/{userId}/data
+ * @param {string} userId - ID del usuario.
+ * @param {number} year - Año de los datos.
+ * @param {number} month - Mes de los datos (1-12).
+ * @returns {import('firebase/firestore').DocumentReference}
+ */
+const getDataDocRef = (userId, year, month) => {
+    const dataPath = `/artifacts/${appId}/users/${userId}/data`;
+    return doc(db, dataPath, `${year}-${month}`);
+};
 
 
-// --- LÓGICA DE CÁLCULO Y RENDERIZADO ---
+/**
+ * Obtiene la referencia al documento de Perfil de Usuario.
+ * Colección: /artifacts/{appId}/users/{userId}/profile/userProfile
+ * @param {string} userId - ID del usuario.
+ * @returns {import('firebase/firestore').DocumentReference}
+ */
+const getProfileDocRef = (userId) => {
+    const profilePath = `/artifacts/${appId}/users/${userId}/profile`;
+    // Usamos un ID fijo 'userProfile' para el documento de perfil
+    return doc(db, profilePath, 'userProfile'); 
+};
 
-/** Ejecuta el cálculo y actualiza la UI. */
-function runCalculation(isInitial) {
-    if (isInitial) setLoading(true);
 
-    const result = calculateSchedule(appState.config, appState.extraHours, appState.manualHolidays);
-    
-    appState.calculationResult = result;
+// -------------------- FUNCIONES PÚBLICAS DE AUTENTICACIÓN --------------------
 
-    if (isInitial) {
-        setLoading(false);
-        updateStatus(result ? 'success' : 'error', result ? 'Cálculo generado. ¡Añade tus extras y feriados!' : 'Por favor, ingrese Valor Hora y Fecha de Último Franco válidos.');
-    }
-
-    // El último paso es renderizar la UI con el nuevo estado
-    updateUIFromState(appState, handleExtraChange, handleHolidayChange);
-}
-
-// --- FUNCIÓN DE INICIALIZACIÓN DE LA APLICACIÓN ---
-
-/** Listener principal de Firebase Auth. */
-function authStateChangedHandler(user) {
-    if (user) {
-        appState.userId = user.uid;
-        appState.userName = user.displayName || user.email || (user.isAnonymous ? 'Temporal' : 'Usuario');
-        appState.isGoogleAuthenticated = !user.isAnonymous && user.providerData.some(p => p.providerId === 'google.com');
-        appState.isAuthReady = true;
+/**
+ * Inicializa Firebase y establece el listener de autenticación.
+ * @param {string} initialAuthToken - Token de autenticación inicial.
+ * @param {(user: import('firebase/auth').User | null) => void} onAuthStateChangeCallback - Callback a llamar al cambiar el estado de autenticación.
+ * @returns {Promise<void>}
+ */
+export async function initFirebase(initialAuthToken, onAuthStateChangeCallback) {
+    try {
+        setLogLevel('debug'); // Para depuración
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
         
-        updateStatus('success', `Sesión iniciada. Bienvenido, ${appState.userName}!`);
-        
-        // Configuramos los listeners de datos que dependen del userId
-        setupDataListeners(appState.userId, appState.config, handleConfigUpdate, handleDataUpdate);
-        
-    } else {
-        // Si no hay usuario (ej: después de un signOut), intentamos el anónimo
-        signInAnonymouslyUser(); 
-        appState.isGoogleAuthenticated = false;
-        appState.isAuthReady = true;
-        
-        // Ejecutamos cálculo inicial si no estamos usando Firebase (fallback)
-        if (!appState.isFirebaseActive) runCalculation(true);
-    }
-    
-    // Actualizar la UI de Auth
-    updateAuthUI(appState.userId, appState.userName, appState.isGoogleAuthenticated, signInWithGoogle, signOutUser);
-}
+        // 1. Establecer el listener de estado de autenticación
+        onAuthStateChanged(auth, onAuthStateChangeCallback);
 
-
-/** Configura todos los listeners de la UI y lanza la inicialización. */
-function setupEventListeners() {
-    // Attach listeners to config inputs
-    document.querySelectorAll('.input-style').forEach(input => {
-        // Usamos el evento 'change' en lugar de 'input' para solo guardar y recalcular al terminar de editar
-        input.addEventListener('change', handleConfigChange);
-    });
-
-    document.getElementById('calculate-schedule-button').addEventListener('click', () => runCalculation(true));
-    
-    document.getElementById('generate-pdf-button').addEventListener('click', () => {
-        if (appState.calculationResult) {
-            renderPDF(appState.calculationResult, appState.config);
+        // 2. Intentar autenticación inicial
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
         } else {
-            updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
+            // Intentamos anónima como base, el listener lo detectará.
+            await signInAnonymously(auth); 
         }
-    });
+    } catch (error) {
+        console.error("Error inicializando Firebase o autenticando:", error);
+    }
 }
 
-// --- INICIO ---
-window.onload = () => {
-    // 1. Configurar eventos de la UI
-    setupEventListeners();
-
-    // 2. Inicializar Firebase
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    const firebaseInitResult = initFirebase(initialAuthToken, authStateChangedHandler);
-    
-    if (firebaseInitResult && firebaseInitResult.error) {
-        appState.isFirebaseActive = false;
-        appState.userId = crypto.randomUUID(); 
-        appState.userName = 'Local (Error)';
-        appState.isAuthReady = true;
-        updateStatus('error', `Error Crítico: ${firebaseInitResult.message}. La aplicación funcionará sin persistencia.`);
-        runCalculation(true);
+/**
+ * Inicia sesión de forma anónima (usado como fallback).
+ */
+export async function signInAnonymouslyUser() {
+    try {
+        await signInAnonymously(auth);
+    } catch (error) {
+        console.error("Error al iniciar sesión anónimamente:", error);
     }
+}
+
+/**
+ * Inicia sesión con Google.
+ */
+export async function signInWithGoogle() {
+    try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Error al iniciar sesión con Google:", error);
+    }
+}
+
+/**
+ * Cierra la sesión del usuario.
+ */
+export async function signOutUser() {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+    }
+}
+
+
+// -------------------- FUNCIONES PÚBLICAS DE PERSISTENCIA --------------------
+
+/**
+ * Carga el perfil del usuario.
+ * @param {string} userId - ID del usuario.
+ * @returns {Promise<Object | null>} - El objeto de perfil si existe, o null.
+ */
+export async function getProfile(userId) {
+    try {
+        const profileDocRef = getProfileDocRef(userId);
+        const docSnap = await getDoc(profileDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data();
+        }
+        return null;
+    } catch (error) {
+        console.error("Error al obtener el perfil:", error);
+        return null;
+    }
+}
+
+/**
+ * Guarda el perfil del usuario.
+ * @param {string} userId - ID del usuario.
+ * @param {{ category: string, isTechnician: boolean }} profile - Objeto con los datos del perfil.
+ * @returns {Promise<void>}
+ */
+export async function setProfile(userId, profile) {
+    try {
+        const profileDocRef = getProfileDocRef(userId);
+        // Usamos merge para solo actualizar los campos que pasamos
+        await setDoc(profileDocRef, profile, { merge: true }); 
+        console.log("Perfil guardado exitosamente.");
+    } catch (error) {
+        console.error("Error al guardar el perfil:", error);
+    }
+}
+
+/**
+ * Carga la configuración del mes/año anterior para usar como valores iniciales.
+ * @param {string} userId - ID del usuario.
+ * @param {number} currentYear - Año actual.
+ * @param {number} currentMonth - Mes actual (1-12).
+ * @returns {Promise<Object | null>} - Configuración del mes anterior o null.
+ */
+export async function loadPreviousConfig(userId, currentYear, currentMonth) {
+    try {
+        // Calcular mes y año anterior
+        let prevMonth = currentMonth - 1;
+        let prevYear = currentYear;
+        if (prevMonth === 0) {
+            prevMonth = 12;
+            prevYear -= 1;
+        }
+
+        const docRef = getConfigDocRef(userId, prevYear, prevMonth);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            console.log(`Configuración del mes anterior (${prevYear}-${prevMonth}) cargada.`);
+            return docSnap.data();
+        }
+
+        console.log(`No se encontró configuración previa para ${prevYear}-${prevMonth}.`);
+        return null;
+
+    } catch (error) {
+        console.error("Error al cargar la configuración anterior:", error);
+        return null;
+    }
+}
+
+/**
+ * Establece los listeners en tiempo real para la configuración y los datos.
+ * @param {string} userId - ID del usuario.
+ * @param {{year: number, month: number}} currentPeriod - Período actual.
+ * @param {(config: Object) => void} onConfigUpdate - Callback para la actualización de configuración.
+ * @param {(data: Object) => void} onDataUpdate - Callback para la actualización de datos.
+ * @param {(profile: Object | null) => void} onProfileUpdate - Callback para la actualización de perfil.
+ * @returns {() => void} - Función para desuscribirse de todos los listeners.
+ */
+export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onDataUpdate, onProfileUpdate) {
+    if (!db || !userId) {
+        console.warn("Firestore no inicializado o userId no disponible.");
+        return () => {};
+    }
+
+    const { year, month } = currentPeriod;
+    const configDocRef = getConfigDocRef(userId, year, month);
+    const dataDocRef = getDataDocRef(userId, year, month);
+    const profileDocRef = getProfileDocRef(userId); 
+
+    // Función auxiliar para convertir Timestamps a Date, si es necesario
+    const convertTimestampToDate = (item) => {
+        if (item && item.date && typeof item.date.toDate === 'function') {
+            return { ...item, date: item.date.toDate() };
+        }
+        return item;
+    };
+
+    // 1. Listener de Configuración
+    const unsubscribeConfig = onSnapshot(configDocRef, (doc) => {
+        if (doc.exists()) {
+            onConfigUpdate(doc.data());
+        } else {
+            onConfigUpdate({}); 
+        }
+    }, (error) => console.error("Error en el listener de Config:", error));
+
+    // 2. Listener de Datos (Resultados)
+    const unsubscribeData = onSnapshot(dataDocRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            
+            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en el schedule
+            if (data.schedule && Array.isArray(data.schedule)) {
+                data.schedule = data.schedule.map(convertTimestampToDate);
+            }
+            
+            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en las fechas de pago
+            if (data.paymentDates && Array.isArray(data.paymentDates)) {
+                data.paymentDates = data.paymentDates.map(convertTimestampToDate);
+            }
+            
+            onDataUpdate(data);
+        } else {
+            onDataUpdate(null);
+        }
+    }, (error) => console.error("Error en el listener de Datos:", error));
     
-    // 3. Renderizar el estado inicial de la UI
-    updateUIFromState(appState, handleExtraChange, handleHolidayChange); 
-};
+    // 3. Listener de Perfil
+    const unsubscribeProfile = onSnapshot(profileDocRef, (doc) => {
+        if (doc.exists()) {
+            onProfileUpdate(doc.data());
+        } else {
+            onProfileUpdate(null);
+        }
+    }, (error) => console.error("Error en el listener de Perfil:", error));
+
+
+    // Retornar una función para desuscribirse de todos los listeners
+    return () => {
+        unsubscribeConfig();
+        unsubscribeData();
+        unsubscribeProfile();
+    };
+}
+
+/**
+ * Guarda la configuración del mes/año actual.
+ * @param {string} userId - ID del usuario.
+ * @param {Object} config - Objeto de configuración.
+ * @returns {Promise<void>}
+ */
+export function saveConfig(userId, config) {
+    if (!config || !config.year || !config.month) {
+        console.error("Configuración inválida. Se requiere year y month.");
+        return;
+    }
+    try {
+        const docRef = getConfigDocRef(userId, config.year, config.month);
+        // Usamos setDoc con merge para no sobrescribir todo el documento
+        setDoc(docRef, config, { merge: true }); 
+    } catch (error) {
+        console.error("Error al guardar la configuración:", error);
+    }
+}
+
+/**
+ * Guarda los resultados del cálculo (datos).
+ * @param {string} userId - ID del usuario.
+ * @param {Object} data - Objeto de datos (horario, horas extra, etc.).
+ * @returns {Promise<void>}
+ */
+export function saveData(userId, data) {
+    if (!data || !data.year || !data.month) {
+        console.error("Datos inválidos. Se requiere year y month.");
+        return;
+    }
+    try {
+        const docRef = getDataDocRef(userId, data.year, data.month);
+        // Usamos setDoc con merge para no sobrescribir todo el documento
+        setDoc(docRef, data, { merge: true });
+    } catch (error) {
+        console.error("Error al guardar los datos:", error);
+    }
+}
