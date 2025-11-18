@@ -190,23 +190,36 @@
                 return () => unsubscribe();
             }, []);
             
-            // Función para iniciar sesión con Google
+// Función para iniciar sesión con Google (CORREGIDA CON POPUP)
             const signInWithGoogle = useCallback(async () => {
                 if (!auth) return;
                 setIsLoading(true);
-                setStatus({ type: 'info', message: "Iniciando sesión con Google..." });
+                setStatus({ type: 'info', message: "Abriendo ventana de Google..." });
 
                 try {
                     const provider = new firebase.auth.GoogleAuthProvider();
-                    // Esto redirige la página para autenticarse.
-                    await auth.signInWithRedirect(provider); 
-
+                    
+                    // *** CAMBIO CLAVE: Usar 'signInWithPopup' en lugar de 'signInWithRedirect' ***
+                    const result = await auth.signInWithPopup(provider);
+                    // **************************************************************************
+                    
+                    // El 'onAuthStateChanged' (que ya tienes) se disparará automáticamente
+                    // y mostrará la calculadora.
+                    setStatus({ type: 'success', message: `¡Bienvenido, ${result.user.displayName}!` });
+                    
                 } catch (error) {
                     console.error("Google Sign-In Error:", error);
-                    setStatus({ type: 'error', message: `Fallo en el inicio de sesión: ${error.code}` });
+                    // Manejar errores comunes de pop-up
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        setStatus({ type: 'info', message: "Inicio de sesión cancelado." });
+                    } else if (error.code === 'auth/popup-blocked-by-browser') {
+                        setStatus({ type: 'error', message: "El navegador bloqueó la ventana emergente. Por favor, habilítalas." });
+                    } else {
+                        setStatus({ type: 'error', message: `Fallo en el inicio de sesión: ${error.code}` });
+                    }
                     setIsLoading(false);
                 }
-            }, []);
+            }, [auth]); // Asegúrate de que 'auth' esté en el array de dependencias si usas V9, si no, déjalo vacío [].
 
             // 2. Carga de Configuración del Usuario (Listener Firestore)
             useEffect(() => {
