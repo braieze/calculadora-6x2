@@ -6,9 +6,8 @@ import {
     saveConfig, 
     saveData, 
     setupDataListeners, 
-    loadPreviousConfig, // Nueva Importación
-    getProfile,         // Nueva Importación
-    setProfile          // Nueva Importación
+    loadPreviousConfig,
+    setProfile
 } from './firebase.js';
 import { calculateSchedule } from './calcLogic.js';
 import { 
@@ -17,10 +16,8 @@ import {
     setLoading, 
     updateAuthUI, 
     generatePDFReport, 
-    formatNumber,
     openModal,
-    closeModal,
-    populateProfileModal // Nueva Importación (Asumimos que la crearemos o la integramos aquí)
+    closeModal
 } from './uiRenderer.js';
 
 // Estado Global de la Aplicación
@@ -38,11 +35,12 @@ let appState = {
         initialTurn: 'Mañana',
     },
     data: null, // Resultado del cálculo
-    profile: null, // NUEVO: Datos fijos del usuario (Categoría, Técnico)
+    profile: null, // Datos fijos del usuario (Categoría, Técnico)
     isAuthReady: false,
+    isLoadingData: false, // Nuevo indicador de carga
 };
 
-// -------------------- MANEJO DE PERFIL (NUEVO) --------------------
+// -------------------- MANEJO DE PERFIL --------------------
 
 /**
  * Abre el modal de perfil y precarga los datos existentes.
@@ -76,8 +74,10 @@ async function handleProfileSubmit(e) {
 
     const newProfile = { category, isTechnician };
 
+    appState.isLoadingData = true;
     setLoading(true);
     await setProfile(appState.userId, newProfile); // Guarda en Firebase
+    appState.isLoadingData = false;
     setLoading(false);
 
     closeModal('profile-modal');
@@ -95,6 +95,7 @@ async function handleProfileSubmit(e) {
 async function loadInitialConfig(year, month) {
     if (!appState.userId) return;
 
+    appState.isLoadingData = true;
     setLoading(true);
     
     // 1. Intentar cargar la configuración del mes anterior
@@ -111,13 +112,9 @@ async function loadInitialConfig(year, month) {
     }
 
     // 2. Aplicar la configuración al UI (input fields)
-    document.getElementById('input-month').value = appState.config.month;
-    document.getElementById('input-year').value = appState.config.year;
-    document.getElementById('input-valorHora').value = appState.config.valorHora;
-    document.getElementById('input-discountRate').value = appState.config.discountRate;
-    document.getElementById('input-lastFrancoDate').value = appState.config.lastFrancoDate;
-    document.getElementById('input-initialTurn').value = appState.config.initialTurn;
+    syncInputsFromState();
 
+    appState.isLoadingData = false;
     setLoading(false);
 }
 
@@ -146,7 +143,7 @@ function initDataListeners(userId) {
             updateUIFromState(appState);
         },
         (profileData) => {
-            // NUEVO: Callback de Perfil
+            // Callback de Perfil
             appState.profile = profileData;
             
             // Si el perfil no existe y el usuario está autenticado, forzar la apertura del modal
@@ -175,7 +172,6 @@ function handleAuthStateChange(user) {
     if (user && user.uid) {
         // Si el usuario está logueado, inicializar listeners y cargar configuración
         initDataListeners(user.uid);
-        // Intentamos cargar la configuración inicial y el perfil (el listener de perfil se encarga de mostrar el modal)
         loadInitialConfig(appState.config.year, appState.config.month); 
     } else {
         // Usuario desconectado
@@ -183,8 +179,10 @@ function handleAuthStateChange(user) {
             appState.unsubscribeListeners();
             appState.unsubscribeListeners = null;
         }
-        // Puedes resetear la UI o mostrar un mensaje de inicio de sesión
+        // *CORRECCIÓN CLAVE*: Asegurar que si la auth termina sin usuario (anónimo no persiste, logout), la UI se desbloquee.
+        setLoading(false); 
         updateStatus('Inicia sesión para guardar y cargar tus datos.', 'info');
+        updateUIFromState(appState); // Refresca la UI (muestra valores por defecto si los hay)
     }
 }
 
@@ -198,7 +196,8 @@ function syncInputsFromState() {
     // Solo sincronizar si no estamos cargando explícitamente la config anterior
     document.getElementById('input-month').value = appState.config.month;
     document.getElementById('input-year').value = appState.config.year;
-    document.getElementById('input-valorHora').value = appState.config.valorHora;
+    // Usar toFixed(2) para asegurar que se muestre como número flotante
+    document.getElementById('input-valorHora').value = appState.config.valorHora.toFixed(2); 
     document.getElementById('input-discountRate').value = appState.config.discountRate;
     document.getElementById('input-lastFrancoDate').value = appState.config.lastFrancoDate;
     document.getElementById('input-initialTurn').value = appState.config.initialTurn;
@@ -212,7 +211,8 @@ function collectConfigFromUI() {
     return {
         month: parseInt(document.getElementById('input-month').value),
         year: parseInt(document.getElementById('input-year').value),
-        valorHora: parseFloat(document.getElementById('input-valorHora').value) || 0,
+        // Asegurar que el valor sea un número, 0 si está vacío.
+        valorHora: parseFloat(document.getElementById('input-valorHora').value) || 0, 
         discountRate: parseFloat(document.getElementById('input-discountRate').value) || 0.18,
         lastFrancoDate: document.getElementById('input-lastFrancoDate').value,
         initialTurn: document.getElementById('input-initialTurn').value,
@@ -230,16 +230,16 @@ function startCalculation() {
     
     const newConfig = collectConfigFromUI();
     
-    // 1. Guardar la nueva configuración
+    // 1. Guardar la nueva configuración (dispara onSnapshot)
     appState.config = newConfig;
     saveConfig(appState.userId, newConfig);
 
+    appState.isLoadingData = true;
     setLoading(true);
     updateStatus('Calculando y generando horario...', 'info');
 
     try {
         // 2. Ejecutar la lógica de cálculo
-        // Nota: Pasamos el perfil para que la lógica lo use (ej: suma del título).
         const calculationResults = calculateSchedule(appState.config, appState.data, appState.profile);
 
         // 3. Guardar los resultados (esto dispara el onSnapshot y actualiza la UI)
@@ -250,6 +250,7 @@ function startCalculation() {
         console.error("Error durante el cálculo:", error);
         updateStatus(`Error en el cálculo: ${error.message}`, 'error');
     } finally {
+        appState.isLoadingData = false;
         setLoading(false);
     }
 }
@@ -272,8 +273,9 @@ function handlePeriodChange(e) {
         
         // La UI se actualizará automáticamente por initDataListeners -> onSnapshot
     } else {
-        // Si solo se cambia un valor sin cambiar el mes/año, solo actualizamos el estado (para evitar recálculos)
+        // Si solo se cambia un valor sin cambiar el mes/año, solo actualizamos el estado (para guardar en config)
         appState.config = newConfig;
+        saveConfig(appState.userId, newConfig);
     }
 }
 
@@ -288,7 +290,7 @@ function setupEventListeners() {
     document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
     document.getElementById('logout-btn').addEventListener('click', signOutUser);
     
-    // NUEVO: Perfil
+    // Perfil
     document.getElementById('profile-btn').addEventListener('click', openProfileModal);
     document.getElementById('profile-form').addEventListener('submit', handleProfileSubmit);
     document.getElementById('close-profile-modal-btn').addEventListener('click', () => closeModal('profile-modal'));
@@ -307,7 +309,10 @@ function setupEventListeners() {
         document.getElementById(id).addEventListener('change', (e) => {
             const newConfig = collectConfigFromUI();
             appState.config = newConfig;
-            saveConfig(appState.userId, newConfig);
+            // Guardar inmediatamente la configuración modificada
+            if (appState.userId) {
+                saveConfig(appState.userId, newConfig); 
+            }
         });
     });
 
@@ -315,6 +320,7 @@ function setupEventListeners() {
     document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
         if (e.target.dataset.field === 'isHoliday' || e.target.dataset.field === 'extraHours') {
             const index = parseInt(e.target.dataset.index);
+            // Si es checkbox, es booleano; si no, es flotante
             const value = e.target.type === 'checkbox' ? e.target.checked : parseFloat(e.target.value) || 0;
             
             if (appState.data && appState.data.schedule && index >= 0) {
@@ -350,11 +356,10 @@ function setupEventListeners() {
 
 // Iniciar la aplicación
 window.onload = function () {
-    // El initFirebase debe ser lo primero, antes de los listeners
-    initFirebase(
-        typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null, 
-        handleAuthStateChange
-    );
+    // Si el token inicial no está definido, se intentará la autenticación anónima.
+    const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    initFirebase(initialToken, handleAuthStateChange);
     setupEventListeners();
-    updateStatus('Cargando aplicación...', 'info');
+    updateStatus('Esperando autenticación...', 'info');
+    // El loading se desbloquea dentro de handleAuthStateChange
 };
