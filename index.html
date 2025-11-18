@@ -219,7 +219,7 @@
                     }
                     setIsLoading(false);
                 }
-            }, [auth]); // Asegúrate de que 'auth' esté en el array de dependencias si usas V9, si no, déjalo vacío [].
+            }, []); // Asegúrate de que 'auth' esté en el array de dependencias si usas V9, si no, déjalo vacío [].
 
             // 2. Carga de Configuración del Usuario (Listener Firestore)
             useEffect(() => {
