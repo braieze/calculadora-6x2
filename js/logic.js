@@ -31,13 +31,15 @@ function getTurnEquivalencies(dayOfWeek, turnType) {
     let equivalentHours = 8;
     let turnBaseName = turnType;
     
-    // ... (Mantener la lógica de equivalencias por día/turno exactamente igual)
+    // Lunes (1) a Viernes (5)
     if (dayOfWeek >= 1 && dayOfWeek <= 5) { 
         if (turnType === 'Noche') equivalentHours = 12;
+    // Sábado (6)
     } else if (dayOfWeek === 6) { 
         if (turnType === 'Mañana') { realHours = 8; equivalentHours = 9; }
         if (turnType === 'Tarde') { realHours = 9; equivalentHours = 12; }
         if (turnType === 'Noche') { realHours = 8; equivalentHours = 16; }
+    // Domingo (0)
     } else if (dayOfWeek === 0) { 
         turnBaseName = 'Domingo ' + turnType;
         if (turnType !== 'Noche') equivalentHours = 24;
@@ -61,14 +63,16 @@ export function calculateSalaryData() {
             totalNeto: 0,
             valorHora: valorHora || 0,
             discountRate: discountRate || 0,
-            dailyResults: [], // ESTO EVITA EL CRASH DE .map()
+            dailyResults: [], // ESTO EVITA EL CRASH DE .map() EN LA UI
             quincena1: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A" },
             quincena2: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A", tituloSumApplied: 0 },
         };
     }
 
 
-    // (Lógica de inicialización de fechas y offset, se mantiene igual)
+    // ----------------------------------------------------
+    // INICIALIZACIÓN Y OFFSET DEL CICLO
+    // ----------------------------------------------------
     let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
     const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
     const dayAfterFranco = new Date(lastFrancoDay2.getTime());
@@ -88,14 +92,11 @@ export function calculateSalaryData() {
     if (startOffset < 0) startOffset += 24;
 
     let dailyResults = [];
-    let francosDates = [];
     const daysInMonth = new Date(year, month, 0).getDate();
 
     // Variables de Agregación Quincenal
     let q1TotalEquivHours = 0;
-    let q1TotalExtraHoursReal = 0;
     let q2TotalEquivHours = 0;
-    let q2TotalExtraHoursReal = 0;
     
     // ----------------------------------------------------
     // LOOP DIARIO
@@ -107,7 +108,6 @@ export function calculateSalaryData() {
         const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true;
         const cycleStatus = masterCycle[startOffset];
 
-        // ... (Cálculo de turnos, horas equivalentes y extras, se mantiene igual)
         let turnBaseName = cycleStatus;
         let realHours = 0;
         let equivalentHours = 0;
@@ -119,7 +119,6 @@ export function calculateSalaryData() {
                 equivalentHours = HOLIDAY_FREE_EQUIV_HOURS;
             } else {
                 turnBaseName = `Franco`;
-                francosDates.push(dateKeyForSave);
             }
         } else {
             if (isHolidayManual) {
@@ -143,10 +142,8 @@ export function calculateSalaryData() {
         // AGREGACIÓN QUINCENAL
         if (dayOfMonth <= 15) {
             q1TotalEquivHours += finalEquivHours;
-            q1TotalExtraHoursReal += dayExtraReal;
         } else {
             q2TotalEquivHours += finalEquivHours;
-            q2TotalExtraHoursReal += dayExtraReal;
         }
 
 
@@ -178,21 +175,21 @@ export function calculateSalaryData() {
     const q1Neto = q1Bruto - q1Descuento;
     const q1CutOffDate = new Date(year, month - 1, 15);
     
-    // --- LÓGICA DE SUMA DEL TÍTULO (NUEVA) ---
+    // LÓGICA DE SUMA DEL TÍTULO
     const tituloSum = appState.profile?.isTechnician 
                       ? Number(appState.profile.tituloSum || 0) 
                       : 0;
     
     // El monto bruto de la Quincena 2 incluye las horas más el bono de título
     let q2BaseBruto = q2TotalEquivHours * valorHora;
-    let q2Bruto = q2BaseBruto + tituloSum; // <--- SUMA A LA SEGUNDA QUINCENA
+    let q2Bruto = q2BaseBruto + tituloSum;
     
     const q2Descuento = q2Bruto * discountRate;
     const q2Neto = q2Bruto - q2Descuento;
     const q2CutOffDate = new Date(year, month, 0); 
     
     // ----------------------------------------------------
-    // CÁLCULO DE TOTALES MENSUALES (AÑADIDO PARA COMPLETAR EL OBJETO DE RETORNO)
+    // CÁLCULO DE TOTALES MENSUALES (Corregido y Asignado)
     // ----------------------------------------------------
     const totalEquivalentHours = q1TotalEquivHours + q2TotalEquivHours;
     const totalBruto = q1Bruto + q2Bruto;
@@ -200,7 +197,7 @@ export function calculateSalaryData() {
     const totalNeto = totalBruto - totalDescuento;
 
     return {
-        // DATOS MENSUALES
+        // DATOS MENSUALES (CORREGIDO: Ahora se asignan correctamente)
         totalEquivalentHours: totalEquivalentHours,
         totalDescuento: totalDescuento,
         totalBruto: totalBruto,
