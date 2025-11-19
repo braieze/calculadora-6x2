@@ -68,7 +68,7 @@ const getProfileDocRef = (userId) => {
 };
 
 
-// -------------------- FUNCIONES PÚBLICAS DE AUTENTICACIÓN --------------------
+// -------------------- FUNCIONES PÚBLICAS DE AUTENTICACIÓN -------------------
 
 /**
  * Inicializa Firebase y establece el listener de autenticación.
