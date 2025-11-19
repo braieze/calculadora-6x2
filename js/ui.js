@@ -5,13 +5,15 @@ const formatNumber = (amt) => parseFloat(amt || 0).toLocaleString('es-AR', { min
 
 export function renderResults(result) {
     const section = document.getElementById('results-section');
+    
+    // 1. PRIMER CHECK: Si el resultado es nulo, ocultamos y salimos.
     if (!result) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
 
     // Hacemos la propiedad de descuento segura para evitar el TypeError si es undefined.
     const discountRateDisplay = result.discountRate ?? 0;
     
-    // 1. CARDS DE TOTALES MENSUALES (Asegurado y Completo)
+    // 2. CARDS DE TOTALES MENSUALES
     document.getElementById('summary-cards').innerHTML = `
         <div class="p-3 bg-gray-50 rounded-lg">
             <p class="text-gray-500">H. Eq. Totales</p>
@@ -31,7 +33,7 @@ export function renderResults(result) {
         </div>
     `;
     
-    // 2. NUEVOS CARDS DE RESUMEN QUINCENAL
+    // 3. CARDS DE RESUMEN QUINCENAL
     const quincenaSection = document.getElementById('quincena-summary-section');
     if (!quincenaSection) {
         console.error("Missing #quincena-summary-section in HTML");
@@ -57,8 +59,8 @@ export function renderResults(result) {
     `;
 
 
-    // 3. TABLA DIARIA (Añadir columna de Quincena para referencia)
-    document.getElementById('daily-detail-tbody').innerHTML = result.dailyResults.map(day => {
+    // 4. TABLA DIARIA (CORRECCIÓN CRÍTICA: Aseguramos que dailyResults exista)
+    document.getElementById('daily-detail-tbody').innerHTML = (result.dailyResults ?? []).map(day => {
         const isFranco = day.turn.includes('Franco');
         let rowClass = isFranco && !day.isHoliday ? 'bg-yellow-50 text-yellow-800' : day.isHoliday ? 'bg-red-100 text-red-700' : 'hover:bg-gray-50';
         
@@ -77,9 +79,6 @@ export function renderResults(result) {
     }).join('');
 }
 
-// ... (Las funciones updateStatus y populateInputs se mantienen)
-// ... (código recortado para brevedad)
-
 export function updateStatus(type, message) {
     const el = document.getElementById('status-message');
     if (!message) { el.classList.add('hidden'); return; }
@@ -95,9 +94,9 @@ export function updateStatus(type, message) {
 
 export function populateInputs() {
     const c = appState.config;
-    const p = appState.profile; // <-- LEER ESTADO DEL PERFIL
+    const p = appState.profile; 
 
-    // 1. CARGA DE CONFIGURACIÓN DE CÁLCULO (Se mantiene igual)
+    // 1. CARGA DE CONFIGURACIÓN DE CÁLCULO
     document.getElementById('input-year').value = c.year;
     document.getElementById('input-valorHora').value = c.valorHora;
     document.getElementById('input-lastFrancoDate').value = c.lastFrancoDate;
@@ -117,7 +116,7 @@ export function populateInputs() {
     }
     sel.value = c.month;
     
-    // 2. CARGA DE CONFIGURACIÓN DE PERFIL (NUEVO)
+    // 2. CARGA DE CONFIGURACIÓN DE PERFIL
     document.getElementById('input-category').value = p.category || '';
     document.getElementById('input-tituloSum').value = p.tituloSum || 0;
     document.getElementById('input-isTechnician').checked = p.isTechnician || false;
