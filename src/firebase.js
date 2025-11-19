@@ -19,7 +19,8 @@ import {
 
 // Configuración global (MANDATORIO: No modificar estas variables)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+// FIX: Asegurar que se parsee correctamente
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
 let app;
 let db;
@@ -47,8 +48,10 @@ const getConfigDocRef = (userId, year, month) => {
  * @returns {import('firebase/firestore').DocumentReference}
  */
 const getDataDocRef = (userId, year, month) => {
-    const dataPath = `/artifacts/${appId}/users/${userId}/data`;
-    return doc(db, dataPath, `${year}-${month}`);
+    const dataPath = `/artifacts/${appId}/users/{userId}/data`;
+    // Nota: El path es un poco diferente para que se guarde en la carpeta privada del usuario
+    const fullPath = `/artifacts/${appId}/users/${userId}/data`;
+    return doc(db, fullPath, `${year}-${month}`);
 };
 
 
@@ -76,6 +79,12 @@ const getProfileDocRef = (userId) => {
 export async function initFirebase(initialAuthToken, onAuthStateChangeCallback) {
     try {
         setLogLevel('debug'); // Para depuración
+        // FIX: Comprobar si firebaseConfig tiene el mínimo para inicializar
+        if (!firebaseConfig || !firebaseConfig.projectId) {
+            console.error("Configuración de Firebase incompleta. Inicialización omitida.");
+            return;
+        }
+
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
@@ -96,20 +105,14 @@ export async function initFirebase(initialAuthToken, onAuthStateChangeCallback) 
 }
 
 /**
- * Inicia sesión de forma anónima (usado como fallback).
- */
-export async function signInAnonymouslyUser() {
-    try {
-        await signInAnonymously(auth);
-    } catch (error) {
-        console.error("Error al iniciar sesión anónimamente:", error);
-    }
-}
-
-/**
  * Inicia sesión con Google.
  */
 export async function signInWithGoogle() {
+    // FIX: Asegurar que 'auth' exista
+    if (!auth) {
+        console.error("El objeto de autenticación no está inicializado.");
+        return;
+    }
     try {
         const provider = new GoogleAuthProvider();
         await signInWithPopup(auth, provider);
@@ -122,8 +125,15 @@ export async function signInWithGoogle() {
  * Cierra la sesión del usuario.
  */
 export async function signOutUser() {
+    // FIX: Asegurar que 'auth' exista
+    if (!auth) {
+        console.error("El objeto de autenticación no está inicializado.");
+        return;
+    }
     try {
         await signOut(auth);
+        // Volver a iniciar sesión de forma anónima
+        await signInAnonymously(auth);
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
     }
@@ -133,42 +143,6 @@ export async function signOutUser() {
 // -------------------- FUNCIONES PÚBLICAS DE PERSISTENCIA --------------------
 
 /**
- * Carga el perfil del usuario.
- * @param {string} userId - ID del usuario.
- * @returns {Promise<Object | null>} - El objeto de perfil si existe, o null.
- */
-export async function getProfile(userId) {
-    try {
-        const profileDocRef = getProfileDocRef(userId);
-        const docSnap = await getDoc(profileDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data();
-        }
-        return null;
-    } catch (error) {
-        console.error("Error al obtener el perfil:", error);
-        return null;
-    }
-}
-
-/**
- * Guarda el perfil del usuario.
- * @param {string} userId - ID del usuario.
- * @param {{ category: string, isTechnician: boolean }} profile - Objeto con los datos del perfil.
- * @returns {Promise<void>}
- */
-export async function setProfile(userId, profile) {
-    try {
-        const profileDocRef = getProfileDocRef(userId);
-        // Usamos merge para solo actualizar los campos que pasamos
-        await setDoc(profileDocRef, profile, { merge: true }); 
-        console.log("Perfil guardado exitosamente.");
-    } catch (error) {
-        console.error("Error al guardar el perfil:", error);
-    }
-}
-
-/**
  * Carga la configuración del mes/año anterior para usar como valores iniciales.
  * @param {string} userId - ID del usuario.
  * @param {number} currentYear - Año actual.
@@ -176,6 +150,7 @@ export async function setProfile(userId, profile) {
  * @returns {Promise<Object | null>} - Configuración del mes anterior o null.
  */
 export async function loadPreviousConfig(userId, currentYear, currentMonth) {
+    if (!db) return null;
     try {
         // Calcular mes y año anterior
         let prevMonth = currentMonth - 1;
@@ -193,7 +168,6 @@ export async function loadPreviousConfig(userId, currentYear, currentMonth) {
             return docSnap.data();
         }
 
-        console.log(`No se encontró configuración previa para ${prevYear}-${prevMonth}.`);
         return null;
 
     } catch (error) {
@@ -224,6 +198,7 @@ export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onData
 
     // Función auxiliar para convertir Timestamps a Date, si es necesario
     const convertTimestampToDate = (item) => {
+        // Verifica si existe el campo 'date' y si tiene la función toDate (es un Timestamp)
         if (item && item.date && typeof item.date.toDate === 'function') {
             return { ...item, date: item.date.toDate() };
         }
@@ -285,13 +260,9 @@ export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onData
  * @returns {Promise<void>}
  */
 export function saveConfig(userId, config) {
-    if (!config || !config.year || !config.month) {
-        console.error("Configuración inválida. Se requiere year y month.");
-        return;
-    }
+    if (!db || !config || !config.year || !config.month) return;
     try {
         const docRef = getConfigDocRef(userId, config.year, config.month);
-        // Usamos setDoc con merge para no sobrescribir todo el documento
         setDoc(docRef, config, { merge: true }); 
     } catch (error) {
         console.error("Error al guardar la configuración:", error);
@@ -305,15 +276,29 @@ export function saveConfig(userId, config) {
  * @returns {Promise<void>}
  */
 export function saveData(userId, data) {
-    if (!data || !data.year || !data.month) {
-        console.error("Datos inválidos. Se requiere year y month.");
-        return;
-    }
+    if (!db || !data || !data.year || !data.month) return;
     try {
         const docRef = getDataDocRef(userId, data.year, data.month);
-        // Usamos setDoc con merge para no sobrescribir todo el documento
         setDoc(docRef, data, { merge: true });
     } catch (error) {
         console.error("Error al guardar los datos:", error);
+    }
+}
+
+/**
+ * Guarda el perfil del usuario.
+ * @param {string} userId - ID del usuario.
+ * @param {{ category: string, isTechnician: boolean }} profile - Objeto con los datos del perfil.
+ * @returns {Promise<void>}
+ */
+export async function setProfile(userId, profile) {
+    if (!db || !userId) return;
+    try {
+        const profileDocRef = getProfileDocRef(userId);
+        // Usamos merge para solo actualizar los campos que pasamos
+        await setDoc(profileDocRef, profile, { merge: true }); 
+        console.log("Perfil guardado exitosamente.");
+    } catch (error) {
+        console.error("Error al guardar el perfil:", error);
     }
 }
