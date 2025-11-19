@@ -39,7 +39,7 @@ let appState = {
     isLoadingData: false, 
 };
 
-// -------------------- MANEJO DE PERFIL --------------------
+// -------------------- MANEJO DE PERFIL -------------------
 
 /**
  * Abre el modal de perfil y precarga los datos existentes.
