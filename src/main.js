@@ -1,319 +1,373 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
-    getAuth, 
-    signInAnonymously, 
-    signInWithCustomToken, 
-    onAuthStateChanged, 
-    GoogleAuthProvider, 
-    signInWithPopup, 
-    signOut 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    initFirebase, 
+    signInAnonymouslyUser, 
+    signInWithGoogle, 
+    signOutUser, 
+    saveConfig, 
+    saveData, 
+    setupDataListeners, 
+    loadPreviousConfig,
+    setProfile
+} from './firebase.js';
+import { calculateSchedule } from './calcLogic.js';
 import { 
-    getFirestore, 
-    doc, 
-    setDoc, 
-    onSnapshot, 
-    getDoc,
-    setLogLevel
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    updateUIFromState, 
+    updateStatus, 
+    setLoading, 
+    updateAuthUI, 
+    generatePDFReport, 
+    openModal,
+    closeModal
+} from './uiRenderer.js';
 
-// Configuración global (MANDATORIO: No modificar estas variables)
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-
-let app;
-let db;
-let auth;
-
-/**
- * Obtiene la referencia al documento de configuración de un usuario para un mes/año específico.
- * Colección: /artifacts/{appId}/users/{userId}/configs
- * @param {string} userId - ID del usuario.
- * @param {number} year - Año de la configuración.
- * @param {number} month - Mes de la configuración (1-12).
- * @returns {import('firebase/firestore').DocumentReference}
- */
-const getConfigDocRef = (userId, year, month) => {
-    const configPath = `/artifacts/${appId}/users/${userId}/configs`;
-    return doc(db, configPath, `${year}-${month}`);
+// Estado Global de la Aplicación
+let appState = {
+    auth: null,
+    db: null,
+    userId: null,
+    unsubscribeListeners: null,
+    config: {
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear(),
+        valorHora: 0.00, // Usar 0.00 para inicializar como flotante
+        discountRate: 0.18,
+        lastFrancoDate: '',
+        initialTurn: 'Mañana',
+    },
+    data: null, // Resultado del cálculo
+    profile: null, // Datos fijos del usuario (Categoría, Técnico)
+    isAuthReady: false,
+    isLoadingData: false, // Indicador de carga
 };
 
-/**
- * Obtiene la referencia al documento de datos de resultados de un usuario para un mes/año específico.
- * Colección: /artifacts/{appId}/users/{userId}/data
- * @param {string} userId - ID del usuario.
- * @param {number} year - Año de los datos.
- * @param {number} month - Mes de los datos (1-12).
- * @returns {import('firebase/firestore').DocumentReference}
- */
-const getDataDocRef = (userId, year, month) => {
-    const dataPath = `/artifacts/${appId}/users/${userId}/data`;
-    return doc(db, dataPath, `${year}-${month}`);
-};
-
+// -------------------- MANEJO DE PERFIL --------------------
 
 /**
- * Obtiene la referencia al documento de Perfil de Usuario.
- * Colección: /artifacts/{appId}/users/{userId}/profile/userProfile
- * @param {string} userId - ID del usuario.
- * @returns {import('firebase/firestore').DocumentReference}
+ * Abre el modal de perfil y precarga los datos existentes.
  */
-const getProfileDocRef = (userId) => {
-    const profilePath = `/artifacts/${appId}/users/${userId}/profile`;
-    // Usamos un ID fijo 'userProfile' para el documento de perfil
-    return doc(db, profilePath, 'userProfile'); 
-};
-
-
-// -------------------- FUNCIONES PÚBLICAS DE AUTENTICACIÓN --------------------
-
-/**
- * Inicializa Firebase y establece el listener de autenticación.
- * @param {string} initialAuthToken - Token de autenticación inicial.
- * @param {(user: import('firebase/auth').User | null) => void} onAuthStateChangeCallback - Callback a llamar al cambiar el estado de autenticación.
- * @returns {Promise<void>}
- */
-export async function initFirebase(initialAuthToken, onAuthStateChangeCallback) {
-    try {
-        setLogLevel('debug'); // Para depuración
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-        
-        // 1. Establecer el listener de estado de autenticación
-        onAuthStateChanged(auth, onAuthStateChangeCallback);
-
-        // 2. Intentar autenticación inicial
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            // Intentamos anónima como base, el listener lo detectará.
-            await signInAnonymously(auth); 
-        }
-    } catch (error) {
-        console.error("Error inicializando Firebase o autenticando:", error);
+function openProfileModal() {
+    if (appState.profile) {
+        document.getElementById('input-category').value = appState.profile.category || '';
+        document.getElementById('input-isTechnician').checked = appState.profile.isTechnician || false;
+    } else {
+        // Limpiar para nuevo registro
+        document.getElementById('input-category').value = '';
+        document.getElementById('input-isTechnician').checked = false;
     }
+    openModal('profile-modal');
 }
 
 /**
- * Inicia sesión de forma anónima (usado como fallback).
+ * Maneja el envío del formulario de perfil.
+ * @param {Event} e - Evento de formulario.
  */
-export async function signInAnonymouslyUser() {
-    try {
-        await signInAnonymously(auth);
-    } catch (error) {
-        console.error("Error al iniciar sesión anónimamente:", error);
-    }
-}
+async function handleProfileSubmit(e) {
+    e.preventDefault();
+    if (!appState.userId) return updateStatus('Error: Usuario no autenticado.', 'error');
 
-/**
- * Inicia sesión con Google.
- */
-export async function signInWithGoogle() {
-    try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-    } catch (error) {
-        console.error("Error al iniciar sesión con Google:", error);
-    }
-}
-
-/**
- * Cierra la sesión del usuario.
- */
-export async function signOutUser() {
-    try {
-        await signOut(auth);
-    } catch (error) {
-        console.error("Error al cerrar sesión:", error);
-    }
-}
-
-
-// -------------------- FUNCIONES PÚBLICAS DE PERSISTENCIA --------------------
-
-/**
- * Carga el perfil del usuario.
- * @param {string} userId - ID del usuario.
- * @returns {Promise<Object | null>} - El objeto de perfil si existe, o null.
- */
-export async function getProfile(userId) {
-    try {
-        const profileDocRef = getProfileDocRef(userId);
-        const docSnap = await getDoc(profileDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data();
-        }
-        return null;
-    } catch (error) {
-        console.error("Error al obtener el perfil:", error);
-        return null;
-    }
-}
-
-/**
- * Guarda el perfil del usuario.
- * @param {string} userId - ID del usuario.
- * @param {{ category: string, isTechnician: boolean }} profile - Objeto con los datos del perfil.
- * @returns {Promise<void>}
- */
-export async function setProfile(userId, profile) {
-    try {
-        const profileDocRef = getProfileDocRef(userId);
-        // Usamos merge para solo actualizar los campos que pasamos
-        await setDoc(profileDocRef, profile, { merge: true }); 
-        console.log("Perfil guardado exitosamente.");
-    } catch (error) {
-        console.error("Error al guardar el perfil:", error);
-    }
-}
-
-/**
- * Carga la configuración del mes/año anterior para usar como valores iniciales.
- * @param {string} userId - ID del usuario.
- * @param {number} currentYear - Año actual.
- * @param {number} currentMonth - Mes actual (1-12).
- * @returns {Promise<Object | null>} - Configuración del mes anterior o null.
- */
-export async function loadPreviousConfig(userId, currentYear, currentMonth) {
-    try {
-        // Calcular mes y año anterior
-        let prevMonth = currentMonth - 1;
-        let prevYear = currentYear;
-        if (prevMonth === 0) {
-            prevMonth = 12;
-            prevYear -= 1;
-        }
-
-        const docRef = getConfigDocRef(userId, prevYear, prevMonth);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            console.log(`Configuración del mes anterior (${prevYear}-${prevMonth}) cargada.`);
-            return docSnap.data();
-        }
-
-        console.log(`No se encontró configuración previa para ${prevYear}-${prevMonth}.`);
-        return null;
-
-    } catch (error) {
-        console.error("Error al cargar la configuración anterior:", error);
-        return null;
-    }
-}
-
-/**
- * Establece los listeners en tiempo real para la configuración y los datos.
- * @param {string} userId - ID del usuario.
- * @param {{year: number, month: number}} currentPeriod - Período actual.
- * @param {(config: Object) => void} onConfigUpdate - Callback para la actualización de configuración.
- * @param {(data: Object) => void} onDataUpdate - Callback para la actualización de datos.
- * @param {(profile: Object | null) => void} onProfileUpdate - Callback para la actualización de perfil.
- * @returns {() => void} - Función para desuscribirse de todos los listeners.
- */
-export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onDataUpdate, onProfileUpdate) {
-    if (!db || !userId) {
-        console.warn("Firestore no inicializado o userId no disponible.");
-        return () => {};
-    }
-
-    const { year, month } = currentPeriod;
-    const configDocRef = getConfigDocRef(userId, year, month);
-    const dataDocRef = getDataDocRef(userId, year, month);
-    const profileDocRef = getProfileDocRef(userId); 
-
-    // Función auxiliar para convertir Timestamps a Date, si es necesario
-    const convertTimestampToDate = (item) => {
-        if (item && item.date && typeof item.date.toDate === 'function') {
-            return { ...item, date: item.date.toDate() };
-        }
-        return item;
-    };
-
-    // 1. Listener de Configuración
-    const unsubscribeConfig = onSnapshot(configDocRef, (doc) => {
-        if (doc.exists()) {
-            onConfigUpdate(doc.data());
-        } else {
-            onConfigUpdate({}); 
-        }
-    }, (error) => console.error("Error en el listener de Config:", error));
-
-    // 2. Listener de Datos (Resultados)
-    const unsubscribeData = onSnapshot(dataDocRef, (doc) => {
-        if (doc.exists()) {
-            const data = doc.data();
-            
-            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en el schedule
-            if (data.schedule && Array.isArray(data.schedule)) {
-                data.schedule = data.schedule.map(convertTimestampToDate);
-            }
-            
-            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en las fechas de pago
-            if (data.paymentDates && Array.isArray(data.paymentDates)) {
-                data.paymentDates = data.paymentDates.map(convertTimestampToDate);
-            }
-            
-            onDataUpdate(data);
-        } else {
-            onDataUpdate(null);
-        }
-    }, (error) => console.error("Error en el listener de Datos:", error));
+    const category = document.getElementById('input-category').value.trim();
+    const isTechnician = document.getElementById('input-isTechnician').checked;
     
-    // 3. Listener de Perfil
-    const unsubscribeProfile = onSnapshot(profileDocRef, (doc) => {
-        if (doc.exists()) {
-            onProfileUpdate(doc.data());
-        } else {
-            onProfileUpdate(null);
+    if (!category) {
+        return updateStatus('Por favor, ingrese una categoría laboral.', 'warning');
+    }
+
+    const newProfile = { category, isTechnician };
+
+    appState.isLoadingData = true;
+    setLoading(true);
+    await setProfile(appState.userId, newProfile); // Guarda en Firebase
+    appState.isLoadingData = false;
+    setLoading(false);
+
+    closeModal('profile-modal');
+    updateStatus('Perfil guardado exitosamente.', 'success');
+}
+
+
+// -------------------- MANEJO DE ESTADO Y FIREBASE --------------------
+
+/**
+ * Carga la configuración del mes anterior y la aplica a la UI/Estado.
+ * @param {number} year - Año seleccionado.
+ * @param {number} month - Mes seleccionado.
+ */
+async function loadInitialConfig(year, month) {
+    if (!appState.userId) return;
+
+    appState.isLoadingData = true;
+    setLoading(true);
+    
+    // 1. Intentar cargar la configuración del mes anterior
+    const prevConfig = await loadPreviousConfig(appState.userId, year, month);
+
+    if (prevConfig) {
+        // Si hay config previa, usarla como base y sobrescribir el periodo
+        appState.config = { ...prevConfig, year, month };
+        updateStatus(`Configuración base cargada del mes anterior (${prevConfig.month}/${prevConfig.year}).`, 'info');
+    } else {
+        // Si no hay config previa, mantener los valores por defecto o los cargados por el listener
+        appState.config = { ...appState.config, year, month };
+        updateStatus('Usando configuración por defecto para el nuevo mes.', 'info');
+    }
+
+    // 2. Aplicar la configuración al UI (input fields)
+    syncInputsFromState();
+
+    appState.isLoadingData = false;
+    setLoading(false);
+}
+
+// ... initDataListeners (no cambia)
+
+/**
+ * Inicializa los listeners de datos de Firebase.
+ * @param {string} userId - ID del usuario.
+ */
+function initDataListeners(userId) {
+    // Si hay listeners activos, desuscribirse
+    if (appState.unsubscribeListeners) {
+        appState.unsubscribeListeners();
+    }
+
+    // Suscribirse a la configuración, datos y AHORA al perfil
+    appState.unsubscribeListeners = setupDataListeners(
+        userId,
+        { year: appState.config.year, month: appState.config.month },
+        (configData) => {
+            // Callback de Configuración
+            appState.config = { ...appState.config, ...configData };
+            syncInputsFromState(); // Sincroniza la UI
+        },
+        (dataResults) => {
+            // Callback de Resultados
+            appState.data = dataResults;
+            updateUIFromState(appState);
+        },
+        (profileData) => {
+            // Callback de Perfil
+            appState.profile = profileData;
+            
+            // Si el perfil no existe y el usuario está autenticado, forzar la apertura del modal
+            if (appState.isAuthReady && appState.userId && !profileData) {
+                updateStatus('¡Bienvenido! Por favor, configura tu perfil salarial.', 'warning');
+                openProfileModal();
+            } else {
+                 // Si ya tiene perfil, simplemente actualiza la UI o usa los datos
+                 updateUIFromState(appState);
+            }
         }
-    }, (error) => console.error("Error en el listener de Perfil:", error));
+    );
+}
+
+/**
+ * Callback de Firebase que se llama al cambiar el estado de autenticación.
+ * @param {import('firebase/auth').User | null} user - Objeto de usuario de Firebase.
+ */
+function handleAuthStateChange(user) {
+    appState.isAuthReady = true;
+    appState.auth = user;
+    appState.userId = user ? user.uid : null;
+
+    updateAuthUI(user); // Actualiza botones de Login/Logout/Usuario
+
+    if (user && user.uid) {
+        // Si el usuario está logueado, inicializar listeners y cargar configuración
+        initDataListeners(user.uid);
+        loadInitialConfig(appState.config.year, appState.config.month); 
+        // El updateUIFromState final se hará cuando lleguen los datos del listener.
+    } else {
+        // Usuario desconectado
+        if (appState.unsubscribeListeners) {
+            appState.unsubscribeListeners();
+            appState.unsubscribeListeners = null;
+        }
+        // Limpiar datos y desbloquear UI
+        appState.data = null; 
+        setLoading(false); 
+        updateStatus('Inicia sesión para guardar y cargar tus datos.', 'info');
+        updateUIFromState(appState); 
+    }
+}
 
 
-    // Retornar una función para desuscribirse de todos los listeners
-    return () => {
-        unsubscribeConfig();
-        unsubscribeData();
-        unsubscribeProfile();
+// -------------------- MANEJO DE EVENTOS Y CÁLCULO --------------------
+
+/**
+ * Sincroniza los inputs de la UI con el estado local.
+ */
+function syncInputsFromState() {
+    document.getElementById('input-month').value = appState.config.month;
+    document.getElementById('input-year').value = appState.config.year;
+    // Usar toFixed(2) para asegurar que se muestre como número flotante
+    document.getElementById('input-valorHora').value = appState.config.valorHora.toFixed(2); 
+    document.getElementById('input-discountRate').value = appState.config.discountRate;
+    document.getElementById('input-lastFrancoDate').value = appState.config.lastFrancoDate;
+    document.getElementById('input-initialTurn').value = appState.config.initialTurn;
+}
+
+/**
+ * Recolecta los datos de configuración de la UI.
+ * @returns {Object} La nueva configuración.
+ */
+function collectConfigFromUI() {
+    return {
+        month: parseInt(document.getElementById('input-month').value),
+        year: parseInt(document.getElementById('input-year').value),
+        // Asegurar que el valor sea un número, 0 si está vacío.
+        valorHora: parseFloat(document.getElementById('input-valorHora').value) || 0, 
+        discountRate: parseFloat(document.getElementById('input-discountRate').value) || 0.18,
+        lastFrancoDate: document.getElementById('input-lastFrancoDate').value,
+        initialTurn: document.getElementById('input-initialTurn').value,
     };
 }
 
 /**
- * Guarda la configuración del mes/año actual.
- * @param {string} userId - ID del usuario.
- * @param {Object} config - Objeto de configuración.
- * @returns {Promise<void>}
+ * Función principal para iniciar el cálculo.
  */
-export function saveConfig(userId, config) {
-    if (!config || !config.year || !config.month) {
-        console.error("Configuración inválida. Se requiere year y month.");
+function startCalculation() {
+    if (!appState.userId) {
+        updateStatus('Debes iniciar sesión para realizar cálculos y guardar datos.', 'warning');
         return;
     }
+    
+    const newConfig = collectConfigFromUI();
+    
+    // 1. Guardar la nueva configuración (dispara onSnapshot)
+    appState.config = newConfig;
+    saveConfig(appState.userId, newConfig);
+
+    appState.isLoadingData = true;
+    setLoading(true);
+    updateStatus('Calculando y generando horario...', 'info');
+
     try {
-        const docRef = getConfigDocRef(userId, config.year, config.month);
-        // Usamos setDoc con merge para no sobrescribir todo el documento
-        setDoc(docRef, config, { merge: true }); 
+        // 2. Ejecutar la lógica de cálculo
+        const calculationResults = calculateSchedule(appState.config, appState.data, appState.profile);
+
+        // 3. Guardar los resultados (esto dispara el onSnapshot y actualiza la UI)
+        saveData(appState.userId, calculationResults);
+
+        updateStatus('Cálculo finalizado y datos guardados.', 'success');
     } catch (error) {
-        console.error("Error al guardar la configuración:", error);
+        console.error("Error durante el cálculo:", error);
+        updateStatus(`Error en el cálculo: ${error.message}`, 'error');
+    } finally {
+        appState.isLoadingData = false;
+        // set Loading false se hace en onSnapshot de dataResults para asegurar que la UI se actualice
     }
 }
 
 /**
- * Guarda los resultados del cálculo (datos).
- * @param {string} userId - ID del usuario.
- * @param {Object} data - Objeto de datos (horario, horas extra, etc.).
- * @returns {Promise<void>}
+ * Maneja el cambio en los selectores de Mes/Año.
  */
-export function saveData(userId, data) {
-    if (!data || !data.year || !data.month) {
-        console.error("Datos inválidos. Se requiere year y month.");
+function handlePeriodChange() {
+    if (!appState.userId) {
+        updateStatus('Debes iniciar sesión para cambiar el período.', 'warning');
         return;
     }
-    try {
-        const docRef = getDataDocRef(userId, data.year, data.month);
-        // Usamos setDoc con merge para no sobrescribir todo el documento
-        setDoc(docRef, data, { merge: true });
-    } catch (error) {
-        console.error("Error al guardar los datos:", error);
+    const newConfig = collectConfigFromUI();
+    const isNewPeriod = newConfig.month !== appState.config.month || newConfig.year !== appState.config.year;
+
+    if (isNewPeriod) {
+        appState.config = newConfig; 
+        
+        // Recargar configuración anterior y establecer nuevos listeners para el nuevo período
+        initDataListeners(appState.userId);
+        loadInitialConfig(newConfig.year, newConfig.month);
     }
 }
+
+/**
+ * Maneja el cambio en los inputs de configuración (Valor Hora, Tasa Descuento, etc.)
+ */
+function handleConfigInputChange() {
+     if (!appState.userId) {
+        updateStatus('Debes iniciar sesión para guardar tu configuración.', 'warning');
+        return;
+    }
+    const newConfig = collectConfigFromUI();
+    // Guardar inmediatamente la configuración modificada
+    appState.config = newConfig;
+    saveConfig(appState.userId, newConfig); 
+}
+
+
+// -------------------- INICIALIZACIÓN --------------------
+
+/**
+ * Configura los eventos iniciales.
+ */
+function setupEventListeners() {
+    // Autenticación
+    document.getElementById('google-login-btn').addEventListener('click', signInWithGoogle);
+    document.getElementById('logout-btn').addEventListener('click', signOutUser);
+    
+    // Perfil
+    document.getElementById('profile-btn').addEventListener('click', openProfileModal);
+    document.getElementById('profile-form').addEventListener('submit', handleProfileSubmit);
+    document.getElementById('close-profile-modal-btn').addEventListener('click', () => closeModal('profile-modal'));
+
+    // Configuración y Cálculo
+    document.getElementById('calculate-schedule-button').addEventListener('click', startCalculation);
+    document.getElementById('generate-pdf-button').addEventListener('click', () => generatePDFReport(appState));
+    
+    // Eventos de cambio para Mes y Año (para recargar config anterior)
+    document.getElementById('input-month').addEventListener('change', handlePeriodChange);
+    document.getElementById('input-year').addEventListener('change', handlePeriodChange);
+
+    // Eventos de cambio para guardar config al volar (resto de inputs)
+    const configInputs = ['input-valorHora', 'input-discountRate', 'input-lastFrancoDate', 'input-initialTurn'];
+    configInputs.forEach(id => {
+        document.getElementById(id).addEventListener('change', handleConfigInputChange);
+    });
+
+    // Delegación de eventos para las casillas de feriado y horas extra (en la tabla de UI)
+    document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
+        if (e.target.dataset.field === 'isHoliday' || e.target.dataset.field === 'extraHours') {
+            const index = parseInt(e.target.dataset.index);
+            const value = e.target.type === 'checkbox' ? e.target.checked : parseFloat(e.target.value) || 0;
+            
+            if (appState.data && appState.data.schedule && index >= 0 && appState.userId) {
+                appState.data.schedule[index][e.target.dataset.field] = value;
+                
+                const updatedResults = calculateSchedule(appState.config, appState.data, appState.profile); 
+                saveData(appState.userId, updatedResults);
+            } else if (!appState.userId) {
+                 updateStatus('Debes iniciar sesión para interactuar con los datos guardados.', 'warning');
+            }
+        }
+    });
+
+    // Inicializar selectores de Mes y Año
+    const monthSelect = document.getElementById('input-month');
+    const currentMonth = new Date().getMonth() + 1;
+    for (let i = 1; i <= 12; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = new Date(0, i, 0).toLocaleDateString('es-ES', { month: 'long' });
+        monthSelect.appendChild(option);
+    }
+
+    monthSelect.value = currentMonth;
+    
+    const yearInput = document.getElementById('input-year');
+    const currentYear = new Date().getFullYear();
+    yearInput.value = currentYear;
+
+    // Sincronizar estado inicial
+    appState.config.month = currentMonth;
+    appState.config.year = currentYear;
+    syncInputsFromState();
+    
+    // Asegurar que la UI se renderice al inicio con los valores por defecto
+    updateUIFromState(appState); 
+}
+
+// Iniciar la aplicación
+window.onload = function () {
+    const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    initFirebase(initialToken, handleAuthStateChange);
+    setupEventListeners();
+    updateStatus('Esperando autenticación...', 'info');
+};
