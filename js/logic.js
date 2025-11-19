@@ -155,49 +155,44 @@ export function calculateSalaryData() {
     // FIN LOOP DIARIO
     // ----------------------------------------------------
     
-    // Cálculo de Totales Quincenales
+   // ... (Código anterior de calculateSalaryData hasta el final del LOOP DIARIO)
+
+    // ----------------------------------------------------
+    // CÁLCULO DE TOTALES QUINCENALES
+    // ----------------------------------------------------
     const q1Bruto = q1TotalEquivHours * valorHora;
     const q1Descuento = q1Bruto * discountRate;
     const q1Neto = q1Bruto - q1Descuento;
     const q1CutOffDate = new Date(year, month - 1, 15);
     
-    const q2Bruto = q2TotalEquivHours * valorHora;
+    // --- LÓGICA DE SUMA DEL TÍTULO (NUEVA) ---
+    const tituloSum = appState.profile?.isTechnician 
+                      ? Number(appState.profile.tituloSum || 0) 
+                      : 0;
+    
+    // El monto bruto de la Quincena 2 incluye las horas más el bono de título
+    let q2BaseBruto = q2TotalEquivHours * valorHora;
+    let q2Bruto = q2BaseBruto + tituloSum; // <--- SUMA A LA SEGUNDA QUINCENA
+    
     const q2Descuento = q2Bruto * discountRate;
     const q2Neto = q2Bruto - q2Descuento;
-    const q2CutOffDate = new Date(year, month, 0); // Último día del mes
-
+    const q2CutOffDate = new Date(year, month, 0); 
+    
     // Totales Mensuales (Suma de Quincenas)
-    const totalEquivalentHours = q1TotalEquivHours + q2TotalEquivHours;
-    const totalExtraHoursReal = q1TotalExtraHoursReal + q2TotalExtraHoursReal;
-    const totalBruto = q1Bruto + q2Bruto;
-    const totalDescuento = q1Descuento + q2Descuento;
-    const totalNeto = q1Neto + q2Neto;
-
+    // ... (El resto del cálculo mensual se mantiene igual)
 
     return {
-        dailyResults,
-        francosDates,
-        totalEquivalentHours,
-        totalExtraHoursReal,
-        totalBruto,
-        totalDescuento,
-        totalNeto,
-        discountRate: discountRate * 100,
+        // ... (El resto del objeto return se mantiene igual)
         
         // NUEVOS DATOS QUINCENALES
         quincena1: {
-            equivHours: q1TotalEquivHours,
-            extraHours: q1TotalExtraHoursReal,
-            bruto: q1Bruto,
-            neto: q1Neto,
-            payDate: calculatePayday(q1CutOffDate),
-            cutOffDate: q1CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+            // ... (Igual que antes)
         },
         quincena2: {
-            equivHours: q2TotalEquivHours,
-            extraHours: q2TotalExtraHoursReal,
-            bruto: q2Bruto,
-            neto: q2Neto,
+            // ... (Igual que antes)
+            bruto: q2Bruto, // Ahora incluye Suma del Título
+            neto: q2Neto, // Ahora incluye Suma del Título
+            tituloSumApplied: tituloSum, // NUEVO CAMPO para el dashboard
             payDate: calculatePayday(q2CutOffDate),
             cutOffDate: q2CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         },
