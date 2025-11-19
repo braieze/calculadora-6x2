@@ -224,3 +224,41 @@ export function calculateSalaryData() {
         },
     };
 }
+
+import { db } from './auth.js'; // Asumiendo que exportas 'db' de Firebase desde auth.js
+import { doc, setDoc } from 'firebase/firestore'; 
+
+/**
+ * Guarda un resumen de los resultados del cálculo en el historial de Firebase.
+ * @param {object} result - El resultado completo del cálculo.
+ */
+export async function saveCalculationHistory(result) {
+    const userId = appState.user.uid;
+    const { year, month } = appState.config;
+    
+    // Formato de ID para el documento: YYYY-MM (e.g., 2025-11)
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+    
+    // Creamos un resumen de los datos relevantes para el historial
+    const historyData = {
+        monthKey: monthKey,
+        month: month,
+        year: year,
+        totalNeto: result.totalNeto,
+        totalBruto: result.totalBruto,
+        totalEquivalentHours: result.totalEquivalentHours,
+        valorHora: result.valorHora,
+        discountRate: result.discountRate,
+        tituloSumApplied: result.quincena2.tituloSumApplied,
+        timestamp: Date.now() 
+    };
+
+    try {
+        const docRef = doc(db, 'users', userId, 'history', monthKey);
+        await setDoc(docRef, historyData, { merge: true });
+        console.log("Historial de cálculo guardado con éxito:", monthKey);
+        // Nota: No se requiere updateStatus aquí, ya que el estado se actualiza al final del cálculo.
+    } catch (e) {
+        console.error("Error al guardar el historial de cálculo:", e);
+    }
+}
