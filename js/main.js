@@ -9,11 +9,15 @@ import { generatePDFReport } from './pdf.js';
 // 1. FUNCIÓN PRINCIPAL DE RECÁLCULO (AHORA EXPORTADA)
 // ----------------------------------------------------
 // Eliminamos la asignación a 'window' y usamos 'export'
-export function refreshCalculation(initial = false) {
-    const result = calculateSalaryData();
+export async function refreshCalculation(initial = false) {
+const result = calculateSalaryData();
     appState.calculationResult = result;
     renderResults(result);
-    if(initial && appState.calculationResult) updateStatus('success', 'Cálculo realizado.');
+    updateStatus('success', 'Cálculo realizado.');
+    
+    // NUEVA LÍNEA: GUARDAR EN EL HISTORIAL
+    if (result && result.totalNeto > 0) {
+        await saveCalculationHistory(result); // Llama a la función de guardado
 }
 
 
