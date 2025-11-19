@@ -1,4 +1,4 @@
-// Constantes de cálculo
+// Constantes de cálculoo
 const HOURS_PER_TURN = 12.0;
 const EQUIVALENT_HOURS = 1.66; // Multiplicador para horas base y feriados
 const EXTRA_HOUR_MULTIPLIER = 1.5; // Multiplicador para horas extra
