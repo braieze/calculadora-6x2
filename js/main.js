@@ -1,32 +1,40 @@
 import { appState } from './state.js';
-import { initAuth, saveConfig, saveData } from './auth.js'; // Asume que creas este archivo para lógica auth/db
+// ¡IMPORTANTE! Hemos añadido saveProfileDetails al import
+import { initAuth, saveConfig, saveData, saveProfileDetails } from './auth.js'; 
 import { calculateSalaryData } from './logic.js';
 import { updateStatus, renderResults, populateInputs } from './ui.js';
 import { generatePDFReport } from './pdf.js';
 
-// --- Event Listeners ---
-
-// 1. Inicialización
-window.onload = async () => {
-    populateInputs();
-    // initAuth configurará los listeners de Firebase y cargará datos,
-    // luego llamará a refreshCalculation() cuando los datos lleguen.
-    await initAuth(); 
-};
-
-// 2. Recálculo Global
-window.refreshCalculation = (initial = false) => {
-    appState.calculationResult = calculateSalaryData();
-    renderResults(appState.calculationResult);
+// ----------------------------------------------------
+// 1. FUNCIÓN PRINCIPAL DE RECÁLCULO (AHORA EXPORTADA)
+// ----------------------------------------------------
+// Eliminamos la asignación a 'window' y usamos 'export'
+export function refreshCalculation(initial = false) {
+    const result = calculateSalaryData();
+    appState.calculationResult = result;
+    renderResults(result);
     if(initial && appState.calculationResult) updateStatus('success', 'Cálculo realizado.');
+}
+
+
+// --- Event Listeners and Initialization ---
+
+// 2. Inicialización
+window.onload = async () => {
+    // Inicializa inputs visualmente (antes de cargar de Firebase)
+    populateInputs(); 
+    // initAuth configura los listeners de Firebase y carga datos.
+    // auth.js llamará a refreshCalculation() cuando tenga datos.
+    await initAuth();  
 };
+
 
 // 3. Botón Calcular
 document.getElementById('calculate-schedule-button').addEventListener('click', () => {
     refreshCalculation(true);
 });
 
-// 4. Inputs de Configuración (Delegación simplificada)
+// 4. Inputs de Configuración
 ['input-month', 'input-year', 'input-valorHora', 'input-discountRate', 'input-lastFrancoDate', 'input-initialTurn'].forEach(id => {
     document.getElementById(id).addEventListener('change', (e) => {
         const val = e.target.value;
@@ -35,11 +43,11 @@ document.getElementById('calculate-schedule-button').addEventListener('click', (
         else appState.config[e.target.name] = val;
         
         saveConfig(); // Guardar en Firebase
-        refreshCalculation();
+        refreshCalculation(); // Llamar a la función exportada
     });
 });
 
-// 4. Inputs de PERFIL (NUEVO BLOQUE)
+// 5. Inputs de PERFIL
 ['input-category', 'input-tituloSum', 'input-isTechnician'].forEach(id => {
     document.getElementById(id).addEventListener('change', (e) => {
         const val = e.target.value;
@@ -57,13 +65,12 @@ document.getElementById('calculate-schedule-button').addEventListener('click', (
             appState.profile[name] = val;
         }
 
-        saveProfileDetails(); // <--- GUARDAR EN FIREBASE
-        // populateInputs(); // Llama a populateInputs para actualizar el estado del input-tituloSum (deshabilitar/habilitar)
-        window.refreshCalculation();
+        saveProfileDetails(); // <-- Correcto, ya importado
+        refreshCalculation(); // <-- Llamar a la función exportada
     });
 });
 
-// 5. Inputs Dinámicos (Tabla) - Event Delegation
+// 6. Inputs Dinámicos (Tabla) - Event Delegation
 document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
     const dateKey = e.target.dataset.date;
     if (e.target.classList.contains('holiday-check')) {
@@ -77,5 +84,5 @@ document.getElementById('daily-detail-tbody').addEventListener('change', (e) => 
     refreshCalculation();
 });
 
-// 6. PDF
+// 7. PDF
 document.getElementById('generate-pdf-button').addEventListener('click', generatePDFReport);
