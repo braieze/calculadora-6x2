@@ -90,6 +90,9 @@ export function updateStatus(type, message) {
 
 export function populateInputs() {
     const c = appState.config;
+    const p = appState.profile; // <-- LEER ESTADO DEL PERFIL
+
+    // 1. CARGA DE CONFIGURACIÓN DE CÁLCULO (Se mantiene igual)
     document.getElementById('input-year').value = c.year;
     document.getElementById('input-valorHora').value = c.valorHora;
     document.getElementById('input-lastFrancoDate').value = c.lastFrancoDate;
@@ -108,4 +111,12 @@ export function populateInputs() {
         });
     }
     sel.value = c.month;
+    
+    // 2. CARGA DE CONFIGURACIÓN DE PERFIL (NUEVO)
+    document.getElementById('input-category').value = p.category || '';
+    document.getElementById('input-tituloSum').value = p.tituloSum || 0;
+    document.getElementById('input-isTechnician').checked = p.isTechnician || false;
+    
+    // Opcional: Deshabilitar el input de monto si no es técnico
+    document.getElementById('input-tituloSum').disabled = !p.isTechnician;
 }
