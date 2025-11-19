@@ -1,92 +1,135 @@
 import { appState } from './state.js';
-// ¡IMPORTANTE! Hemos añadido saveProfileDetails al import
 import { initAuth, saveConfig, saveData, saveProfileDetails } from './auth.js'; 
-import { calculateSalaryData, saveCalculationHistory } from './logic.js'; // Importar la nueva función
-import { renderResults, updateStatus } from './ui.js';
+// CORRECCIÓN: Se añaden populateInputs y renderDashboard de ui.js
+import { calculateSalaryData, saveCalculationHistory } from './logic.js'; 
+import { renderResults, updateStatus, populateInputs, renderDashboard } from './ui.js'; 
 import { generatePDFReport } from './pdf.js';
 
 // ----------------------------------------------------
-// 1. FUNCIÓN PRINCIPAL DE RECÁLCULO (AHORA EXPORTADA)
+// 1. FUNCIÓN PRINCIPAL DE RECÁLCULO (EXPORTADA)
 // ----------------------------------------------------
-// Eliminamos la asignación a 'window' y usamos 'export'
-export async function refreshCalculation(initial = false) {
-const result = calculateSalaryData();
+/**
+ * Ejecuta el cálculo salarial, actualiza la UI y guarda el historial si aplica.
+ * @param {boolean} forceSaveHistory - Indica si se debe intentar guardar el historial.
+ */
+export async function refreshCalculation(forceSaveHistory = false) {
+    const result = calculateSalaryData();
     appState.calculationResult = result;
+    
+    // Actualizar la vista de resultados y el dashboard
     renderResults(result);
-    updateStatus('success', 'Cálculo realizado.');
+    // Nota: renderDashboard debe ser llamado por initAuth cuando se carga el historial, 
+    // pero lo incluimos aquí para asegurarnos de que el cálculo actual se refleje en los totales si es necesario.
+    // Aunque auth.js lo orquesta, si appState.historicalData cambia, esta es una buena práctica.
+    renderDashboard(appState.historicalData);
+    
+    updateStatus('success', 'Cálculo realizado y actualizado.');
     
     // NUEVA LÍNEA: GUARDAR EN EL HISTORIAL
-    if (result && result.totalNeto > 0) {
-        await saveCalculationHistory(result); // Llama a la función de guardado
+    // Solo guardamos si hay un neto positivo y si se forzó el guardado (como al presionar "Calcular").
+    if (result && result.totalNeto > 0 && forceSaveHistory) {
+        await saveCalculationHistory(result);
+    }
 }
 
 
-// --- Event Listeners and Initialization ---
+// --- Handlers de Eventos ---
 
-// 2. Inicialización
-window.onload = async () => {
-    // Inicializa inputs visualmente (antes de cargar de Firebase)
-    populateInputs(); 
-    // initAuth configura los listeners de Firebase y carga datos.
-    // auth.js llamará a refreshCalculation() cuando tenga datos.
-    await initAuth();  
-};
-
-
-// 3. Botón Calcular
-document.getElementById('calculate-schedule-button').addEventListener('click', () => {
-    refreshCalculation(true);
-});
-
-// 4. Inputs de Configuración
-['input-month', 'input-year', 'input-valorHora', 'input-discountRate', 'input-lastFrancoDate', 'input-initialTurn'].forEach(id => {
-    document.getElementById(id).addEventListener('change', (e) => {
-        const val = e.target.value;
-        if(id === 'input-valorHora' || id === 'input-discountRate') appState.config[e.target.name] = parseFloat(val);
-        else if(id === 'input-month' || id === 'input-year') appState.config[e.target.name] = parseInt(val);
-        else appState.config[e.target.name] = val;
+/**
+ * Handler para cambios en la configuración mensual.
+ */
+export function handleConfigChange() {
+    const configInputs = document.querySelectorAll('#input-month, #input-year, #input-valorHora, #input-discountRate, #input-lastFrancoDate, #input-initialTurn');
+    
+    configInputs.forEach(input => {
+        const val = input.value;
+        const name = input.name;
         
-        saveConfig(); // Guardar en Firebase
-        refreshCalculation(); // Llamar a la función exportada
+        if (name === 'valorHora' || name === 'discountRate') appState.config[name] = parseFloat(val) || 0;
+        else if (name === 'month' || name === 'year') appState.config[name] = parseInt(val);
+        else appState.config[name] = val;
     });
-});
 
-// 5. Inputs de PERFIL
-['input-category', 'input-tituloSum', 'input-isTechnician'].forEach(id => {
-    document.getElementById(id).addEventListener('change', (e) => {
-        const val = e.target.value;
-        const name = e.target.name;
+    saveConfig(); // Guardar en Firebase
+    refreshCalculation();
+}
 
-        // Manejar el checkbox
-        if (name === 'isTechnician') {
-            appState.profile[name] = e.target.checked;
-        } 
-        // Manejar números/texto
-        else if (name === 'tituloSum') {
-            appState.profile[name] = parseFloat(val) || 0;
-        } 
-        else {
-            appState.profile[name] = val;
-        }
+/**
+ * Handler para cambios en el perfil de usuario.
+ */
+export function handleProfileChange() {
+    const p = appState.profile;
+    const isTechInput = document.getElementById('input-isTechnician');
+    const tituloSumInput = document.getElementById('input-tituloSum');
 
-        saveProfileDetails(); // <-- Correcto, ya importado
-        refreshCalculation(); // <-- Llamar a la función exportada
-    });
-});
+    p.isTechnician = isTechInput.checked;
+    p.category = document.getElementById('input-category').value;
+    p.tituloSum = parseFloat(tituloSumInput.value) || 0;
+    
+    // Opcional: Deshabilitar el input de monto si no es técnico
+    tituloSumInput.disabled = !p.isTechnician;
 
-// 6. Inputs Dinámicos (Tabla) - Event Delegation
-document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
+    saveProfileDetails(); // Guardar en Firebase
+    refreshCalculation(); 
+}
+
+/**
+ * Handler genérico para cambios en las horas extra o feriados de la tabla.
+ */
+export function handleDailyTableChange(e) {
     const dateKey = e.target.dataset.date;
+    
     if (e.target.classList.contains('holiday-check')) {
         if (e.target.checked) appState.manualHolidays[dateKey] = true;
         else delete appState.manualHolidays[dateKey];
-    } 
-    else if (e.target.classList.contains('extra-input')) {
+    } else if (e.target.classList.contains('extra-input')) {
         appState.extraHours[dateKey] = parseFloat(e.target.value) || 0;
     }
-    saveData(); // Guardar datos mensuales
+    
+    saveData(); // Guardar datos mensuales (extraHours y manualHolidays)
     refreshCalculation();
-});
+}
 
-// 7. PDF
-document.getElementById('generate-pdf-button').addEventListener('click', generatePDFReport);
+
+// ----------------------------------------------------
+// 2. INICIALIZACIÓN
+// ----------------------------------------------------
+window.onload = async () => {
+    // 1. Inicializa inputs visualmente (antes de cargar de Firebase)
+    populateInputs(); 
+    
+    // 2. initAuth configura los listeners de Firebase y carga datos.
+    // auth.js llamará a refreshCalculation() cuando tenga datos.
+    await initAuth(); 
+    
+    // 3. Setup de Event Listeners Globales
+    
+    // a) Inputs de Configuración y Perfil (usando la nueva función de delegación)
+    document.querySelectorAll('.input-style, input[type="checkbox"]').forEach(input => {
+        if (input.id.startsWith('input-')) {
+            if (input.name === 'category' || input.name === 'tituloSum' || input.name === 'isTechnician') {
+                input.addEventListener('change', handleProfileChange);
+            } else {
+                input.addEventListener('change', handleConfigChange);
+            }
+        }
+    });
+    
+    // b) Botón Calcular
+    document.getElementById('calculate-schedule-button').addEventListener('click', () => {
+        // Al hacer clic, forzamos el guardado en el historial
+        refreshCalculation(true); 
+    });
+
+    // c) Inputs Dinámicos (Tabla) - Event Delegation
+    document.getElementById('daily-detail-tbody').addEventListener('change', handleDailyTableChange);
+
+    // d) PDF
+    document.getElementById('generate-pdf-button').addEventListener('click', () => {
+        if(appState.calculationResult) {
+            generatePDFReport(appState.calculationResult);
+        } else {
+            updateStatus('error', 'Debe realizar un cálculo primero para generar el PDF.');
+        }
+    });
+};
