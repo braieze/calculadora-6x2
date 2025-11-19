@@ -24,5 +24,11 @@ export const appState = {
         id: null,
         name: 'Invitado',
         isAuthenticated: false
+    },
+    profile: {
+        category: 'Base',
+        isTechnician: false,
+        tituloSum: 0,
+        // Aquí se podrían agregar más campos como ART, etc.
     }
 };
