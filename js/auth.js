@@ -1,4 +1,8 @@
 import { auth, db, appId } from './firebase.js'; 
+import { db } from './firebase_config.js'; // O donde sea que inicialices db
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore'; 
+import { appState } from './state.js';
+import { renderDashboard } from './ui.js'; // ESTA LA CREAREMOS EN EL PASO 3
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { appState } from './state.js';
