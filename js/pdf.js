@@ -5,8 +5,10 @@ const formatNumber = (amt) => parseFloat(amt || 0).toLocaleString('es-AR', { min
 
 export function generatePDFReport() {
     const result = appState.calculationResult;
-    if (!result) {
-        alert("Primero debes realizar el cálculo.");
+    
+    // VERIFICACIÓN CLAVE: Si el resultado es nulo o no hay dailyResults, salimos.
+    if (!result || !result.dailyResults || result.dailyResults.length === 0) {
+        alert('No hay datos de cálculo para generar el PDF. Por favor, realiza un cálculo primero.');
         return;
     }
 
