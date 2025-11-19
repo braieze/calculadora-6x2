@@ -3,8 +3,7 @@ import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signI
 import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { appState } from './state.js';
 import { updateStatus, populateInputs, renderResults } from './ui.js';
-// Importamos la función de recálculo global que definimos en main.js
-import { refreshCalculation } from './main.js'; 
+import { refreshCalculation } from './main.js'; // <--- Importación correcta
 
 let unsubscribeConfig = null;
 let unsubscribeProfile = null; // Nuevo listener para el perfil
