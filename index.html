@@ -30,6 +30,31 @@
         </div>
         
         <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
+        <div class="mt-4 mb-6 p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+        <h2 class="text-xl font-bold text-indigo-700 mb-4">Mi Perfil</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Categoría Laboral</label>
+                <input id="input-category" type="text" name="category" class="input-style" placeholder="Ej: Operador, Administrativo">
+            </div>
+    
+            <div class="flex items-center pt-5">
+                <input id="input-isTechnician" type="checkbox" name="isTechnician" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                <label for="input-isTechnician" class="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
+                    Soy Técnico (Aplica bono por título)
+                </label>
+            </div>
+    
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Monto Suma del Título ($)</label>
+                <input id="input-tituloSum" type="number" name="tituloSum" class="input-style" step="0.01">
+            </div>
+    
+        </div>
+        </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div>
