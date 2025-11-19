@@ -3,20 +3,42 @@ import { appState } from './state.js';
 const EXTRA_HOUR_MULTIPLIER = 1.5;
 const HOLIDAY_WORKED_EQUIV_HOURS = 32;
 const HOLIDAY_FREE_EQUIV_HOURS = 8;
+const PAYMENT_LAG_DAYS = 4; // Días hábiles de retraso para el pago
 
-// Utilidad interna
+// --- Funciones de Utilidad ---
+
+// Calcula el día de pago hábil (4 días después del corte)
+function calculatePayday(cutOffDate) {
+    let payday = new Date(cutOffDate);
+    payday.setDate(payday.getDate() + 1); // Empezamos a contar desde el día después del corte
+    
+    let daysToAdd = PAYMENT_LAG_DAYS;
+    
+    while (daysToAdd > 0) {
+        payday.setDate(payday.getDate() + 1);
+        const dayOfWeek = payday.getDay();
+        
+        // Días hábiles son Lunes (1) a Viernes (5)
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            daysToAdd--;
+        }
+    }
+    return payday.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 function getTurnEquivalencies(dayOfWeek, turnType) {
     let realHours = 8;
     let equivalentHours = 8;
     let turnBaseName = turnType;
     
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) { // L-V
+    // ... (Mantener la lógica de equivalencias por día/turno exactamente igual)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) { 
         if (turnType === 'Noche') equivalentHours = 12;
-    } else if (dayOfWeek === 6) { // Sábado
+    } else if (dayOfWeek === 6) { 
         if (turnType === 'Mañana') { realHours = 8; equivalentHours = 9; }
         if (turnType === 'Tarde') { realHours = 9; equivalentHours = 12; }
         if (turnType === 'Noche') { realHours = 8; equivalentHours = 16; }
-    } else if (dayOfWeek === 0) { // Domingo
+    } else if (dayOfWeek === 0) { 
         turnBaseName = 'Domingo ' + turnType;
         if (turnType !== 'Noche') equivalentHours = 24;
         else equivalentHours = 28;
@@ -24,11 +46,14 @@ function getTurnEquivalencies(dayOfWeek, turnType) {
     return { realHours, equivalentHours, turnBaseName };
 }
 
+
+// --- Función Principal de Cálculo ---
+
 export function calculateSalaryData() {
     const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
-
     if (!lastFrancoDate || !valorHora) return null;
 
+    // (Lógica de inicialización de fechas y offset, se mantiene igual)
     let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
     const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
     const dayAfterFranco = new Date(lastFrancoDay2.getTime());
@@ -51,21 +76,32 @@ export function calculateSalaryData() {
     let francosDates = [];
     const daysInMonth = new Date(year, month, 0).getDate();
 
+    // Variables de Agregación Quincenal
+    let q1TotalEquivHours = 0;
+    let q1TotalExtraHoursReal = 0;
+    let q2TotalEquivHours = 0;
+    let q2TotalExtraHoursReal = 0;
+    
+    // ----------------------------------------------------
+    // LOOP DIARIO
+    // ----------------------------------------------------
     for (let i = 0; i < daysInMonth; i++) {
+        const dayOfMonth = i + 1;
         const dayOfWeek = currentDate.getDay();
         const dateKeyForSave = currentDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true;
         const cycleStatus = masterCycle[startOffset];
 
+        // ... (Cálculo de turnos, horas equivalentes y extras, se mantiene igual)
         let turnBaseName = cycleStatus;
         let realHours = 0;
         let equivalentHours = 0;
-
+        
+        // Determinar horas base y equivalentes (Franco, Feriado, Normal)
         if (cycleStatus === 'Franco') {
             if (isHolidayManual) {
                 turnBaseName = `FERIADO - Franco`;
                 equivalentHours = HOLIDAY_FREE_EQUIV_HOURS;
-                francosDates.push(dateKeyForSave + ' (Feriado)');
             } else {
                 turnBaseName = `Franco`;
                 francosDates.push(dateKeyForSave);
@@ -83,12 +119,23 @@ export function calculateSalaryData() {
             }
         }
 
-        // Calcular Extrass
+        // Calcular Extras
         const dayExtraReal = appState.extraHours[dateKeyForSave] || 0;
         const dayExtraEquivalent = dayExtraReal * EXTRA_HOUR_MULTIPLIER;
         const finalEquivHours = equivalentHours + dayExtraEquivalent;
         const dailyBruto = finalEquivHours * valorHora;
+        
+        // AGREGACIÓN QUINCENAL
+        if (dayOfMonth <= 15) {
+            q1TotalEquivHours += finalEquivHours;
+            q1TotalExtraHoursReal += dayExtraReal;
+        } else {
+            q2TotalEquivHours += finalEquivHours;
+            q2TotalExtraHoursReal += dayExtraReal;
+        }
 
+
+        // Registrar resultado diario
         dailyResults.push({
             date: dateKeyForSave,
             day: dayNames[dayOfWeek],
@@ -97,18 +144,35 @@ export function calculateSalaryData() {
             equivHoursBase: equivalentHours,
             extraReal: dayExtraReal,
             equivHoursFinal: finalEquivHours,
-            dailyBruto: dailyBruto
+            dailyBruto: dailyBruto,
+            quincena: dayOfMonth <= 15 ? 1 : 2 // Marcar la quincena
         });
 
         startOffset = (startOffset + 1) % 24;
         currentDate.setDate(currentDate.getDate() + 1);
     }
+    // ----------------------------------------------------
+    // FIN LOOP DIARIO
+    // ----------------------------------------------------
+    
+    // Cálculo de Totales Quincenales
+    const q1Bruto = q1TotalEquivHours * valorHora;
+    const q1Descuento = q1Bruto * discountRate;
+    const q1Neto = q1Bruto - q1Descuento;
+    const q1CutOffDate = new Date(year, month - 1, 15);
+    
+    const q2Bruto = q2TotalEquivHours * valorHora;
+    const q2Descuento = q2Bruto * discountRate;
+    const q2Neto = q2Bruto - q2Descuento;
+    const q2CutOffDate = new Date(year, month, 0); // Último día del mes
 
-    const totalEquivalentHours = dailyResults.reduce((acc, d) => acc + d.equivHoursFinal, 0);
-    const totalExtraHoursReal = dailyResults.reduce((acc, d) => acc + d.extraReal, 0);
-    const totalBruto = totalEquivalentHours * valorHora;
-    const totalDescuento = totalBruto * discountRate;
-    const totalNeto = totalBruto - totalDescuento;
+    // Totales Mensuales (Suma de Quincenas)
+    const totalEquivalentHours = q1TotalEquivHours + q2TotalEquivHours;
+    const totalExtraHoursReal = q1TotalExtraHoursReal + q2TotalExtraHoursReal;
+    const totalBruto = q1Bruto + q2Bruto;
+    const totalDescuento = q1Descuento + q2Descuento;
+    const totalNeto = q1Neto + q2Neto;
+
 
     return {
         dailyResults,
@@ -118,6 +182,24 @@ export function calculateSalaryData() {
         totalBruto,
         totalDescuento,
         totalNeto,
-        discountRate: discountRate * 100
+        discountRate: discountRate * 100,
+        
+        // NUEVOS DATOS QUINCENALES
+        quincena1: {
+            equivHours: q1TotalEquivHours,
+            extraHours: q1TotalExtraHoursReal,
+            bruto: q1Bruto,
+            neto: q1Neto,
+            payDate: calculatePayday(q1CutOffDate),
+            cutOffDate: q1CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        },
+        quincena2: {
+            equivHours: q2TotalEquivHours,
+            extraHours: q2TotalExtraHoursReal,
+            bruto: q2Bruto,
+            neto: q2Neto,
+            payDate: calculatePayday(q2CutOffDate),
+            cutOffDate: q2CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        },
     };
 }
