@@ -1,264 +1,276 @@
 import { appState } from './state.js';
+import { saveData } from './auth.js'; // Necesario para guardar cambios de tabla diaria
 
-const EXTRA_HOUR_MULTIPLIER = 1.5;
-const HOLIDAY_WORKED_EQUIV_HOURS = 32;
-const HOLIDAY_FREE_EQUIV_HOURS = 8;
-const PAYMENT_LAG_DAYS = 4; // Días hábiles de retraso para el pago
+// Variable global para mantener la instancia del gráfico Chart.js
+let chartInstance = null; 
 
-// --- Funciones de Utilidad ---
+// --- Funciones de Utilidad de UI ---
 
-// Calcula el día de pago hábil (4 días después del corte)
-function calculatePayday(cutOffDate) {
-    let payday = new Date(cutOffDate);
-    payday.setDate(payday.getDate() + 1); // Empezamos a contar desde el día después del corte
-    
-    let daysToAdd = PAYMENT_LAG_DAYS;
-    
-    while (daysToAdd > 0) {
-        payday.setDate(payday.getDate() + 1);
-        const dayOfWeek = payday.getDay();
-        
-        // Días hábiles son Lunes (1) a Viernes (5)
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-            daysToAdd--;
-        }
-    }
-    return payday.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+const formatCurrency = (amount) => {
+    // Asegura que es un número antes de formatear
+    const num = parseFloat(amount) || 0;
+    return num.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+};
 
-function getTurnEquivalencies(dayOfWeek, turnType) {
-    let realHours = 8;
-    let equivalentHours = 8;
-    let turnBaseName = turnType;
-    
-    // Lunes (1) a Viernes (5)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) { 
-        if (turnType === 'Noche') equivalentHours = 12;
-    // Sábado (6)
-    } else if (dayOfWeek === 6) { 
-        if (turnType === 'Mañana') { realHours = 8; equivalentHours = 9; }
-        if (turnType === 'Tarde') { realHours = 9; equivalentHours = 12; }
-        if (turnType === 'Noche') { realHours = 8; equivalentHours = 16; }
-    // Domingo (0)
-    } else if (dayOfWeek === 0) { 
-        turnBaseName = 'Domingo ' + turnType;
-        if (turnType !== 'Noche') equivalentHours = 24;
-        else equivalentHours = 28;
-    }
-    return { realHours, equivalentHours, turnBaseName };
-}
-
-
-// --- Función Principal de Cálculo ---
-
-export function calculateSalaryData() {
-    const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
-    
-    // CORRECCIÓN CRÍTICA: Devolvemos una estructura segura en caso de datos faltantes.
-    if (!lastFrancoDate || !valorHora) {
-        return {
-            totalEquivalentHours: 0,
-            totalDescuento: 0,
-            totalBruto: 0,
-            totalNeto: 0,
-            valorHora: valorHora || 0,
-            discountRate: discountRate || 0,
-            dailyResults: [], // ESTO EVITA EL CRASH DE .map() EN LA UI
-            quincena1: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A" },
-            quincena2: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A", tituloSumApplied: 0 },
-        };
-    }
-
-
-    // ----------------------------------------------------
-    // INICIALIZACIÓN Y OFFSET DEL CICLO
-    // ----------------------------------------------------
-    let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
-    const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
-    const dayAfterFranco = new Date(lastFrancoDay2.getTime());
-    dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
-
-    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const masterCycle = [
-        'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco',
-        'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco',
-        'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'
-    ];
-
-    let baseOffset = initialTurn === 'Noche' ? 8 : initialTurn === 'Tarde' ? 16 : 0;
-    const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    let startOffset = (baseOffset + diffDays) % 24;
-    if (startOffset < 0) startOffset += 24;
-
-    let dailyResults = [];
-    const daysInMonth = new Date(year, month, 0).getDate();
-
-    // Variables de Agregación Quincenal
-    let q1TotalEquivHours = 0;
-    let q2TotalEquivHours = 0;
-    
-    // ----------------------------------------------------
-    // LOOP DIARIO
-    // ----------------------------------------------------
-    for (let i = 0; i < daysInMonth; i++) {
-        const dayOfMonth = i + 1;
-        const dayOfWeek = currentDate.getDay();
-        const dateKeyForSave = currentDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true;
-        const cycleStatus = masterCycle[startOffset];
-
-        let turnBaseName = cycleStatus;
-        let realHours = 0;
-        let equivalentHours = 0;
-        
-        // Determinar horas base y equivalentes (Franco, Feriado, Normal)
-        if (cycleStatus === 'Franco') {
-            if (isHolidayManual) {
-                turnBaseName = `FERIADO - Franco`;
-                equivalentHours = HOLIDAY_FREE_EQUIV_HOURS;
-            } else {
-                turnBaseName = `Franco`;
-            }
-        } else {
-            if (isHolidayManual) {
-                turnBaseName = `FERIADO - ${cycleStatus}`;
-                realHours = 8;
-                equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
-            } else {
-                const equivalences = getTurnEquivalencies(dayOfWeek, cycleStatus);
-                realHours = equivalences.realHours;
-                equivalentHours = equivalences.equivalentHours;
-                turnBaseName = equivalences.turnBaseName;
-            }
-        }
-
-        // Calcular Extras
-        const dayExtraReal = appState.extraHours[dateKeyForSave] || 0;
-        const dayExtraEquivalent = dayExtraReal * EXTRA_HOUR_MULTIPLIER;
-        const finalEquivHours = equivalentHours + dayExtraEquivalent;
-        const dailyBruto = finalEquivHours * valorHora;
-        
-        // AGREGACIÓN QUINCENAL
-        if (dayOfMonth <= 15) {
-            q1TotalEquivHours += finalEquivHours;
-        } else {
-            q2TotalEquivHours += finalEquivHours;
-        }
-
-
-        // Registrar resultado diario
-        dailyResults.push({
-            date: dateKeyForSave,
-            day: dayNames[dayOfWeek],
-            turn: turnBaseName,
-            isHoliday: isHolidayManual,
-            equivHoursBase: equivalentHours,
-            extraReal: dayExtraReal,
-            equivHoursFinal: finalEquivHours,
-            dailyBruto: dailyBruto,
-            quincena: dayOfMonth <= 15 ? 1 : 2 // Marcar la quincena
-        });
-
-        startOffset = (startOffset + 1) % 24;
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    // ----------------------------------------------------
-    // FIN LOOP DIARIO
-    // ----------------------------------------------------
-    
-    // ----------------------------------------------------
-    // CÁLCULO DE TOTALES QUINCENALES
-    // ----------------------------------------------------
-    const q1Bruto = q1TotalEquivHours * valorHora;
-    const q1Descuento = q1Bruto * discountRate;
-    const q1Neto = q1Bruto - q1Descuento;
-    const q1CutOffDate = new Date(year, month - 1, 15);
-    
-    // LÓGICA DE SUMA DEL TÍTULO
-    const tituloSum = appState.profile?.isTechnician 
-                      ? Number(appState.profile.tituloSum || 0) 
-                      : 0;
-    
-    // El monto bruto de la Quincena 2 incluye las horas más el bono de título
-    let q2BaseBruto = q2TotalEquivHours * valorHora;
-    let q2Bruto = q2BaseBruto + tituloSum;
-    
-    const q2Descuento = q2Bruto * discountRate;
-    const q2Neto = q2Bruto - q2Descuento;
-    const q2CutOffDate = new Date(year, month, 0); 
-    
-    // ----------------------------------------------------
-    // CÁLCULO DE TOTALES MENSUALES (Corregido y Asignado)
-    // ----------------------------------------------------
-    const totalEquivalentHours = q1TotalEquivHours + q2TotalEquivHours;
-    const totalBruto = q1Bruto + q2Bruto;
-    const totalDescuento = q1Descuento + q2Descuento;
-    const totalNeto = totalBruto - totalDescuento;
-
-    return {
-        // DATOS MENSUALES (CORREGIDO: Ahora se asignan correctamente)
-        totalEquivalentHours: totalEquivalentHours,
-        totalDescuento: totalDescuento,
-        totalBruto: totalBruto,
-        totalNeto: totalNeto,
-        valorHora: valorHora,
-        discountRate: discountRate,
-
-        // DATOS DIARIOS
-        dailyResults: dailyResults, 
-        
-        // DATOS QUINCENALES
-        quincena1: {
-            bruto: q1Bruto,
-            neto: q1Neto,
-            cutOffDate: q1CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-            payDate: calculatePayday(q1CutOffDate),
-        },
-        quincena2: {
-            bruto: q2Bruto, 
-            neto: q2Neto, 
-            tituloSumApplied: tituloSum, 
-            payDate: calculatePayday(q2CutOffDate),
-            cutOffDate: q2CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        },
-    };
-}
-
-import { db } from './auth.js'; // Asumiendo que exportas 'db' de Firebase desde auth.js
-import { doc, setDoc } from 'firebase/firestore'; 
+// --- Manejo de Estado y Errores ---
 
 /**
- * Guarda un resumen de los resultados del cálculo en el historial de Firebase.
+ * Muestra mensajes de estado y errores en la parte superior.
+ * @param {string} type - 'success', 'error', 'info'.
+ * @param {string} message - El mensaje a mostrar.
+ */
+export function updateStatus(type, message) {
+    const statusEl = document.getElementById('status-message');
+    statusEl.textContent = message;
+    statusEl.className = 'p-3 rounded-lg text-sm transition-all duration-300';
+    
+    switch (type) {
+        case 'success':
+            statusEl.classList.add('bg-green-100', 'text-green-800');
+            break;
+        case 'error':
+            statusEl.classList.add('bg-red-100', 'text-red-800');
+            break;
+        case 'info':
+        default:
+            statusEl.classList.add('bg-blue-100', 'text-blue-800');
+            break;
+    }
+}
+
+
+// --- Llenado de Inputs (Configuración y Perfil) ---
+
+/**
+ * Llena los inputs de configuración y perfil con los valores del estado (appState).
+ */
+export function populateInputs() {
+    const config = appState.config;
+    const profile = appState.profile;
+
+    // 1. Inputs de Configuración
+    document.getElementById('input-month').value = String(config.month).padStart(2, '0');
+    document.getElementById('input-year').value = config.year;
+    document.getElementById('input-valorHora').value = config.valorHora;
+    document.getElementById('input-discountRate').value = config.discountRate * 100;
+    document.getElementById('input-lastFrancoDate').value = config.lastFrancoDate;
+    document.getElementById('input-initialTurn').value = config.initialTurn;
+
+    // 2. Inputs de Perfil (NUEVO)
+    // Asumimos que estos IDs existen en index.html
+    if (document.getElementById('input-category')) {
+        document.getElementById('input-category').value = profile.category;
+    }
+    if (document.getElementById('input-isTechnician')) {
+        document.getElementById('input-isTechnician').checked = profile.isTechnician;
+    }
+    if (document.getElementById('input-tituloSum')) {
+        document.getElementById('input-tituloSum').value = profile.tituloSum;
+    }
+}
+
+
+// --- Renderizado de Resultados y Tabla Diaria ---
+
+/**
+ * Renderiza la tabla diaria y los resúmenes quincenales y mensuales.
  * @param {object} result - El resultado completo del cálculo.
  */
-export async function saveCalculationHistory(result) {
-    const userId = appState.user.uid;
-    const { year, month } = appState.config;
+export function renderResults(result) {
+    const { totalNeto, totalBruto, totalDescuento, quincena1, quincena2, dailyResults } = result;
     
-    // Formato de ID para el documento: YYYY-MM (e.g., 2025-11)
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-    
-    // Creamos un resumen de los datos relevantes para el historial
-    const historyData = {
-        monthKey: monthKey,
-        month: month,
-        year: year,
-        totalNeto: result.totalNeto,
-        totalBruto: result.totalBruto,
-        totalEquivalentHours: result.totalEquivalentHours,
-        valorHora: result.valorHora,
-        discountRate: result.discountRate,
-        tituloSumApplied: result.quincena2.tituloSumApplied,
-        timestamp: Date.now() 
-    };
+    // 1. Mostrar la sección de resultados
+    document.getElementById('results-section').classList.remove('hidden');
 
-    try {
-        const docRef = doc(db, 'users', userId, 'history', monthKey);
-        await setDoc(docRef, historyData, { merge: true });
-        console.log("Historial de cálculo guardado con éxito:", monthKey);
-        // Nota: No se requiere updateStatus aquí, ya que el estado se actualiza al final del cálculo.
-    } catch (e) {
-        console.error("Error al guardar el historial de cálculo:", e);
+    // 2. Actualizar el resumen mensual
+    document.getElementById('total-neto').textContent = formatCurrency(totalNeto);
+    document.getElementById('total-bruto').textContent = formatCurrency(totalBruto);
+    document.getElementById('total-descuento').textContent = formatCurrency(totalDescuento);
+
+    // 3. Actualizar resumen Quincena 1
+    document.getElementById('q1-bruto').textContent = formatCurrency(quincena1.bruto);
+    document.getElementById('q1-neto').textContent = formatCurrency(quincena1.neto);
+    document.getElementById('q1-cutOffDate').textContent = quincena1.cutOffDate;
+    document.getElementById('q1-payDate').textContent = quincena1.payDate;
+
+    // 4. Actualizar resumen Quincena 2
+    document.getElementById('q2-bruto').textContent = formatCurrency(quincena2.bruto);
+    document.getElementById('q2-neto').textContent = formatCurrency(quincena2.neto);
+    document.getElementById('q2-cutOffDate').textContent = quincena2.cutOffDate;
+    document.getElementById('q2-payDate').textContent = quincena2.payDate;
+    
+    // Mostrar bono por título si aplica
+    const tituloSumEl = document.getElementById('q2-titulo-sum');
+    if (tituloSumEl) {
+        if (quincena2.tituloSumApplied > 0) {
+            tituloSumEl.textContent = `(+Título: ${formatCurrency(quincena2.tituloSumApplied)})`;
+            tituloSumEl.classList.remove('hidden');
+        } else {
+            tituloSumEl.classList.add('hidden');
+        }
+    }
+
+
+    // 5. Renderizar la Tabla Diaria
+    const tableBody = document.getElementById('daily-results-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = dailyResults.map(day => {
+        const isFranco = day.turn.includes('Franco') && !day.isHoliday;
+        const isFeriado = day.isHoliday;
+        
+        let rowClass = 'bg-white hover:bg-gray-50';
+        if (isFranco) {
+            rowClass = 'bg-yellow-50 hover:bg-yellow-100';
+        }
+        if (isFeriado) {
+            rowClass = 'bg-red-50 font-semibold text-red-700 hover:bg-red-100';
+        }
+
+        // Determinar si el campo de horas extra es editable (no Franco y no Feriado)
+        const isEditable = !isFranco && !isFeriado;
+
+        // ID único para el checkbox de feriado manual
+        const holidayCheckboxId = `holiday-${day.date.replace(/[\/.]/g, '-')}`; 
+        
+        return `
+            <tr class="${rowClass}">
+                <td class="px-2 py-1 text-sm">${day.date} (${day.quincena})</td>
+                <td class="px-2 py-1 text-sm">${day.day}</td>
+                <td class="px-2 py-1 text-sm">${day.turn.replace('FERIADO - ', '')}</td>
+                <td class="px-2 py-1 text-sm text-center">
+                    <input 
+                        type="checkbox" 
+                        id="${holidayCheckboxId}"
+                        class="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                        ${day.isHoliday ? 'checked' : ''}
+                        onchange="handleHolidayChange('${day.date}', this)"
+                    />
+                </td>
+                <td class="px-2 py-1 text-sm text-center">${day.equivHoursBase.toFixed(2)}</td>
+                <td class="px-2 py-1 text-sm text-right">
+                    <input 
+                        type="number" 
+                        min="0"
+                        step="0.01"
+                        value="${day.extraReal}"
+                        class="w-16 text-right border rounded text-sm p-1 ${isEditable ? 'bg-white border-indigo-300' : 'bg-gray-200 border-gray-300'}"
+                        ${isEditable ? `onchange="handleExtraChange('${day.date}', this)"` : 'disabled'}
+                    />
+                </td>
+                <td class="px-2 py-1 text-sm font-bold text-right">${day.equivHoursFinal.toFixed(2)}</td>
+                <td class="px-2 py-1 text-sm font-bold text-right">${formatCurrency(day.dailyBruto)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+
+// --- Renderizado del Dashboard Histórico ---
+/**
+ * Dibuja el gráfico de tendencia salarial y el resumen histórico.
+ * @param {object} data - Datos históricos de appState.historicalData.
+ */
+export function renderDashboard(data) {
+    const section = document.getElementById('dashboard-section');
+    const chartCanvas = document.getElementById('salary-chart');
+    const summaryEl = document.getElementById('historical-summary');
+
+    // Muestra/Oculta la sección
+    const monthKeys = Object.keys(data).sort();
+    if (monthKeys.length < 2) {
+        section.classList.add('hidden');
+        if (summaryEl) summaryEl.innerHTML = '';
+        if (chartInstance) chartInstance.destroy();
+        return;
+    }
+    section.classList.remove('hidden');
+
+    // 1. PREPARAR DATOS PARA EL GRÁFICO
+    const labels = [];
+    const netos = [];
+    
+    let totalBruto = 0;
+    let totalNeto = 0;
+    
+    monthKeys.forEach(key => {
+        const item = data[key];
+        const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
+        
+        labels.push(monthName);
+        netos.push(item.totalNeto);
+        
+        totalBruto += item.totalBruto;
+        totalNeto += item.totalNeto;
+    });
+
+    // 2. RENDERIZAR GRÁFICO (usando Chart.js)
+    if (chartInstance) {
+        chartInstance.destroy(); // Destruir instancia anterior
+    }
+
+    // Chart.js debe estar cargado en index.html
+    if (window.Chart && chartCanvas) {
+        chartInstance = new window.Chart(chartCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Neto Total Mensual',
+                    data: netos,
+                    borderColor: 'rgb(79, 70, 229)', 
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: { display: true, text: 'Monto Neto (ARS)' },
+                        ticks: {
+                            callback: function(value) { return formatCurrency(value); }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. RENDERIZAR RESUMEN HISTÓRICO
+    if (summaryEl) {
+        const avgNeto = totalNeto / monthKeys.length;
+        const maxNeto = Math.max(...netos);
+
+        summaryEl.innerHTML = `
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <p class="text-gray-500 text-sm">Meses en Historial</p>
+                <p class="text-xl font-bold">${monthKeys.length}</p>
+            </div>
+            <div class="p-3 bg-indigo-50 rounded-lg">
+                <p class="text-gray-500 text-sm">Neto Promedio</p>
+                <p class="text-xl font-bold">${formatCurrency(avgNeto)}</p>
+            </div>
+            <div class="p-3 bg-indigo-50 rounded-lg">
+                <p class="text-gray-500 text-sm">Neto Máximo</p>
+                <p class="text-xl font-bold">${formatCurrency(maxNeto)}</p>
+            </div>
+            <div class="p-3 bg-indigo-50 rounded-lg">
+                <p class="text-gray-500 text-sm">Neto Total Acumulado</p>
+                <p class="text-xl font-bold">${formatCurrency(totalNeto)}</p>
+            </div>
+        `;
     }
 }
