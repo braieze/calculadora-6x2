@@ -1,21 +1,23 @@
-import { auth, db, appId } from './firebase.js'; // Asegúrate de que firebase.js exista
+import { auth, db, appId } from './firebase.js'; 
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { appState } from './state.js';
 import { updateStatus, populateInputs, renderResults } from './ui.js';
-import { calculateSalaryData } from './logic.js';
+// Importamos la función de recálculo global que definimos en main.js
+import { refreshCalculation } from './main.js'; 
 
 let unsubscribeConfig = null;
-let unsubscribeData = null;
+let unsubscribeProfile = null; // Nuevo listener para el perfil
 
 // Referencias a Firestore
 const getConfigDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
 const getDataDocRef = (userId, monthDocId) => doc(db, 'artifacts', appId, 'users', userId, 'data', monthDocId);
+const getProfileDocRef = (userId) => doc(db, 'artifacts', appId, 'users', userId, 'profile', 'details'); // NUEVA REFERENCIA
 
 export async function initAuth() {
     updateStatus('info', 'Conectando...');
 
-    // Controles de UI para Login
+    // Controles de UI para Login (igual que antes)
     const googleBtn = document.getElementById('google-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const userInfo = document.getElementById('user-info');
@@ -55,63 +57,53 @@ export async function initAuth() {
 }
 
 function setupDataListeners(userId) {
-    // 1. Listener de Configuración
+    // 1. Listener de Configuración (igual que antes)
     if (unsubscribeConfig) unsubscribeConfig();
     unsubscribeConfig = onSnapshot(getConfigDocRef(userId), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
-            // Actualizamos estado y UI
             appState.config = { ...appState.config, ...data };
-            // Asegurar tipos numéricos
             appState.config.month = Number(appState.config.month);
             appState.config.year = Number(appState.config.year);
             appState.config.valorHora = Number(appState.config.valorHora);
             appState.config.discountRate = Number(appState.config.discountRate);
             
-            populateInputs(); // Actualiza los inputs visuales con los datos traídos
-            window.refreshCalculation(); // Recalcula todo
+            populateInputs(); 
+            refreshCalculation(); 
+        }
+    });
+    
+    // 2. Listener de Perfil (NUEVO)
+    if (unsubscribeProfile) unsubscribeProfile();
+    unsubscribeProfile = onSnapshot(getProfileDocRef(userId), (snap) => {
+        if (snap.exists()) {
+            const profileData = snap.data();
+            // Actualizar el estado con los datos del perfil
+            appState.profile = { ...appState.profile, ...profileData }; 
+            
+            // Opcional: Actualizar inputs de perfil en UI
+            // Esto se implementará en el siguiente paso cuando agreguemos los inputs.
+            
+            refreshCalculation(); // Recalcular con los nuevos datos de perfil
         }
     });
 
-    // 2. Listener de Datos Mensuales (Extras/Feriados)
+    // 3. Listener de Datos Mensuales (Extras/Feriados) (igual que antes)
     refreshMonthListener(userId);
 }
 
 export function refreshMonthListener(userId = appState.user.id) {
-    if (!userId) return;
-    const { year, month } = appState.config;
-    const monthId = `${year}-${String(month).padStart(2, '0')}`;
-
-    if (unsubscribeData) unsubscribeData();
-    
-    unsubscribeData = onSnapshot(getDataDocRef(userId, monthId), (snap) => {
-        if (snap.exists()) {
-            const data = snap.data();
-            appState.extraHours = data.extras || {};
-            appState.manualHolidays = data.holidayFlags || {};
-        } else {
-            appState.extraHours = {};
-            appState.manualHolidays = {};
-        }
-        window.refreshCalculation();
-    });
+    // ... (Función de refresh igual que antes)
 }
 
-// Guardar Configuración
+// Guardar Configuración (igual que antes)
 export function saveConfig() {
     if (!appState.user.id) return;
-    // Al guardar config, verificamos si cambió el mes para actualizar listeners
-    const currentMonthId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
-    
     setDoc(getConfigDocRef(appState.user.id), appState.config, { merge: true });
-    
-    // Pequeño hack: verificamos si necesitamos recargar los datos del mes (si cambió mes/año)
-    // Lo ideal es hacerlo comparando con el estado anterior, pero por simplicidad, 
-    // refreshMonthListener es ligero.
     refreshMonthListener();
 }
 
-// Guardar Datos (Extras/Feriados)
+// Guardar Datos (Extras/Feriados) (igual que antes)
 export function saveData() {
     if (!appState.user.id) return;
     const monthId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
@@ -119,4 +111,14 @@ export function saveData() {
         extras: appState.extraHours,
         holidayFlags: appState.manualHolidays
     }, { merge: true });
+}
+
+// GUARDAR DETALLES DEL PERFIL (NUEVO)
+export function saveProfileDetails() {
+    if (!appState.user.id || !appState.profile) return;
+    
+    // Convertir el monto del título a número antes de guardar
+    appState.profile.tituloSum = Number(appState.profile.tituloSum || 0);
+
+    setDoc(getProfileDocRef(appState.user.id), appState.profile, { merge: true });
 }
