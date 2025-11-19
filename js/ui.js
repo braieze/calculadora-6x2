@@ -88,38 +88,6 @@ export function updateStatus(type, message) {
     el.textContent = message;
 }
 
-export function renderResults(result) {
-    const section = document.getElementById('results-section');
-    if (!result) { section.classList.add('hidden'); return; }
-    section.classList.remove('hidden');
-
-    // Cards
-    document.getElementById('summary-cards').innerHTML = `
-        <div class="p-3 bg-gray-50 rounded-lg"><p class="text-gray-500">H. Eq. Totales</p><p class="text-lg font-bold">${formatNumber(result.totalEquivalentHours)}</p></div>
-        <div class="p-3 bg-red-50 rounded-lg"><p class="text-gray-500">Desc. (${result.discountRate.toFixed(0)}%)</p><p class="text-lg text-red-600 font-bold">${formatCurrency(result.totalDescuento)}</p></div>
-        <div class="p-3 bg-indigo-50 rounded-lg"><p class="text-gray-500">Bruto Total</p><p class="text-xl text-indigo-600 font-bold">${formatCurrency(result.totalBruto)}</p></div>
-        <div class="p-3 bg-green-100 rounded-lg"><p class="text-green-700 font-semibold">NETO</p><p class="text-2xl text-green-800 font-bold">${formatCurrency(result.totalNeto)}</p></div>
-    `;
-
-    // Tabla
-    document.getElementById('daily-detail-tbody').innerHTML = result.dailyResults.map(day => {
-        const isFranco = day.turn.includes('Franco');
-        let rowClass = isFranco && !day.isHoliday ? 'bg-yellow-50 text-yellow-800' : day.isHoliday ? 'bg-red-100 text-red-700' : 'hover:bg-gray-50';
-        
-        return `
-            <tr class="${rowClass}">
-                <td class="px-3 py-2">${day.date} - ${day.day.substring(0,3)}</td>
-                <td class="px-3 py-2">${day.turn}</td>
-                <td class="px-3 py-2 text-center"><input type="checkbox" ${day.isHoliday ? 'checked' : ''} data-date="${day.date}" class="holiday-check"></td>
-                <td class="px-3 py-2 text-right">${formatNumber(day.equivHoursBase)}</td>
-                <td class="px-3 py-2 text-center"><input type="number" value="${day.extraReal || ''}" step="0.5" min="0" data-date="${day.date}" class="extra-input w-16 text-center border rounded"></td>
-                <td class="px-3 py-2 text-right font-bold">${formatNumber(day.equivHoursFinal)}</td>
-                <td class="px-3 py-2 text-right font-bold">${formatCurrency(day.dailyBruto)}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
 export function populateInputs() {
     const c = appState.config;
     document.getElementById('input-year').value = c.year;
