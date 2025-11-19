@@ -213,11 +213,12 @@
         </div>
     </div>
 
-    <!-- Carga de Scripts con type="module" -->
-    <script type="module" src="main.js"></script>
-    <script type="module" src="firebase.js"></script>
-    <script type="module" src="calcLogic.js"></script>
-    <script type="module" src="uiRenderer.js"></script>
+    <!-- IMPORTANTE: CARGA SOLO EL ARCHIVO PRINCIPAL DESDE LA CARPETA SRC -->
+    <script type="module" src="./src/main.js"></script>
+
+    <!-- CARGA DE LIBRERÍAS EXTERNAS (PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
 </body>
 </html>
