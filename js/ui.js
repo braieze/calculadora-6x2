@@ -60,6 +60,7 @@ export function renderResults(result) {
 
 
     // 4. TABLA DIARIA (CORRECCIÓN CRÍTICA: Aseguramos que dailyResults exista)
+    // Asegúrate de usar (result.dailyResults ?? [])
     document.getElementById('daily-detail-tbody').innerHTML = (result.dailyResults ?? []).map(day => {
         const isFranco = day.turn.includes('Franco');
         let rowClass = isFranco && !day.isHoliday ? 'bg-yellow-50 text-yellow-800' : day.isHoliday ? 'bg-red-100 text-red-700' : 'hover:bg-gray-50';
