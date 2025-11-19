@@ -8,18 +8,17 @@ export function renderResults(result) {
     if (!result) { section.classList.add('hidden'); return; }
     section.classList.remove('hidden');
 
-// 1. CARDS DE TOTALES MENSUALES (Aseguramos que result existe)
-    // El check del if (!result) ya debería estar al inicio de renderResults,
-    // pero aseguramos la propiedad por si acaso:
-    const discountRateDisplay = result.discountRate || 0; // Si es undefined, usamos 0
+    // Hacemos la propiedad de descuento segura para evitar el TypeError si es undefined.
+    const discountRateDisplay = result.discountRate ?? 0;
     
+    // 1. CARDS DE TOTALES MENSUALES (Asegurado y Completo)
     document.getElementById('summary-cards').innerHTML = `
-        <div class="p-3 bg-red-50 rounded-lg">
-            <p class="text-gray-500">Desc. (${discountRateDisplay.toFixed(0)}%)</p>
-            <p class="text-lg text-red-600 font-bold">${formatCurrency(result.totalDescuento)}</p>
+        <div class="p-3 bg-gray-50 rounded-lg">
+            <p class="text-gray-500">H. Eq. Totales</p>
+            <p class="text-lg font-bold">${formatNumber(result.totalEquivalentHours)}</p>
         </div>
         <div class="p-3 bg-red-50 rounded-lg">
-            <p class="text-gray-500">Desc. (${result.discountRate.toFixed(0)}%)</p>
+            <p class="text-gray-500">Desc. (${discountRateDisplay.toFixed(0)}%)</p>
             <p class="text-lg text-red-600 font-bold">${formatCurrency(result.totalDescuento)}</p>
         </div>
         <div class="p-3 bg-indigo-50 rounded-lg">
@@ -35,7 +34,6 @@ export function renderResults(result) {
     // 2. NUEVOS CARDS DE RESUMEN QUINCENAL
     const quincenaSection = document.getElementById('quincena-summary-section');
     if (!quincenaSection) {
-        // Esto evita que falle si nos olvidamos de agregar la sección en el HTML (Paso 3)
         console.error("Missing #quincena-summary-section in HTML");
         return; 
     }
@@ -78,6 +76,9 @@ export function renderResults(result) {
         `;
     }).join('');
 }
+
+// ... (Las funciones updateStatus y populateInputs se mantienen)
+// ... (código recortado para brevedad)
 
 export function updateStatus(type, message) {
     const el = document.getElementById('status-message');
