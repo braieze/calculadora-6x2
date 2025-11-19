@@ -13,10 +13,6 @@ import {
     doc, 
     setDoc, 
     onSnapshot, 
-    collection,
-    query,
-    where,
-    getDocs,
     getDoc,
     setLogLevel
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -57,7 +53,7 @@ const getDataDocRef = (userId, year, month) => {
 
 
 /**
- * NUEVO: Obtiene la referencia al documento de Perfil de Usuario.
+ * Obtiene la referencia al documento de Perfil de Usuario.
  * Colección: /artifacts/{appId}/users/{userId}/profile/userProfile
  * @param {string} userId - ID del usuario.
  * @returns {import('firebase/firestore').DocumentReference}
@@ -91,7 +87,8 @@ export async function initFirebase(initialAuthToken, onAuthStateChangeCallback) 
         if (initialAuthToken) {
             await signInWithCustomToken(auth, initialAuthToken);
         } else {
-            await signInAnonymously(auth);
+            // Intentamos anónima como base, el listener lo detectará.
+            await signInAnonymously(auth); 
         }
     } catch (error) {
         console.error("Error inicializando Firebase o autenticando:", error);
@@ -136,7 +133,7 @@ export async function signOutUser() {
 // -------------------- FUNCIONES PÚBLICAS DE PERSISTENCIA --------------------
 
 /**
- * NUEVO: Carga el perfil del usuario.
+ * Carga el perfil del usuario.
  * @param {string} userId - ID del usuario.
  * @returns {Promise<Object | null>} - El objeto de perfil si existe, o null.
  */
@@ -155,7 +152,7 @@ export async function getProfile(userId) {
 }
 
 /**
- * NUEVO: Guarda el perfil del usuario.
+ * Guarda el perfil del usuario.
  * @param {string} userId - ID del usuario.
  * @param {{ category: string, isTechnician: boolean }} profile - Objeto con los datos del perfil.
  * @returns {Promise<void>}
@@ -163,7 +160,8 @@ export async function getProfile(userId) {
 export async function setProfile(userId, profile) {
     try {
         const profileDocRef = getProfileDocRef(userId);
-        await setDoc(profileDocRef, profile, { merge: true });
+        // Usamos merge para solo actualizar los campos que pasamos
+        await setDoc(profileDocRef, profile, { merge: true }); 
         console.log("Perfil guardado exitosamente.");
     } catch (error) {
         console.error("Error al guardar el perfil:", error);
@@ -210,7 +208,7 @@ export async function loadPreviousConfig(userId, currentYear, currentMonth) {
  * @param {{year: number, month: number}} currentPeriod - Período actual.
  * @param {(config: Object) => void} onConfigUpdate - Callback para la actualización de configuración.
  * @param {(data: Object) => void} onDataUpdate - Callback para la actualización de datos.
- * @param {(profile: Object | null) => void} onProfileUpdate - NUEVO: Callback para la actualización de perfil.
+ * @param {(profile: Object | null) => void} onProfileUpdate - Callback para la actualización de perfil.
  * @returns {() => void} - Función para desuscribirse de todos los listeners.
  */
 export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onDataUpdate, onProfileUpdate) {
@@ -222,14 +220,21 @@ export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onData
     const { year, month } = currentPeriod;
     const configDocRef = getConfigDocRef(userId, year, month);
     const dataDocRef = getDataDocRef(userId, year, month);
-    const profileDocRef = getProfileDocRef(userId); // NUEVO: Referencia de perfil
+    const profileDocRef = getProfileDocRef(userId); 
+
+    // Función auxiliar para convertir Timestamps a Date, si es necesario
+    const convertTimestampToDate = (item) => {
+        if (item && item.date && typeof item.date.toDate === 'function') {
+            return { ...item, date: item.date.toDate() };
+        }
+        return item;
+    };
 
     // 1. Listener de Configuración
     const unsubscribeConfig = onSnapshot(configDocRef, (doc) => {
         if (doc.exists()) {
             onConfigUpdate(doc.data());
         } else {
-            // Si no existe la configuración, pasar un objeto vacío o valores por defecto
             onConfigUpdate({}); 
         }
     }, (error) => console.error("Error en el listener de Config:", error));
@@ -237,13 +242,25 @@ export function setupDataListeners(userId, currentPeriod, onConfigUpdate, onData
     // 2. Listener de Datos (Resultados)
     const unsubscribeData = onSnapshot(dataDocRef, (doc) => {
         if (doc.exists()) {
-            onDataUpdate(doc.data());
+            const data = doc.data();
+            
+            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en el schedule
+            if (data.schedule && Array.isArray(data.schedule)) {
+                data.schedule = data.schedule.map(convertTimestampToDate);
+            }
+            
+            // CONVERSIÓN CRÍTICA: Convertir Timestamps a Date en las fechas de pago
+            if (data.paymentDates && Array.isArray(data.paymentDates)) {
+                data.paymentDates = data.paymentDates.map(convertTimestampToDate);
+            }
+            
+            onDataUpdate(data);
         } else {
             onDataUpdate(null);
         }
     }, (error) => console.error("Error en el listener de Datos:", error));
     
-    // 3. NUEVO: Listener de Perfil
+    // 3. Listener de Perfil
     const unsubscribeProfile = onSnapshot(profileDocRef, (doc) => {
         if (doc.exists()) {
             onProfileUpdate(doc.data());
@@ -276,7 +293,6 @@ export function saveConfig(userId, config) {
         const docRef = getConfigDocRef(userId, config.year, config.month);
         // Usamos setDoc con merge para no sobrescribir todo el documento
         setDoc(docRef, config, { merge: true }); 
-        // No es necesario esperar el await aquí, ya que onSnapshot actualizará la UI
     } catch (error) {
         console.error("Error al guardar la configuración:", error);
     }
@@ -297,7 +313,6 @@ export function saveData(userId, data) {
         const docRef = getDataDocRef(userId, data.year, data.month);
         // Usamos setDoc con merge para no sobrescribir todo el documento
         setDoc(docRef, data, { merge: true });
-        // No es necesario esperar el await aquí, ya que onSnapshot actualizará la UI
     } catch (error) {
         console.error("Error al guardar los datos:", error);
     }
