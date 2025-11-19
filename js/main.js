@@ -1,8 +1,8 @@
 import { appState } from './state.js';
 // ¡IMPORTANTE! Hemos añadido saveProfileDetails al import
 import { initAuth, saveConfig, saveData, saveProfileDetails } from './auth.js'; 
-import { calculateSalaryData } from './logic.js';
-import { updateStatus, renderResults, populateInputs } from './ui.js';
+import { calculateSalaryData, saveCalculationHistory } from './logic.js'; // Importar la nueva función
+import { renderResults, updateStatus } from './ui.js';
 import { generatePDFReport } from './pdf.js';
 
 // ----------------------------------------------------
