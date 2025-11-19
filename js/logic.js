@@ -51,7 +51,22 @@ function getTurnEquivalencies(dayOfWeek, turnType) {
 
 export function calculateSalaryData() {
     const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
-    if (!lastFrancoDate || !valorHora) return null;
+    
+    // CORRECCIÓN CRÍTICA: Devolvemos una estructura segura en caso de datos faltantes.
+    if (!lastFrancoDate || !valorHora) {
+        return {
+            totalEquivalentHours: 0,
+            totalDescuento: 0,
+            totalBruto: 0,
+            totalNeto: 0,
+            valorHora: valorHora || 0,
+            discountRate: discountRate || 0,
+            dailyResults: [], // ESTO EVITA EL CRASH DE .map()
+            quincena1: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A" },
+            quincena2: { bruto: 0, neto: 0, cutOffDate: "N/A", payDate: "N/A", tituloSumApplied: 0 },
+        };
+    }
+
 
     // (Lógica de inicialización de fechas y offset, se mantiene igual)
     let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
@@ -155,8 +170,6 @@ export function calculateSalaryData() {
     // FIN LOOP DIARIO
     // ----------------------------------------------------
     
-   // ... (Código anterior de calculateSalaryData hasta el final del LOOP DIARIO)
-
     // ----------------------------------------------------
     // CÁLCULO DE TOTALES QUINCENALES
     // ----------------------------------------------------
@@ -178,21 +191,37 @@ export function calculateSalaryData() {
     const q2Neto = q2Bruto - q2Descuento;
     const q2CutOffDate = new Date(year, month, 0); 
     
-    // Totales Mensuales (Suma de Quincenas)
-    // ... (El resto del cálculo mensual se mantiene igual)
+    // ----------------------------------------------------
+    // CÁLCULO DE TOTALES MENSUALES (AÑADIDO PARA COMPLETAR EL OBJETO DE RETORNO)
+    // ----------------------------------------------------
+    const totalEquivalentHours = q1TotalEquivHours + q2TotalEquivHours;
+    const totalBruto = q1Bruto + q2Bruto;
+    const totalDescuento = q1Descuento + q2Descuento;
+    const totalNeto = totalBruto - totalDescuento;
 
     return {
-        // ... (El resto del objeto return se mantiene igual)
+        // DATOS MENSUALES
+        totalEquivalentHours: totalEquivalentHours,
+        totalDescuento: totalDescuento,
+        totalBruto: totalBruto,
+        totalNeto: totalNeto,
+        valorHora: valorHora,
+        discountRate: discountRate,
+
+        // DATOS DIARIOS
+        dailyResults: dailyResults, 
         
-        // NUEVOS DATOS QUINCENALES
+        // DATOS QUINCENALES
         quincena1: {
-            // ... (Igual que antes)
+            bruto: q1Bruto,
+            neto: q1Neto,
+            cutOffDate: q1CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+            payDate: calculatePayday(q1CutOffDate),
         },
         quincena2: {
-            // ... (Igual que antes)
-            bruto: q2Bruto, // Ahora incluye Suma del Título
-            neto: q2Neto, // Ahora incluye Suma del Título
-            tituloSumApplied: tituloSum, // NUEVO CAMPO para el dashboard
+            bruto: q2Bruto, 
+            neto: q2Neto, 
+            tituloSumApplied: tituloSum, 
             payDate: calculatePayday(q2CutOffDate),
             cutOffDate: q2CutOffDate.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         },
