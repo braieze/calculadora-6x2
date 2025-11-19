@@ -32,14 +32,11 @@ function generateSchedule(year, month, lastFrancoDate, initialTurn, previousSche
         }
     } else if (lastFrancoDate) {
         // 1. Calcular el ciclo basado en la fecha del último franco (si se proporcionó)
-        // Esto requiere una lógica compleja de rotación de fechas, la simplificaremos
-        // asumiendo que el día siguiente al franco es un turno Mañana (índice 0).
-        // Si el usuario da el último FRANCO, el día 1 del mes es el turno (Franco + 1) % 6
         
         // Convertir la fecha del último franco a objeto Date
-        const lastFranco = new Date(lastFrancoDate);
-        if (!isNaN(lastFranco)) {
-            // El ciclo es de 6 días. El día siguiente al franco es Día de Mañana (índice 0)
+        const lastFranco = new Date(lastFrancoDate.replace(/-/g, '/')); // Corregir formato para Safari/iOS
+        if (!isNaN(lastFranco.getTime())) {
+            // El ciclo es de 6 días. Asumimos que el día siguiente al franco es Mañana (índice 0)
             const dayAfterFranco = new Date(lastFranco);
             dayAfterFranco.setDate(lastFranco.getDate() + 1);
             
@@ -109,7 +106,6 @@ function calculatePaymentDates(year, month) {
     const findNthWorkingDay = (startDate, offset) => {
         let currentDate = new Date(startDate);
         let workingDaysFound = 0;
-        let daysPassed = 0;
         
         // Empezar a buscar DESPUÉS de la fecha de corte (startDate + 1)
         currentDate.setDate(currentDate.getDate() + 1);
@@ -160,7 +156,7 @@ export function calculateSchedule(config, previousData, profile) {
         // Generar horario 2x2 basado en el último franco o turno inicial
         schedule = generateSchedule(year, month, lastFrancoDate, initialTurn, previousSchedule);
     } else {
-        // Si hay datos previos para este mes, usarlos (ya estarán convertidos a Date por firebase.js)
+        // Si hay datos previos para este mes, usarlos
         schedule = previousData.schedule;
     }
 
@@ -172,7 +168,6 @@ export function calculateSchedule(config, previousData, profile) {
     let technicianTitleBonus = 0.0;
     
     const isTechnician = profile?.isTechnician || false;
-    const daysInMonth = new Date(year, month, 0).getDate();
 
     schedule.forEach(day => {
         // Sincronizar Horas Extra y Feriados con los datos guardados/modificados por el usuario
@@ -199,18 +194,17 @@ export function calculateSchedule(config, previousData, profile) {
 
         // Las horas extra se multiplican por 1.5 y por el factor equivalente
         if (day.extraHours > 0) {
+            // Nota: Aquí solo se multiplica por 1.5 (extra) o 1.66 (equivalente). 
+            // Para ser rigurosos: (Horas * 1.5) * Factor de la categoría
             extraHoursEq = day.extraHours * EXTRA_HOUR_MULTIPLIER * EQUIVALENT_HOURS;
             totalHorasExtra += day.extraHours;
         }
 
-        // Si es feriado, todas las horas (base + extra) se pagan como feriado (200%), 
-        // pero para simplificar el modelo (horas equivalentes), sumamos las horas base 
-        // a las horas extra equivalentes y le añadimos un extra por ser feriado.
-        // Método más sencillo: si es feriado, las horas se pagan al doble (200% o factor 2.0).
+        // Si es feriado, las horas Base se pagan al doble (200% o factor 2.0).
         if (day.isHoliday && day.baseHours > 0) {
             // Horas equivalentes de feriado = Base * Factor Feriado (2.0)
             feriadoHoursEq = day.baseHours * 2.0; 
-            baseHoursEq = 0.0; // Ya están cubiertas por el pago de feriado
+            baseHoursEq = 0.0; // Se anulan las horas base equivalentes
             totalFeriadoEq += feriadoHoursEq;
         }
 
@@ -228,19 +222,20 @@ export function calculateSchedule(config, previousData, profile) {
     // --- 3. CALCULO DE BONOS Y DESCUENTOS GLOBALES ---
 
     // 3.1. Bono de Título de Técnico (20% del valor de la hora equivalente)
-    const horaEquivalente = valorHora * EQUIVALENT_HOURS;
-    const valorBonoPorDia = horaEquivalente * TECNHICIAN_BONUS;
-
-    // El bono se paga sobre las horas equivalentes de la SEGUNDA QUINCENA.
+    
     if (isTechnician) {
-        // Días de la segunda quincena (16 hasta fin de mes)
-        const daysSecondQuincena = schedule.filter(day => day.date.getDate() > 15 && !day.turn.includes('Franco'));
+        // La hora equivalente (HE) es el valor de la hora base multiplicado por el factor (1.66).
+        const valorHoraBrutaHE = valorHora * EQUIVALENT_HOURS; 
+        // El valor del bono es el 20% del Valor Hora Bruta Equivalente (VHBHE * 0.20)
+        const valorBonoPorHora = valorHoraBrutaHE * TECNHICIAN_BONUS;
+
+        // El bono se paga sobre las horas base trabajadas en la SEGUNDA QUINCENA.
+        const totalBaseHoursSecondQuincena = schedule
+            .filter(day => day.date.getDate() > 15 && day.baseHours > 0)
+            .reduce((sum, day) => sum + day.baseHours, 0);
         
-        // Asumimos que la cantidad de días de trabajo en la 2da quincena es el número de horas base
-        const totalBaseHoursSecondQuincena = daysSecondQuincena.reduce((sum, day) => sum + day.baseHours, 0);
-        
-        // Multiplicamos el valor del bono por las horas base trabajadas en la 2da quincena
-        technicianTitleBonus = totalBaseHoursSecondQuincena * valorBonoPorDia; 
+        // Bono Total
+        technicianTitleBonus = totalBaseHoursSecondQuincena * valorBonoPorHora; 
         
         // Sumar al bruto total
         totalBruto += technicianTitleBonus;
@@ -259,14 +254,14 @@ export function calculateSchedule(config, previousData, profile) {
         year,
         month,
         schedule,
-        paymentDates, // NUEVO
+        paymentDates, 
         summary: {
             totalHorasEq: totalHorasEq,
             totalHorasExtra: totalHorasExtra,
             totalFeriadoEq: totalFeriadoEq,
             totalBruto: totalBruto,
             totalNeto: totalNeto,
-            technicianTitleBonus: technicianTitleBonus // NUEVO
+            technicianTitleBonus: technicianTitleBonus 
         }
     };
 }
