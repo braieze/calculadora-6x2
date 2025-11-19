@@ -39,6 +39,30 @@ document.getElementById('calculate-schedule-button').addEventListener('click', (
     });
 });
 
+// 4. Inputs de PERFIL (NUEVO BLOQUE)
+['input-category', 'input-tituloSum', 'input-isTechnician'].forEach(id => {
+    document.getElementById(id).addEventListener('change', (e) => {
+        const val = e.target.value;
+        const name = e.target.name;
+
+        // Manejar el checkbox
+        if (name === 'isTechnician') {
+            appState.profile[name] = e.target.checked;
+        } 
+        // Manejar números/texto
+        else if (name === 'tituloSum') {
+            appState.profile[name] = parseFloat(val) || 0;
+        } 
+        else {
+            appState.profile[name] = val;
+        }
+
+        saveProfileDetails(); // <--- GUARDAR EN FIREBASE
+        // populateInputs(); // Llama a populateInputs para actualizar el estado del input-tituloSum (deshabilitar/habilitar)
+        window.refreshCalculation();
+    });
+});
+
 // 5. Inputs Dinámicos (Tabla) - Event Delegation
 document.getElementById('daily-detail-tbody').addEventListener('change', (e) => {
     const dateKey = e.target.dataset.date;
