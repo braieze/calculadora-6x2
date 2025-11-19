@@ -80,6 +80,112 @@ export function renderResults(result) {
     }).join('');
 }
 
+let chartInstance = null; // Variable para mantener la instancia del gráfico
+
+const formatCurrency = (amt) => parseFloat(amt || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+
+export function renderDashboard(data) {
+    const section = document.getElementById('dashboard-section');
+    const chartCanvas = document.getElementById('salary-chart');
+    const summaryEl = document.getElementById('historical-summary');
+
+    const monthKeys = Object.keys(data).sort();
+    if (monthKeys.length === 0) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    // 1. PREPARAR DATOS PARA EL GRÁFICO
+    const labels = [];
+    const netos = [];
+    
+    // Calcular totales para el resumen
+    let totalBruto = 0;
+    let totalNeto = 0;
+    
+    monthKeys.forEach(key => {
+        const item = data[key];
+        const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' });
+        
+        labels.push(monthName);
+        netos.push(item.totalNeto);
+        
+        totalBruto += item.totalBruto;
+        totalNeto += item.totalNeto;
+    });
+
+    // 2. RENDERIZAR GRÁFICO (usando Chart.js)
+    if (chartInstance) {
+        chartInstance.destroy(); // Destruir instancia anterior
+    }
+
+    chartInstance = new Chart(chartCanvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Neto Total Mensual',
+                data: netos,
+                borderColor: 'rgb(79, 70, 229)', // Indigo-600
+                backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Monto Neto (ARS)'
+                    },
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return formatCurrency(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 3. RENDERIZAR RESUMEN HISTÓRICO
+    const avgNeto = totalNeto / monthKeys.length;
+
+    summaryEl.innerHTML = `
+        <div class="p-3 bg-gray-50 rounded-lg">
+            <p class="text-gray-500 text-sm">Meses en Historial</p>
+            <p class="text-xl font-bold">${monthKeys.length}</p>
+        </div>
+        <div class="p-3 bg-indigo-50 rounded-lg">
+            <p class="text-gray-500 text-sm">Neto Promedio</p>
+            <p class="text-xl font-bold">${formatCurrency(avgNeto)}</p>
+        </div>
+        <div class="p-3 bg-indigo-50 rounded-lg">
+            <p class="text-gray-500 text-sm">Neto Máximo</p>
+            <p class="text-xl font-bold">${formatCurrency(Math.max(...netos))}</p>
+        </div>
+        <div class="p-3 bg-indigo-50 rounded-lg">
+            <p class="text-gray-500 text-sm">Neto Total Acumulado</p>
+            <p class="text-xl font-bold">${formatCurrency(totalNeto)}</p>
+        </div>
+    `;
+}
+
 export function updateStatus(type, message) {
     const el = document.getElementById('status-message');
     if (!message) { el.classList.add('hidden'); return; }
