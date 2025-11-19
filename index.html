@@ -4,17 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Salarial 6x2</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    
+    <link rel="stylesheet" href="./css/styles.css">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="min-h-screen flex items-start justify-center p-4">
-    
+
     <div id="app-container" class="w-full max-w-5xl bg-white rounded-xl card p-6 md:p-8 mt-4">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 mb-4">
+            <h1 class="text-2xl font-bold text-indigo-700">Calculadora Salarial 6x2</h1>
+            <div id="auth-controls" class="flex space-x-2 mt-2 md:mt-0 items-center">
+                <div id="user-info" class="text-sm text-gray-600">Cargando...</div>
+                <button id="google-login-btn" class="hidden flex items-center px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-blue-700 transition duration-150">
+                    Google Login
+                </button>
+                <button id="logout-btn" class="hidden px-3 py-1 bg-gray-500 text-white text-sm font-semibold rounded-lg shadow hover:bg-gray-600 transition duration-150">
+                    Salir
+                </button>
+            </div>
+        </div>
+        
+        <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Mes</label>
+                <select id="input-month" name="month" class="input-style">
+                    </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Año</label>
+                <input id="input-year" type="number" name="year" class="input-style">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Valor Hora Bruta ($)</label>
+                <input id="input-valorHora" type="number" name="valorHora" class="input-style" step="0.01">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Desc. Afiliación</label>
+                <select id="input-discountRate" name="discountRate" class="input-style">
+                    <option value="0.18">No Afiliado (18%)</option>
+                    <option value="0.16">Afiliado (16%)</option>
+                </select>
+            </div>
+            <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Fecha del Último Franco (Día 2)</label>
+                <input id="input-lastFrancoDate" type="date" name="lastFrancoDate" class="input-style">
+                <p class="text-xs text-gray-500 mt-1">Ingresa la fecha de tu segundo día de franco anterior.</p>
+            </div>
+            <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Turno Post-Franco</label>
+                <select id="input-initialTurn" name="initialTurn" class="input-style">
+                    <option value="Mañana">Mañana</option>
+                    <option value="Noche">Noche</option>
+                    <option value="Tarde">Tarde</option>
+                </select>
+            </div>
         </div>
 
-    <script type="module" src="js/main.js"></script
+        <button id="calculate-schedule-button" class="w-full py-3 mt-2 rounded-lg text-white font-bold transition duration-150 bg-indigo-700 hover:bg-indigo-800">
+            Generar/Actualizar Horario y Calcular Salario
+        </button>
+
+        <div id="results-section" class="hidden mt-6 border-t pt-6">
+            <h2 class="text-xl font-bold text-indigo-700 mb-4">Resumen de Ganancias</h2>
+            
+            <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium mb-6"></div>
+
+            <button id="generate-pdf-button" class="w-full py-2 mb-6 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center">
+                Descargar Reporte PDF
+            </button>
+            
+            <h3 class="text-lg font-bold text-gray-800 mb-3 border-t pt-4">Detalle Diario</h3>
+            <div id="daily-detail-table-container" class="overflow-x-auto rounded-lg border" style="max-height: 400px; overflow-y: auto;">
+                <table id="daily-detail-table" class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-100 sticky-header">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-gray-500">Fecha</th>
+                            <th class="px-3 py-2 text-left text-gray-500">Turno</th>
+                            <th class="px-3 py-2 text-center text-gray-500">Es Feriado</th>
+                            <th class="px-3 py-2 text-right text-gray-500">H. Eq. Base</th>
+                            <th class="px-3 py-2 text-center text-gray-500">H. Extra (Reales)</th>
+                            <th class="px-3 py-2 text-right text-gray-500">H. Eq. Total</th>
+                            <th class="px-3 py-2 text-right text-gray-500">Monto Bruto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-detail-tbody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>
