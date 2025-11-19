@@ -1,5 +1,5 @@
-// jspdf para la generación de PDF
-import { jsPDF } from "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+// NOTA: Ya no importamos jsPDF aquí porque lo cargamos en index.html
+// Esto soluciona el error de "does not provide an export named 'jsPDF'"
 
 // Formateador de moneda para EUR
 const currencyFormatter = new Intl.NumberFormat('es-ES', {
@@ -244,6 +244,13 @@ export function generatePDFReport(appState) {
         updateStatus('No hay datos calculados para generar el PDF.', 'warning');
         return;
     }
+
+    // CORRECCIÓN: Acceder a jsPDF desde el objeto global window
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        updateStatus('La librería PDF no se ha cargado correctamente.', 'error');
+        return;
+    }
+    const { jsPDF } = window.jspdf;
 
     // Inicializar jspdf
     const doc = new jsPDF();
