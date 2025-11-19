@@ -83,7 +83,7 @@ export function calculateSalaryData() {
             }
         }
 
-        // Calcular Extras
+        // Calcular Extrass
         const dayExtraReal = appState.extraHours[dateKeyForSave] || 0;
         const dayExtraEquivalent = dayExtraReal * EXTRA_HOUR_MULTIPLIER;
         const finalEquivHours = equivalentHours + dayExtraEquivalent;
