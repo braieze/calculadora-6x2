@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Salarial 6x2 Pro V2</title>
+    <title>Calculadora Salarial 6x2 Pro Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -15,11 +15,7 @@
         
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Animaciones */
         .transition-all-300 { transition: all 0.3s ease-in-out; }
-        
-        /* Estilo Sticky para la tabla */
         .sticky-header th { position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; }
         
         /* Sidebar */
@@ -107,13 +103,12 @@
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
-                
                 <div class="flex justify-between items-end mb-8">
                     <div>
                         <h1 class="text-3xl font-extrabold text-slate-800">
                             Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
                         </h1>
-                        <p class="text-slate-500 mt-1">Resumen de actividad.</p>
+                        <p class="text-slate-500 mt-1">Este es tu estado al día de hoy.</p>
                     </div>
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
@@ -124,24 +119,22 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena</h3>
+                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3>
                         <div class="flex items-baseline">
                             <span class="text-3xl font-extrabold text-emerald-600" id="home-next-quincena">$ 0</span>
-                            <span class="ml-2 text-xs text-emerald-500 font-medium bg-emerald-50 px-2 py-1 rounded-full">Estimado</span>
                         </div>
                         <p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">
-                            <i class="fa-regular fa-clock mr-1"></i> Cobro est: Calculando...
+                            Calculando fecha...
                         </p>
                     </div>
 
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Total Neto Mes Actual</h3>
+                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3>
                         <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p>
                         <div class="flex items-baseline">
                             <span class="text-4xl font-extrabold text-slate-800" id="home-month-net">$ 0</span>
                         </div>
-                        <p class="text-xs text-slate-400 mt-2">Calculado con descuentos aplicados</p>
                     </div>
                 </div>
 
@@ -152,55 +145,38 @@
                     <div id="home-next-francos-container" class="flex space-x-4 overflow-x-auto hide-scroll pb-2">
                         </div>
                 </div>
-                
-                <button onclick="navigateTo('monthly-history-view')" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">
-                    Ir al Dashboard de Gestión &rarr;
-                </button>
             </div>
 
             <div id="monthly-history-view" class="view-section hidden max-w-6xl mx-auto">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">Dashboard Personal</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos y Extras</h2>
                     <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md">
                         <i class="fa-solid fa-plus mr-2"></i> Generar Mes Siguiente
                     </button>
                 </div>
 
                 <div class="mb-6">
-                    <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Meses Calculados</label>
-                    <div id="months-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll py-1">
-                        </div>
+                    <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Mes a Gestionar</label>
+                    <div id="months-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll py-1"></div>
                 </div>
 
                 <div id="dashboard-content" class="hidden animate-fade-in">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p>
-                            <p class="text-xl font-bold text-indigo-600" id="dash-equiv-hours">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <p class="text-xs text-slate-500 font-semibold">VIÁTICOS EXTRA</p>
-                            <p class="text-xl font-bold text-orange-600" id="dash-viaticos-total">$ 0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                            <p class="text-xs text-slate-500 font-semibold">TÍTULO (NO DESC)</p>
-                            <p class="text-xl font-bold text-blue-600" id="dash-titulo-total">$ 0</p>
-                        </div>
-                        <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100">
-                            <p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p>
-                            <p class="text-2xl font-extrabold text-emerald-700" id="dash-neto-final">$ 0</p>
-                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p><p class="text-xl font-bold text-indigo-600" id="dash-equiv-hours">0</p></div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">VIÁTICOS</p><p class="text-xl font-bold text-orange-600" id="dash-viaticos-total">$ 0</p></div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">TÍTULO</p><p class="text-xl font-bold text-blue-600" id="dash-titulo-total">$ 0</p></div>
+                        <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100"><p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p><p class="text-2xl font-extrabold text-emerald-700" id="dash-neto-final">$ 0</p></div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <div>
                                 <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
-                                <p class="text-xs text-slate-400">Si cambias turno, selecciónalo en la columna "Turno".</p>
+                                <p class="text-xs text-slate-400">Modifica tus turnos, feriados y extras aquí.</p>
                             </div>
                             <div class="flex gap-2">
                                 <button id="btn-recalculate" class="px-3 py-1 bg-slate-800 text-white rounded text-xs"><i class="fa-solid fa-save"></i> Guardar</button>
-                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold shadow-sm hover:bg-red-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF Full</button>
                             </div>
                         </div>
                         <div class="overflow-x-auto max-h-[500px]">
@@ -208,7 +184,7 @@
                                 <thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky-header">
                                     <tr>
                                         <th class="px-4 py-3">Fecha</th>
-                                        <th class="px-4 py-3">Turno (Cambiar)</th>
+                                        <th class="px-4 py-3">Turno</th>
                                         <th class="px-4 py-3 text-center">Feriado</th>
                                         <th class="px-4 py-3 text-right">H.Eq Base</th>
                                         <th class="px-4 py-3 text-center">H.Extra</th>
@@ -216,8 +192,7 @@
                                         <th class="px-4 py-3 text-right">Bruto Día</th>
                                     </tr>
                                 </thead>
-                                <tbody id="daily-detail-tbody" class="divide-y divide-slate-100">
-                                    </tbody>
+                                <tbody id="daily-detail-tbody" class="divide-y divide-slate-100"></tbody>
                             </table>
                         </div>
                     </div>
@@ -225,13 +200,20 @@
             </div>
 
             <div id="treasury-view" class="view-section hidden max-w-5xl mx-auto">
-                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center">
                     <i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería y Quincenas
                 </h2>
                 
-                <div id="treasury-container" class="space-y-8">
+                <div class="mb-6 bg-slate-100 p-3 rounded-xl">
+                    <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Consultar Liquidación de:</label>
+                    <div id="treasury-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll">
+                         <p class="text-sm text-slate-400 italic">Genera meses en "Mi Gestión" para verlos aquí.</p>
+                    </div>
+                </div>
+
+                <div id="treasury-container" class="space-y-8 animate-fade-in">
                     <div class="p-8 text-center text-slate-500 bg-white rounded-xl shadow-sm">
-                        Selecciona un mes en el Dashboard para ver el detalle de tesorería.
+                        Selecciona un mes arriba para ver el detalle.
                     </div>
                 </div>
             </div>
@@ -240,8 +222,7 @@
                 <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
                     <i class="fa-solid fa-trophy text-yellow-500 mr-3"></i> Ranking de Ganancias
                 </h2>
-                <div id="ranking-list" class="space-y-4">
-                    </div>
+                <div id="ranking-list" class="space-y-4"></div>
             </div>
 
             <div id="config-view" class="view-section hidden max-w-3xl mx-auto">
@@ -277,8 +258,13 @@
         // STATE
         let appState = {
             config: { userName: 'Usuario', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
-            viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
-            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null },
+            
+            // View States (Independientes)
+            viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() }, // Dashboard
+            treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() }, // Tesorería
+            
+            // Data Cache
+            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null }, // Edición actual en Dashboard
             historicalCache: {}
         };
 
@@ -316,13 +302,11 @@
             if (viewId === 'config-view') fillConfigInputs();
         };
 
-        // LOGIC: PAYMENT DATE (4 Business Days)
+        // LOGIC: PAYMENT DATE
         function calculatePaymentDate(year, month, dayOfMonth) {
-            // dayOfMonth: 15 for 1st quincena, lastDay for 2nd
             const baseDate = new Date(year, month - 1, dayOfMonth);
             let paymentDate = new Date(baseDate);
             let businessDaysAdded = 0;
-            
             while (businessDaysAdded < 4) {
                 paymentDate.setDate(paymentDate.getDate() + 1);
                 const day = paymentDate.getDay();
@@ -331,7 +315,7 @@
             return paymentDate;
         }
 
-        // LOGIC: CALCULATION
+        // LOGIC: CALCULATION ENGINE (NO TOCAR)
         function performCalculation(month, year, extras, holidays, overrides) {
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue } = appState.config;
             if(!valorHora) return null;
@@ -339,7 +323,6 @@
             const daysInMonth = new Date(year, month, 0).getDate();
             const dailyResults = [];
             const francosList = [];
-            
             const masterCycle = ['Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'];
             let baseOffset = (initialTurn === 'Noche') ? 8 : (initialTurn === 'Tarde' ? 16 : 0);
             const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
@@ -363,12 +346,7 @@
                 const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
                 let cycleState = masterCycle[startOffset];
-                
-                // --- OVERRIDE LOGIC (Cambio de turno) ---
-                if (overrides && overrides[dateKey] && overrides[dateKey] !== 'Original') {
-                    cycleState = overrides[dateKey];
-                }
-                // ----------------------------------------
+                if (overrides && overrides[dateKey] && overrides[dateKey] !== 'Original') cycleState = overrides[dateKey];
 
                 const isManualHoliday = holidays[displayDate] === true;
                 const extraHours = extras[displayDate] || 0;
@@ -398,28 +376,18 @@
 
                 dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
 
-                // Accumulators for Quincenas
                 if (i <= 15) {
-                    q1_bruto += dailyBruto;
-                    q1_viaticos += dailyViatico;
-                    if(extraHours > 0) q1_extras++;
+                    q1_bruto += dailyBruto; q1_viaticos += dailyViatico; if(extraHours > 0) q1_extras++;
                 } else {
-                    q2_bruto += dailyBruto;
-                    q2_viaticos += dailyViatico;
-                    if(extraHours > 0) q2_extras++;
+                    q2_bruto += dailyBruto; q2_viaticos += dailyViatico; if(extraHours > 0) q2_extras++;
                 }
-
                 startOffset = (startOffset + 1) % 24;
             }
 
-            // Totals
             const q1_desc = q1_bruto * discountRate;
             const q1_neto = q1_bruto - q1_desc + q1_viaticos;
-
             const q2_desc = q2_bruto * discountRate;
-            // Titulo is added to Q2 usually or monthly total. Adding to Q2 for simplicity/monthly balance
             const q2_neto = q2_bruto - q2_desc + q2_viaticos + Number(tituloAmount);
-
             const brutoTotal = q1_bruto + q2_bruto;
             const descuentoTotal = q1_desc + q2_desc;
             const totalViaticos = q1_viaticos + q2_viaticos;
@@ -429,39 +397,57 @@
             return { dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, tituloAmount: Number(tituloAmount), netoFinal, daysWithExtras: q1_extras + q2_extras, quincenas: { q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc }, q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc } } };
         }
 
-        // RENDERING
+        // --- HELPER DE DATOS HISTORICOS ---
+        function getCalculationFor(m, y) {
+            // Busca en cache o calcula "on the fly" si no existe
+            const key = `${y}-${String(m).padStart(2,'0')}`;
+            const cached = appState.historicalCache[key];
+            
+            if(cached) {
+                // Recalcula con la config actual para asegurar precisión si cambian valores
+                return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {});
+            } else {
+                // Si no existe guardado, calcula en limpio
+                return performCalculation(m, y, {}, {}, {});
+            }
+        }
+
+        // RENDERING VISTAS
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
+            // FORZAMOS SIEMPRE EL MES ACTUAL REAL
             const now = new Date();
-            const currentCalc = performCalculation(now.getMonth() + 1, now.getFullYear(), appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
+            const realMonth = now.getMonth() + 1;
+            const realYear = now.getFullYear();
+            
+            // Buscar datos del mes actual (puede estar guardado o no)
+            const calc = getCalculationFor(realMonth, realYear);
             
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
 
-            if (currentCalc) {
-                document.getElementById('home-month-net').textContent = formatCurrency(currentCalc.netoFinal);
+            if (calc) {
+                document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
                 
-                // Next Quincena Logic
                 const dayOfMonth = now.getDate();
                 let nextPayAmount = 0;
                 let payDateObj = null;
 
                 if (dayOfMonth <= 15) {
-                    nextPayAmount = currentCalc.quincenas.q1.neto;
-                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth() + 1, 15);
+                    nextPayAmount = calc.quincenas.q1.neto;
+                    payDateObj = calculatePaymentDate(realYear, realMonth, 15);
                 } else {
-                    nextPayAmount = currentCalc.quincenas.q2.neto;
-                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth() + 1, daysInMonth);
+                    nextPayAmount = calc.quincenas.q2.neto;
+                    const daysInMonth = new Date(realYear, realMonth, 0).getDate();
+                    payDateObj = calculatePaymentDate(realYear, realMonth, daysInMonth);
                 }
 
                 document.getElementById('home-next-quincena').textContent = formatCurrency(nextPayAmount);
                 const payDateStr = payDateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' });
                 document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDateStr}`;
 
-                // Francos
                 const francosContainer = document.getElementById('home-next-francos-container');
                 francosContainer.innerHTML = '';
-                const upcomingFrancos = currentCalc.francosList.filter(f => f.dayNum >= dayOfMonth).slice(0, 5);
+                const upcomingFrancos = calc.francosList.filter(f => f.dayNum >= dayOfMonth).slice(0, 5);
                 if(upcomingFrancos.length === 0) francosContainer.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos este mes.</p>';
                 else upcomingFrancos.forEach(f => {
                     const div = document.createElement('div');
@@ -481,7 +467,7 @@
                 const btn = document.createElement('button');
                 btn.className = "px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold border border-indigo-200";
                 btn.textContent = "Generar Mes Actual";
-                btn.onclick = () => generateMonth(appState.config.currentMonth || new Date().getMonth()+1, appState.config.currentYear || new Date().getFullYear());
+                btn.onclick = () => generateMonth(new Date().getMonth()+1, new Date().getFullYear());
                 chipContainer.appendChild(btn);
                 document.getElementById('dashboard-content').classList.add('hidden');
                 return;
@@ -514,12 +500,9 @@
                     if (d.isFranco && !d.isHoliday) tr.className = "bg-yellow-50/50 hover:bg-yellow-50";
                     if (d.isHoliday) tr.className = "bg-red-50/50 hover:bg-red-50";
 
-                    // Determine Shift Select Value
                     let selectVal = 'Original';
                     const overrides = appState.activeData.shiftOverrides || {};
                     if (overrides[d.key]) selectVal = overrides[d.key];
-                    // If it's franco by default, but user changed it, we show the change
-                    // Logic to build select options:
                     const buildOptions = (curr) => `
                         <option value="Original" ${curr==='Original'?'selected':''}>Auto</option>
                         <option value="Mañana" ${curr==='Mañana'?'selected':''}>Mañana</option>
@@ -530,13 +513,7 @@
 
                     tr.innerHTML = `
                         <td class="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">${d.date.split('/')[0]} <span class="text-xs text-slate-400 uppercase ml-1">${d.dayName.substring(0,3)}</span></td>
-                        <td class="px-4 py-3">
-                            <select class="table-select bg-transparent border-none text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'} focus:ring-0 cursor-pointer"
-                                onchange="window.updateTurnOverride('${d.key}', this.value)">
-                                ${buildOptions(selectVal)}
-                            </select>
-                            <div class="text-[10px] text-slate-400">${d.turn}</div>
-                        </td>
+                        <td class="px-4 py-3"><select class="table-select bg-transparent border-none text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'} focus:ring-0 cursor-pointer" onchange="window.updateTurnOverride('${d.key}', this.value)">${buildOptions(selectVal)}</select><div class="text-[10px] text-slate-400">${d.turn}</div></td>
                         <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-red-600 rounded focus:ring-red-500" ${d.isHoliday ? 'checked' : ''} onchange="window.updateHoliday('${d.date}', this.checked)"></td>
                         <td class="px-4 py-3 text-right text-slate-500">${formatNumber(d.equivBase)}</td>
                         <td class="px-4 py-3 text-center"><input type="number" value="${d.extraReal || ''}" class="w-16 text-center border rounded py-1 text-xs" placeholder="-" step="0.5" min="0" onchange="window.updateExtra('${d.date}', this.value)"></td>
@@ -549,19 +526,36 @@
         }
 
         function renderTreasury() {
+            const chipContainer = document.getElementById('treasury-chips-container');
             const container = document.getElementById('treasury-container');
+            chipContainer.innerHTML = '';
             container.innerHTML = '';
-            const calc = appState.activeData.calculation;
-            
-            if (!calc) {
-                container.innerHTML = '<p class="text-center text-slate-400">Ve al Dashboard y genera un mes primero.</p>';
+
+            const historyKeys = Object.keys(appState.historicalCache).sort().reverse();
+            if (historyKeys.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-400">Genera un mes en "Mi Gestión" primero.</p>';
                 return;
             }
 
-            const { month, year } = appState.viewingMonth;
-            const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
+            // Render Chips de Tesoreria
+            historyKeys.forEach(key => {
+                const [year, month] = key.split('-');
+                const isActive = parseInt(month) === appState.treasuryViewMonth.month && parseInt(year) === appState.treasuryViewMonth.year;
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition ${isActive ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`;
+                btn.textContent = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }).toUpperCase();
+                btn.onclick = () => {
+                    appState.treasuryViewMonth = { month: parseInt(month), year: parseInt(year) };
+                    renderTreasury();
+                };
+                chipContainer.appendChild(btn);
+            });
 
-            // Dates
+            // Render Data Independiente
+            const { month, year } = appState.treasuryViewMonth;
+            const calc = getCalculationFor(month, year); // Calculo al vuelo para Tesoreria
+
+            const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             const dateQ1 = calculatePaymentDate(year, month, 15);
             const daysInMonth = new Date(year, month, 0).getDate();
             const dateQ2 = calculatePaymentDate(year, month, daysInMonth);
@@ -581,14 +575,14 @@
                     <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div><p class="text-slate-400">Bruto Generado</p><p class="font-semibold text-slate-700">${formatCurrency(details.bruto)}</p></div>
                         <div><p class="text-slate-400">Descuentos</p><p class="font-semibold text-red-500">-${formatCurrency(details.desc)}</p></div>
-                        <div><p class="text-slate-400">Viáticos (No Rem)</p><p class="font-semibold text-orange-500">+${formatCurrency(details.viaticos)}</p></div>
+                        <div><p class="text-slate-400">Viáticos</p><p class="font-semibold text-orange-500">+${formatCurrency(details.viaticos)}</p></div>
                         ${title.includes('2') ? `<div><p class="text-slate-400">Título</p><p class="font-semibold text-blue-500">+${formatCurrency(appState.config.tituloAmount)}</p></div>` : ''}
                     </div>
                 </div>
             `;
 
             container.innerHTML = `
-                <div class="mb-4 text-right"><span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">${monthName}</span></div>
+                <div class="mb-4 text-right"><span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">Viendo: ${monthName}</span></div>
                 ${card('1ª Quincena', calc.quincenas.q1.neto, dateQ1, calc.quincenas.q1)}
                 ${card('2ª Quincena (Cierre)', calc.quincenas.q2.neto, dateQ2, calc.quincenas.q2)}
             `;
@@ -598,7 +592,6 @@
             const list = document.getElementById('ranking-list');
             list.innerHTML = '';
             const ranked = Object.entries(appState.historicalCache).map(([key, data]) => ({ key, ...data })).sort((a, b) => b.results.netoFinal - a.results.netoFinal);
-
             if (ranked.length === 0) { list.innerHTML = '<p class="text-center text-slate-400 mt-8">Sin datos.</p>'; return; }
 
             ranked.forEach((item, index) => {
@@ -613,18 +606,9 @@
                     <div class="p-4 rounded-xl border ${border} ${bg} shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                         <div class="flex items-center gap-4 w-full md:w-auto">
                             <div class="text-2xl font-bold w-8 text-center">${medal || (index+1)}</div>
-                            <div>
-                                <h4 class="font-bold text-slate-800 capitalize">${monthName}</h4>
-                                <div class="flex gap-2 text-xs mt-1">
-                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0} días</span>
-                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viáticos: ${formatCurrency(item.results.totalViaticos)}</span>
-                                </div>
-                            </div>
+                            <div><h4 class="font-bold text-slate-800 capitalize">${monthName}</h4><div class="flex gap-2 text-xs mt-1"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0} días</span><span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viáticos: ${formatCurrency(item.results.totalViaticos)}</span></div></div>
                         </div>
-                        <div class="text-right w-full md:w-auto border-t md:border-0 pt-2 md:pt-0">
-                             <p class="text-xs text-slate-500">Neto Final</p>
-                            <p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p>
-                        </div>
+                        <div class="text-right w-full md:w-auto border-t md:border-0 pt-2 md:pt-0"><p class="text-xs text-slate-500">Neto Final</p><p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p></div>
                     </div>
                 `;
             });
@@ -633,13 +617,7 @@
         // ACTIONS
         window.updateExtra = (d, v) => { const val = parseFloat(v) || 0; if (val > 0) appState.activeData.extras[d] = val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
         window.updateHoliday = (d, c) => { if (c) appState.activeData.manualHolidays[d] = true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
-        // NEW: Shift Override
-        window.updateTurnOverride = (key, val) => { 
-            if(!appState.activeData.shiftOverrides) appState.activeData.shiftOverrides = {};
-            if(val === 'Original') delete appState.activeData.shiftOverrides[key];
-            else appState.activeData.shiftOverrides[key] = val;
-            triggerLocalRecalculate(); 
-        };
+        window.updateTurnOverride = (key, val) => { if(!appState.activeData.shiftOverrides) appState.activeData.shiftOverrides = {}; if(val === 'Original') delete appState.activeData.shiftOverrides[key]; else appState.activeData.shiftOverrides[key] = val; triggerLocalRecalculate(); };
 
         function triggerLocalRecalculate() {
             const { month, year } = appState.viewingMonth;
@@ -667,10 +645,11 @@
             appState.activeData.shiftOverrides = {};
             triggerLocalRecalculate();
             saveCurrentData();
+            // Si no hay mes en Tesoreria seleccionado, seleccionar este
+            if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
             showMessage(`Mes de ${m}/${y} generado.`);
         }
 
-        // SAVE & CONFIG
         document.getElementById('btn-recalculate').onclick = () => { triggerLocalRecalculate(); saveCurrentData(); showMessage('Guardado.'); };
         window.saveConfig = async () => {
             appState.config.userName = document.getElementById('cfg-userName').value;
@@ -694,7 +673,6 @@
             document.getElementById('cfg-initialTurn').value = appState.config.initialTurn;
         }
 
-        // FIREBASE CORE
         async function initFirebaseSystem() {
             app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
             const authBtn = document.getElementById('auth-action-btn');
@@ -721,7 +699,11 @@
             appState.historicalCache = {};
             snapshot.forEach(d => appState.historicalCache[d.id] = d.data());
             const keys = Object.keys(appState.historicalCache).sort().reverse();
-            if(keys.length > 0) { const [y, m] = keys[0].split('-'); switchDashboardMonth(parseInt(m), parseInt(y)); }
+            if(keys.length > 0) { 
+                const [y, m] = keys[0].split('-'); 
+                switchDashboardMonth(parseInt(m), parseInt(y)); 
+                appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) }; // Sync inicial
+            }
         }
 
         async function saveCurrentData() {
@@ -733,19 +715,132 @@
             await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
         }
 
-        // UTILS
         function formatCurrency(v) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v || 0); }
         function formatNumber(v) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(v || 0); }
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+1; ty=d.getFullYear(); } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
-        // PDF
+
+        // ================= NUEVA GENERACIÓN DE PDF MEJORADA =================
         document.getElementById('btn-download-pdf').onclick = () => {
-            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const calc = appState.activeData.calculation; if(!calc) return;
-            const ml = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
-            doc.setFontSize(18); doc.text(`Nómina - ${ml}`, 14, 20); doc.setFontSize(10); doc.text(`Empleado: ${appState.config.userName}`, 14, 30);
-            doc.autoTable({ startY: 40, head: [['Concepto', 'Monto']], body: [['Bruto', formatCurrency(calc.brutoTotal)], ['Viáticos', formatCurrency(calc.totalViaticos)], ['Título', formatCurrency(calc.tituloAmount)], ['Descuentos', `-${formatCurrency(calc.descuentoTotal)}`], ['NETO FINAL', formatCurrency(calc.netoFinal)]], theme: 'striped', headStyles: { fillColor: [79, 70, 229] } });
-            doc.save(`Nomina_${ml}.pdf`);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const calc = appState.activeData.calculation;
+            if(!calc) return;
+
+            const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'}).toUpperCase();
+            const userName = appState.config.userName;
+
+            // --- PAGINA 1: TESORERIA (Resumen Ejecutivo) ---
+            
+            // Header Azul
+            doc.setFillColor(67, 56, 202); // Indigo 700
+            doc.rect(0, 0, 210, 40, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text(`LIQUIDACIÓN SALARIAL`, 15, 20);
+            
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(`${monthLabel}`, 15, 30);
+            doc.text(`Empleado: ${userName}`, 195, 30, { align: 'right' });
+
+            // Info General
+            doc.setTextColor(60, 60, 60);
+            doc.setFontSize(10);
+            let y = 55;
+            doc.text(`Valor Hora: ${formatCurrency(appState.config.valorHora)}`, 15, y);
+            doc.text(`Viático Diario: ${formatCurrency(appState.config.viaticoValue)}`, 80, y);
+            doc.text(`Título: ${formatCurrency(appState.config.tituloAmount)}`, 150, y);
+
+            // Tabla de Resumen Financiero (Estilo Tarjeta)
+            y += 10;
+            
+            // Headers de Tabla
+            const headers = [['CONCEPTO', '1ª QUINCENA', '2ª QUINCENA', 'TOTAL MES']];
+            const data = [
+                ['Bruto Generado', formatCurrency(calc.quincenas.q1.bruto), formatCurrency(calc.quincenas.q2.bruto), formatCurrency(calc.brutoTotal)],
+                ['Descuentos', `-${formatCurrency(calc.quincenas.q1.desc)}`, `-${formatCurrency(calc.quincenas.q2.desc)}`, `-${formatCurrency(calc.descuentoTotal)}`],
+                ['Viáticos (No Rem)', formatCurrency(calc.quincenas.q1.viaticos), formatCurrency(calc.quincenas.q2.viaticos), formatCurrency(calc.totalViaticos)],
+                ['Título', '-', formatCurrency(appState.config.tituloAmount), formatCurrency(appState.config.tituloAmount)],
+                ['NETO A COBRAR', formatCurrency(calc.quincenas.q1.neto), formatCurrency(calc.quincenas.q2.neto), formatCurrency(calc.netoFinal)]
+            ];
+
+            doc.autoTable({
+                startY: y,
+                head: headers,
+                body: data,
+                theme: 'grid',
+                headStyles: { fillColor: [50, 50, 50], fontSize: 10, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 50 },
+                    1: { halign: 'right' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right', fontStyle: 'bold', fillColor: [240, 253, 244] } // Verde claro para totales
+                },
+                styles: { fontSize: 10, cellPadding: 3 }
+            });
+
+            // Footer Pag 1
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text("Documento generado por Calculadora 6x2 Pro. Uso interno.", 105, 280, { align: "center" });
+
+            // --- PAGINA 2: DETALLE DIARIO (Operativo) ---
+            doc.addPage();
+
+            // Header Simple Pag 2
+            doc.setTextColor(67, 56, 202);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("DETALLE DE JORNADAS Y HORAS", 15, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text("Desglose de turnos, horas equivalentes y novedades.", 15, 26);
+
+            // Tabla Diaria
+            const dailyData = calc.dailyResults.map(d => [
+                d.date,
+                d.dayName,
+                d.turn,
+                d.isHoliday ? 'Sí' : '-',
+                formatNumber(d.equivBase),
+                d.extraReal > 0 ? d.extraReal : '-',
+                formatNumber(d.totalEquiv),
+                formatCurrency(d.bruto)
+            ]);
+
+            doc.autoTable({
+                startY: 35,
+                head: [['FECHA', 'DÍA', 'TURNO', 'FERIADO', 'H. BASE', 'EXTRAS', 'TOTAL EQ.', 'BRUTO']],
+                body: dailyData,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] }, // Indigo
+                styles: { fontSize: 8, halign: 'center' },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    2: { halign: 'left' },
+                    7: { halign: 'right', fontStyle: 'bold' }
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body') {
+                        const turn = data.row.raw[2];
+                        const isHoliday = data.row.raw[3] === 'Sí';
+                        // Colorear filas
+                        if (turn.includes('Franco') && !isHoliday) {
+                            data.cell.styles.fillColor = [255, 251, 235]; // Yellow tint
+                        }
+                        if (isHoliday) {
+                            data.cell.styles.textColor = [220, 38, 38]; // Red text
+                        }
+                    }
+                }
+            });
+
+            doc.save(`Nomina_${monthLabel.replace(/\s/g, '_')}.pdf`);
         };
+
     </script>
 </body>
 </html>
