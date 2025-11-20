@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Salarial 6x2 - App</title>
+    <title>Calculadora Salarial 6x2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Configuraciones de fuente */
@@ -34,20 +34,7 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            background-color: #f9fafb;
-        }
-        /* Estilos para las pestañas de navegación */
-        .nav-tab {
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #6b7280;
-            border-bottom: 2px solid transparent;
-            transition: border-color 0.15s, color 0.15s;
-        }
-        .nav-tab.active {
-            color: #4f46e5;
-            border-bottom-color: #4f46e5;
+            background-color: #f9fafb; /* Fondo para que se vea bien */
         }
     </style>
 
@@ -76,141 +63,111 @@
        
         <div id="status-message" class="hidden p-3 rounded-lg mt-4 font-semibold text-sm"></div>
 
-        <nav class="flex border-b border-gray-200 mb-6 overflow-x-auto">
-            <div id="tab-home" class="nav-tab active" data-view="home-view">🏠 Inicio</div>
-            <div id="tab-config" class="nav-tab" data-view="config-view">⚙️ Configuración</div>
-            <div id="tab-dashboard" class="nav-tab" data-view="monthly-history-view">📊 Dashboard Mensual</div>
-            <div id="tab-comparisons" class="nav-tab" data-view="comparisons-view">📈 Comparaciones</div>
-        </nav>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tu Nombre</label>
+                <input id="input-name" type="text" name="name" class="input-style" onchange="handleConfigChange()" value="Usuario Temporal">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Mes</label>
+                <select id="input-month" name="month" class="input-style" onchange="handleConfigChange()">
+                    </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Año</label>
+                <input id="input-year" type="number" name="year" class="input-style" onchange="handleConfigChange()">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Valor Hora Bruta ($)</label>
+                <input id="input-valorHora" type="number" name="valorHora" class="input-style" onchange="handleConfigChange()" step="0.01">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Desc. Afiliación</label>
+                <select id="input-discountRate" name="discountRate" class="input-style" onchange="handleConfigChange()">
+                    <option value="0.18">No Afiliado (18%)</option>
+                    <option value="0.21">Afiliado (21%)</option>
+                </select>
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Viático por Día Extra ($)</label>
+                <input id="input-viaticoValue" type="number" name="viaticoValue" class="input-style" onchange="handleConfigChange()" step="100">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+                <label class="block text-sm font-medium text-gray-700">Monto Título ($)</label>
+                <input id="input-titleValue" type="number" name="titleValue" class="input-style" onchange="handleConfigChange()" step="100">
+            </div>
+            <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Fecha del Último Franco (Día 2)</label>
+                <input id="input-lastFrancoDate" type="date" name="lastFrancoDate" class="input-style" onchange="handleConfigChange()">
+            </div>
+            <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700">Turno Post-Franco</label>
+                <select id="input-initialTurn" name="initialTurn" class="input-style" onchange="handleConfigChange()">
+                    <option value="Mañana">Mañana</option>
+                    <option value="Noche">Noche</option>
+                    <option value="Tarde">Tarde</option>
+                </select>
+            </div>
+        </div>
 
-        <div id="view-container">
+        <button id="calculate-schedule-button" class="w-full py-3 mt-2 rounded-lg text-white font-bold transition duration-150 bg-indigo-700 hover:bg-indigo-800">
+            Generar/Actualizar Horario y Calcular Salario
+        </button>
 
-            <div id="home-view" data-view="home-view">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Resumen y Próximo Ciclo</h2>
-                <div id="home-content" class="space-y-6">
-                    <div id="next-events-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="p-5 bg-indigo-50 rounded-lg shadow">
-                            <h3 class="font-semibold text-indigo-700 mb-2">Próximos Francos</h3>
-                            <p id="next-francos-display" class="text-2xl font-extrabold text-indigo-900">Calculando...</p>
-                        </div>
-                        <div class="p-5 bg-yellow-50 rounded-lg shadow">
-                            <h3 class="font-semibold text-yellow-700 mb-2">Estimación Próxima Quincena</h3>
-                            <p id="next-quincena-display" class="text-2xl font-extrabold text-yellow-900">Calculando...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="p-5 bg-green-50 rounded-lg shadow">
-                        <h3 class="font-semibold text-green-700 mb-2">Resumen Neto Mes Actual (${appState.config.month}/${appState.config.year})</h3>
-                        <p id="current-month-net-display" class="text-3xl font-extrabold text-green-900">Genera el cálculo para ver el monto</p>
-                    </div>
+        <div id="results-section" class="hidden mt-6 border-t pt-6">
+            
+            <h2 class="text-xl font-bold text-indigo-700 mb-4">Dashboard Personal del Mes</h2>
+            <div id="personal-dashboard" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium mb-6 p-2 bg-white border rounded-xl">
+                </div>
+
+            <h2 class="text-xl font-bold text-indigo-700 mb-4 mt-6">Resumen de Ganancias del Mes</h2>
+            <div id="monthly-totals-container">
+                </div>
+            
+            <div id="francos-info" class="p-3 bg-yellow-50 rounded-lg text-sm mb-4">
+                </div>
+
+            <button id="generate-pdf-button" class="w-full py-2 mb-6 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Descargar Reporte PDF
+            </button>
+           
+            <h3 class="text-lg font-bold text-gray-800 mb-3 border-t pt-4">Dashboard Mensual & Comparaciones</h3>
+            <div id="monthly-dashboard-container" class="p-4 bg-gray-50 rounded-lg mb-6">
+                <p class="text-sm text-gray-700 font-semibold mb-2">Meses Calculados:</p>
+                <div id="history-buttons" class="flex flex-wrap gap-2 mb-4">
+                    <p id="history-loading" class="text-xs text-gray-500">Cargando historial...</p>
+                </div>
+                <p class="text-sm text-gray-700 font-semibold mb-2 mt-4">Ranking de Ganancias (Neto):</p>
+                <div id="comparison-table" class="bg-white p-3 rounded border text-xs">
+                    <p id="comparison-placeholder" class="text-xs text-gray-500">Se requiere cargar el historial para generar el ranking.</p>
                 </div>
             </div>
-
-            <div id="config-view" class="hidden" data-view="config-view">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Ajustes de Perfil y Rotación</h2>
-                <p class="text-sm text-gray-500 mb-4">Estos valores se aplican a todos los cálculos y se guardan automáticamente.</p>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                    <div class="col-span-1 md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Valor Hora Bruta ($)</label>
-                        <input id="input-valorHora" type="number" name="valorHora" class="input-style" onchange="handleConfigChange()" step="0.01">
-                    </div>
-                    <div class="col-span-1 md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Desc. Afiliación</label>
-                        <select id="input-discountRate" name="discountRate" class="input-style" onchange="handleConfigChange()">
-                            <option value="0.18">No Afiliado (18%)</option>
-                            <option value="0.16">Afiliado (16%)</option>
-                        </select>
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Fecha del Último Franco (Día 2)</label>
-                        <input id="input-lastFrancoDate" type="date" name="lastFrancoDate" class="input-style" onchange="handleConfigChange()">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Turno Post-Franco</label>
-                        <select id="input-initialTurn" name="initialTurn" class="input-style" onchange="handleConfigChange()">
-                            <option value="Mañana">Mañana</option>
-                            <option value="Noche">Noche</option>
-                            <option value="Tarde">Tarde</option>
-                        </select>
-                    </div>
-                </div>
+           
+            <h3 class="text-lg font-bold text-gray-800 mb-3 border-t pt-4">Detalle Diario, Feriados y Horas Extra</h3>
+            <p class="text-xs text-red-600 mb-3">
+                ⚠️ Marca la casilla "Es Feriado" para aplicar la equivalencia de **32 Horas** (si trabajas) o **8 Horas** (si es Franco).
+            </p>
+            <div id="daily-detail-table-container" class="overflow-x-auto rounded-lg border" style="max-height: 400px; overflow-y: auto;">
+                <table id="daily-detail-table" class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-100 sticky-header">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-gray-500">Fecha</th>
+                            <th class="px-3 py-2 text-left text-gray-500">Turno</th>
+                            <th class="px-3 py-2 text-center text-gray-500">Es Feriado</th>
+                            <th class="px-3 py-2 text-right text-gray-500">H. Eq. Base</th>
+                            <th class="px-3 py-2 text-center text-gray-500">H. Extra (Reales)</th>
+                            <th class="px-3 py-2 text-right text-gray-500">H. Eq. Total</th>
+                            <th class="px-3 py-2 text-right text-gray-500">Monto Bruto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-detail-tbody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                </table>
             </div>
+        </div>
 
-            <div id="monthly-history-view" class="hidden" data-view="monthly-history-view">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Historial de Cálculos y Detalle Mensual</h2>
-                <p class="text-sm text-gray-500 mb-4">Seleccione un mes para ver o editar sus datos de horas extra y feriados.</p>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-indigo-50 rounded-lg">
-                    <div>
-                        <label class="block text-sm font-medium text-indigo-700">Mes a Generar</label>
-                        <select id="input-month" name="month" class="input-style bg-white" onchange="handleMonthSelectionChange()">
-                            </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-indigo-700">Año</label>
-                        <input id="input-year" type="number" name="year" class="input-style" onchange="handleMonthSelectionChange()">
-                    </div>
-                    <div class="col-span-2 flex items-end space-x-4">
-                         <button id="calculate-schedule-button" class="flex-1 py-2 rounded-lg text-white font-bold transition duration-150 bg-indigo-700 hover:bg-indigo-800 text-sm">
-                            Generar/Actualizar Horario
-                        </button>
-                        <button id="next-month-button" class="py-2 px-4 rounded-lg text-indigo-700 font-bold transition duration-150 bg-indigo-200 hover:bg-indigo-300 text-sm">
-                            Generar Mes Siguiente &rarr;
-                        </button>
-                    </div>
-                </div>
-
-                <div id="monthly-detail-view" class="mt-6 border p-4 rounded-lg bg-white shadow-inner">
-                    <h3 class="text-lg font-bold text-gray-700 mb-4">Detalle de Mes: <span id="current-detail-month-year">Cargando...</span></h3>
-
-                    <div id="results-section">
-                         <h3 class="text-xl font-bold text-indigo-700 mb-4">Resumen de Ganancias</h3>
-                        <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium mb-6">
-                            </div>
-
-                        <div id="francos-info" class="p-3 bg-yellow-50 rounded-lg text-sm mb-4">
-                            </div>
-
-                        <button id="generate-pdf-button" class="w-full py-2 mb-6 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition duration-150 flex items-center justify-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            Descargar Reporte PDF
-                        </button>
-                    
-                        <h4 class="text-lg font-bold text-gray-800 mb-3 border-t pt-4">Detalle Diario, Feriados y Horas Extra</h4>
-                        <p class="text-xs text-red-600 mb-3">
-                            ⚠️ Marca la casilla "Es Feriado" para aplicar la equivalencia de **32 Horas** (si trabajas) o **8 Horas** (si es Franco).
-                        </p>
-                        <div id="daily-detail-table-container" class="overflow-x-auto rounded-lg border" style="max-height: 400px; overflow-y: auto;">
-                            <table id="daily-detail-table" class="min-w-full divide-y divide-gray-200 text-xs">
-                                <thead class="bg-gray-100 sticky-header">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-gray-500">Fecha</th>
-                                        <th class="px-3 py-2 text-left text-gray-500">Turno</th>
-                                        <th class="px-3 py-2 text-center text-gray-500">Es Feriado</th>
-                                        <th class="px-3 py-2 text-right text-gray-500">H. Eq. Base</th>
-                                        <th class="px-3 py-2 text-center text-gray-500">H. Extra (Reales)</th>
-                                        <th class="px-3 py-2 text-right text-gray-500">H. Eq. Total</th>
-                                        <th class="px-3 py-2 text-right text-gray-500">Monto Bruto</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="daily-detail-tbody" class="bg-white divide-y divide-gray-200">
-                                    </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div> <div id="comparisons-view" class="hidden" data-view="comparisons-view">
-                 <h2 class="text-xl font-bold text-gray-800 mb-4">Análisis de Diferencias Salariales</h2>
-                 <p class="text-sm text-gray-500 mb-4">Esta sección analizará los meses históricos guardados para explicar variaciones en el sueldo neto.</p>
-
-                 <div id="comparisons-list" class="space-y-4">
-                    <p class="p-4 bg-yellow-100 text-yellow-800 rounded-lg">
-                        ⚠️ **Información Histórica Requerida:** Para que esta vista funcione, debes generar y guardar los cálculos de varios meses en el Dashboard Mensual.
-                    </p>
-                    </div>
-            </div>
-
-        </div> </div>
+    </div>
 
     <script type="module">
         // =====================================================================
@@ -251,27 +208,30 @@
        
         // Estado Global de la Aplicación (Simulando React state)
         let appState = {
-            config: { // Configuración Global
-                month: new Date().getMonth() + 1,
+            config: {
+                month: new Date().getDate() === 1 ? new Date().getMonth() : new Date().getMonth() + 1,
                 year: new Date().getFullYear(),
                 valorHora: 3758,
                 lastFrancoDate: getYesterdayDate(),
                 initialTurn: 'Mañana',
                 discountRate: 0.18,
+                // NUEVOS CAMPOS DE CONFIGURACIÓN
+                name: 'Usuario Temporal',
+                viaticoValue: 6200,
+                titleValue: 0,
             },
-            monthlyData: {}, // Datos cargados del mes actual (extraHours, manualHolidays)
             extraHours: {},
             manualHolidays: {},
-            calculationResult: null, // Resultado del cálculo del mes actual (temporal)
-            historicalResults: {}, // { 'YYYY-MM': { net: 123, equivHours: 456, ... } }
+            calculationResult: null,
             isLoading: false,
             status: null,
-            currentView: 'home-view',
+            history: [], // NUEVO: Historial de cálculos de meses
         };
 
         // Elementos del DOM
         const statusEl = document.getElementById('status-message');
-        const summaryCardsEl = document.getElementById('summary-cards');
+        const personalDashboardEl = document.getElementById('personal-dashboard'); // NUEVO ID
+        const monthlyTotalsContainerEl = document.getElementById('monthly-totals-container'); // NUEVO ID
         const francosInfoEl = document.getElementById('francos-info');
         const tbodyEl = document.getElementById('daily-detail-tbody');
         const resultsSectionEl = document.getElementById('results-section');
@@ -280,15 +240,9 @@
         const userInfoEl = document.getElementById('user-info');
         const googleLoginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
-        const nextMonthButtonEl = document.getElementById('next-month-button');
-        const currentDetailMonthYearEl = document.getElementById('current-detail-month-year');
-        
-        // Elementos de la nueva vista HOME
-        const nextFrancosDisplayEl = document.getElementById('next-francos-display');
-        const nextQuincenaDisplayEl = document.getElementById('next-quincena-display');
-        const currentMonthNetDisplayEl = document.getElementById('current-month-net-display');
-        const comparisonsListEl = document.getElementById('comparisons-list');
-
+        const historyButtonsEl = document.getElementById('history-buttons'); // NUEVO
+        const comparisonTableEl = document.getElementById('comparison-table'); // NUEVO
+        const historyLoadingEl = document.getElementById('history-loading'); // NUEVO
 
         // =====================================================================
         // UTILIDADES Y AYUDANTES DE UI
@@ -307,15 +261,10 @@
         function formatDateForDisplay(date) {
             return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
-        
-        function formatMonthYear(month, year) {
-             const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long' });
-             return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
-        }
 
         function formatCurrency(amount) {
             const number = parseFloat(amount) || 0;
-            return number.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
+            return number.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
         }
        
         function formatNumber(amount, decimals = 2) {
@@ -352,7 +301,6 @@
         }
 
         function updateStatus(type, message) {
-            // Lógica existente para mostrar mensajes de estado
             appState.status = { type, message };
             if (!message) {
                 statusEl.classList.add('hidden');
@@ -372,12 +320,10 @@
         }
 
         function setLoading(loading) {
-            // Lógica existente para mostrar estado de carga
             appState.isLoading = loading;
-            const text = loading ? 'Calculando...' : 'Generar/Actualizar Horario';
+            const text = loading ? 'Calculando...' : 'Generar/Actualizar Horario y Calcular Salario';
             calculateButtonEl.textContent = text;
             calculateButtonEl.disabled = loading;
-            nextMonthButtonEl.disabled = loading;
 
             if (loading) {
                 calculateButtonEl.classList.add('bg-indigo-400');
@@ -389,7 +335,6 @@
         }
        
         function updateAuthUI() {
-            // Lógica existente para actualizar UI de autenticación
             if (!isAuthReady) {
                 userInfoEl.textContent = 'Cargando Autenticación...';
                 googleLoginBtn.classList.remove('hidden');
@@ -397,73 +342,51 @@
                 return;
             }
            
-            const user = auth?.currentUser;
+            const user = auth?.currentUser; // Usar optional chaining si auth puede ser null
            
             if (userId && user && !user.isAnonymous) {
+                // Usuario autenticado (Google)
+                userName = user.displayName || user.email || 'Usuario';
                 userInfoEl.textContent = `Hola, ${userName} (${userId.substring(0, 4)}...)`;
                 googleLoginBtn.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
             } else {
-                userInfoEl.textContent = `Sesión: ${userName} (${userId ? userId.substring(0, 4) + '...' : 'Local'})`;
+                // Usuario anónimo (Canvas token) o no autenticado
+                userInfoEl.textContent = `Sesión: ${appState.config.name} (${userId ? userId.substring(0, 4) + '...' : 'Local'})`;
                 googleLoginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
             }
         }
        
-        /** FUNCIÓN DE NAVEGACIÓN (Actualizada para 4 vistas) **/
-        function navigateTo(viewId) {
-            appState.currentView = viewId;
-
-            document.querySelectorAll('#view-container > div').forEach(view => {
-                view.classList.add('hidden');
-            });
-            document.getElementById(viewId).classList.remove('hidden');
-
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                if (tab.getAttribute('data-view') === viewId) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            
-            // Acciones específicas al navegar
-            if (viewId === 'home-view') {
-                 renderHomeView();
-            } else if (viewId === 'monthly-history-view') {
-                 // Cuando navegamos al dashboard, refrescamos el histórico
-                 fetchAllMonthResults();
-            } else if (viewId === 'comparisons-view') {
-                 renderComparisonsView();
-            }
-        }
-        window.navigateTo = navigateTo;
-
         function updateUIFromState() {
-            // 1. Actualizar Inputs de Configuración
+            // 1. Actualizar Inputs
             const config = appState.config;
             document.getElementById('input-year').value = config.year;
             document.getElementById('input-valorHora').value = config.valorHora;
             document.getElementById('input-lastFrancoDate').value = config.lastFrancoDate;
             document.getElementById('input-initialTurn').value = config.initialTurn;
             document.getElementById('input-discountRate').value = config.discountRate;
+            // NUEVOS CAMPOS
+            document.getElementById('input-name').value = config.name;
+            document.getElementById('input-viaticoValue').value = config.viaticoValue;
+            document.getElementById('input-titleValue').value = config.titleValue;
            
             // 2. Llenar opciones de meses
             const monthSelect = document.getElementById('input-month');
+           
             if (monthSelect.options.length === 0 || monthSelect.options.length !== 12) {
                  monthSelect.innerHTML = '';
                 Array.from({ length: 12 }, (_, i) => i + 1).forEach(m => {
                     const option = document.createElement('option');
                     option.value = m;
-                    option.textContent = formatMonthYear(m, config.year);
+                    // El mes es m-1 porque Date usa 0-11
+                    option.textContent = new Date(config.year, m - 1).toLocaleDateString('es-AR', { month: 'long' });
                     monthSelect.appendChild(option);
                 });
             }
             monthSelect.value = config.month;
-            currentDetailMonthYearEl.textContent = formatMonthYear(config.month, config.year);
 
-
-            // 3. Mostrar Resultados
+            // 3. Mostrar Resultados y Dashboard
             renderCalculationResults();
 
             // 4. Actualizar Status y Loading
@@ -472,51 +395,54 @@
            
             // 5. Actualizar UI de Autenticación
             updateAuthUI();
-
-            // 6. Configurar la vista actual (si es la primera carga)
-            navigateTo(appState.currentView);
         }
         
         // =====================================================================
         // INTEGRACIÓN FIREBASE (Autenticación y Persistencia)
         // =====================================================================
 
+        // Importaciones de Firebase (Módulos)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, setLogLevel, doc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, setLogLevel, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Añadido 'collection'
 
         // Rutas de Firestore
         function getConfigDocRef() {
             if (!db || !userId) return null;
+            // Colección privada: /artifacts/{appId}/users/{userId}/config/salary
             return doc(db, 'artifacts', appId, 'users', userId, 'config', 'salary');
         }
        
         function getDataDocRef(monthDocId) {
             if (!db || !userId) return null;
+            // Colección privada: /artifacts/{appId}/users/{userId}/data/{monthDocId} (Extras y Feriados manuales)
             return doc(db, 'artifacts', appId, 'users', userId, 'data', monthDocId);
         }
         
-        function getDataCollectionRef() {
-             if (!db || !userId) return null;
-             return collection(db, 'artifacts', appId, 'users', userId, 'data');
+        function getHistoryDocRef(monthDocId) {
+            if (!db || !userId) return null;
+            // NUEVA Colección para historial de resultados: /artifacts/{appId}/users/{userId}/history/{monthDocId}
+            return doc(db, 'artifacts', appId, 'users', userId, 'history', monthDocId);
         }
 
-        // --- Funciones de Firebase (Autenticación/SignIn/SignOut) (sin cambios) ---
-        // (La lógica se mantiene dentro del script)
-        // ... (initFirebase, signInWithGoogle, signOutUser, etc.) ...
+        // 1. Inicialización y Autenticación
         const initFirebase = async () => {
-             // ... [Misma Lógica de Inicialización y Autenticación de Firebase] ...
-             updateStatus('info', 'Conectando a Firebase para autenticación y persistencia de datos...');
+            updateStatus('info', 'Conectando a Firebase para autenticación y persistencia de datos...');
 
             try {
+                // Inicializar Firebase con la configuración proporcionada
                 app = initializeApp(HARDCODED_FIREBASE_CONFIG);
                 auth = getAuth(app);
                 db = getFirestore(app);
+               
+                // setLogLevel('Debug'); // Descomentar para depuración
 
+                // Autenticar con el token de entorno (si existe)
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 }
 
+                // Listener del estado de autenticación (Auth State Listener)
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
@@ -524,16 +450,16 @@
                         isAuthReady = true;
                         updateStatus('success', `Sesión iniciada. Bienvenido, ${userName}!`);
                         setupDataListeners();
-                        fetchAllMonthResults(); // Cargar todos los resultados al iniciar
                     } else {
+                        // Si el usuario cierra sesión, o no hay token de entorno, iniciamos sesión anónima
                         signInAnonymously(auth).then(anonUser => {
                             userId = anonUser.user.uid;
                             userName = 'Temporal (Anónimo)';
                             isAuthReady = true;
                             updateStatus('info', 'Sesión iniciada anónimamente.');
                             setupDataListeners();
-                            fetchAllMonthResults(); // Cargar todos los resultados al iniciar
                         }).catch(e => {
+                            // Fallback si la autenticación anónima falla
                             console.error("Fallo de autenticación anónima:", e);
                             userId = crypto.randomUUID();
                             userName = 'Local (Error)';
@@ -558,109 +484,127 @@
             }
         };
 
+        // --- FUNCIONES DE AUTENTICACIÓN CON GOOGLE ---
+       
         googleLoginBtn.addEventListener('click', signInWithGoogle);
         logoutBtn.addEventListener('click', signOutUser);
 
         async function signInWithGoogle() {
-            if (!auth) { updateStatus('error', 'Firebase Auth no está inicializado.'); return; }
+            if (!auth) {
+                 updateStatus('error', 'Firebase Auth no está inicializado.');
+                 return;
+            }
             updateStatus('info', 'Iniciando sesión con Google...');
             try {
                 const provider = new GoogleAuthProvider();
                 await signInWithPopup(auth, provider);
+                // onAuthStateChanged se encargará de actualizar el estado y los datos
             } catch (error) {
                 console.error("Error al iniciar sesión con Google:", error);
-                updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    updateStatus('info', 'Ventana de Google cerrada. Intenta de nuevo.');
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    updateStatus('error', 'Error de dominio no autorizado (auth/unauthorized-domain). Verifica tu configuración en la consola de Firebase.');
+                } else {
+                    updateStatus('error', `Error de Google Auth: ${error.code || error.message}`);
+                }
             }
         }
        
         async function signOutUser() {
             if (!auth) return;
-            try { await signOut(auth); } catch (error) { console.error("Error al cerrar sesión:", error); updateStatus('error', `Error al cerrar sesión: ${error.message}`); }
+            try {
+                await signOut(auth);
+                // onAuthStateChanged se encargará de re-autenticar anónimamente
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                updateStatus('error', `Error al cerrar sesión: ${error.message}`);
+            }
         }
 
 
         // 2. Funciones de Carga y Guardado
         function saveConfig() {
             if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
+           
             const configRef = getConfigDocRef();
             if (!configRef) return;
 
             const dataToSave = { ...appState.config };
+            // Asegurar que los datos numéricos se guardan como números
             dataToSave.valorHora = Number(dataToSave.valorHora);
             dataToSave.discountRate = Number(dataToSave.discountRate);
             dataToSave.month = Number(dataToSave.month);
             dataToSave.year = Number(dataToSave.year);
+            // NUEVOS CAMPOS NUMÉRICOS
+            dataToSave.viaticoValue = Number(dataToSave.viaticoValue);
+            dataToSave.titleValue = Number(dataToSave.titleValue);
 
             setDoc(configRef, dataToSave, { merge: true })
-                .catch(error => { console.error("Error saving config:", error); updateStatus('error', "Error al guardar configuración."); });
+                .catch(error => {
+                    console.error("Error saving config:", error);
+                    updateStatus('error', "Error al guardar configuración.");
+                });
         }
        
         function saveData() {
-            if (!isFirebaseActive || !isAuthReady || !userId || !db || !appState.calculationResult) return;
+            if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
            
             const config = appState.config;
             const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
             const dataRef = getDataDocRef(monthDocId);
             if (!dataRef) return;
            
-            // GUARDAR DATOS INTERACTIVOS + RESULTADO COMPLETO DEL CÁLCULO
             setDoc(dataRef, {
                 extras: appState.extraHours,
-                holidayFlags: appState.manualHolidays,
-                results: {
-                    neto: appState.calculationResult.totalNeto,
-                    bruto: appState.calculationResult.totalBruto,
-                    equivHours: appState.calculationResult.totalEquivalentHours,
-                    // Se pueden guardar más campos para comparación
-                    configSnapshot: {
-                         valorHora: config.valorHora,
-                         discountRate: config.discountRate
-                    }
-                }
+                holidayFlags: appState.manualHolidays
             }, { merge: true })
-            .then(() => fetchAllMonthResults()) // Actualizar histórico después de guardar
-            .catch(error => { console.error("Error saving month data:", error); updateStatus('error', "Error al guardar datos de horas/feriados."); });
+            .catch(error => {
+                console.error("Error saving month data:", error);
+                updateStatus('error', "Error al guardar datos de horas/feriados.");
+            });
+        }
+        
+        function saveHistory(result) {
+            if (!isFirebaseActive || !isAuthReady || !userId || !db || !result) return;
+
+            const config = appState.config;
+            const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
+            const historyRef = getHistoryDocRef(monthDocId);
+            if (!historyRef) return;
+
+            const dataToSave = {
+                month: config.month,
+                year: config.year,
+                totalNeto: result.totalNeto,
+                totalBruto: result.totalBruto,
+                totalEquivalentHours: result.totalEquivalentHours,
+                timestamp: new Date().toISOString(),
+                // Guardar los resultados de las quincenas
+                quincena1: result.quincena1.neto,
+                quincena2: result.quincena2.neto,
+            };
+
+            setDoc(historyRef, dataToSave, { merge: true })
+                .catch(error => {
+                    console.error("Error saving history data:", error);
+                    updateStatus('error', "Error al guardar el historial.");
+                });
         }
        
-        /** NUEVA FUNCIÓN: Obtener todos los meses históricos (para Home y Comparaciones) **/
-        async function fetchAllMonthResults() {
-             if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
-             const dataCollectionRef = getDataCollectionRef();
-             if (!dataCollectionRef) return;
-             
-             try {
-                const snapshot = await getDocs(dataCollectionRef);
-                const historicalResults = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.results) {
-                        historicalResults[doc.id] = data.results;
-                    }
-                });
-                appState.historicalResults = historicalResults;
-                // Si estamos en la vista de comparaciones, renderizarla.
-                if (appState.currentView === 'comparisons-view') renderComparisonsView();
-                // También actualiza la vista de Inicio para las quincenas.
-                if (appState.currentView === 'home-view') renderHomeView();
-
-             } catch (error) {
-                 console.error("Error fetching all month data:", error);
-                 updateStatus('error', 'Error al cargar historial de meses.');
-             }
-        }
-
-
         // 3. Listeners de Datos (onSnapshot)
         let unsubscribeConfig = null;
         let unsubscribeData = null;
+        let unsubscribeHistory = null; // NUEVO
 
         function setupDataListeners() {
             if (!isFirebaseActive || !isAuthReady || !userId || !db) {
+                // Si no hay Firebase activo o autenticación lista, solo usa los datos locales.
                 calculateSchedule(false);
                 return;
             }
            
-            // 3.1 Listener de Configuración (Global) - Sin cambios
+            // 3.1 Listener de Configuración
             if (unsubscribeConfig) unsubscribeConfig();
             const configRef = getConfigDocRef();
             if (configRef) {
@@ -669,59 +613,70 @@
                         const data = docSnap.data();
                         appState.config = {
                             ...appState.config, ...data,
+                            // Asegurarse de que los valores numéricos se mantengan
                             valorHora: Number(data.valorHora) || appState.config.valorHora,
                             discountRate: Number(data.discountRate) || appState.config.discountRate,
                             month: Number(data.month) || appState.config.month,
                             year: Number(data.year) || appState.config.year,
+                            viaticoValue: Number(data.viaticoValue) || 0, // Nuevo
+                            titleValue: Number(data.titleValue) || 0, // Nuevo
                         };
                         updateUIFromState();
-                        // Al cargar la config, forzamos la recarga de los datos del mes
-                        setupMonthDataListener();
                     } else {
-                        saveConfig();
+                        saveConfig(); // Guardar por primera vez si no existe el documento
                     }
-                }, (error) => { console.error("Error fetching config:", error); updateStatus('error', "Error al cargar configuración."); });
+                }, (error) => {
+                    console.error("Error fetching config:", error);
+                    updateStatus('error', "Error al cargar configuración.");
+                });
             }
-        }
-        
-        // 3.2 Listener de Datos Mensuales (Extra Hours / Holidays) - Lógica Separada
-        function setupMonthDataListener() {
-            if (!isFirebaseActive || !isAuthReady || !userId || !db) return;
-            
+
+            // 3.2 Listener de Datos (Horas Extra y Feriados Manuales)
             if (unsubscribeData) unsubscribeData();
             const config = appState.config;
             const monthDocId = `${config.year}-${String(config.month).padStart(2, '0')}`;
             const dataRef = getDataDocRef(monthDocId);
-
             if (dataRef) {
                 unsubscribeData = onSnapshot(dataRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         appState.extraHours = data.extras || {};
                         appState.manualHolidays = data.holidayFlags || {};
-                        // Opcional: Cargar resultado previo del cálculo si existe
-                        appState.calculationResult = data.results?.neto ? { ...data.results } : null; 
                     } else {
                         appState.extraHours = {};
                         appState.manualHolidays = {};
-                        appState.calculationResult = null;
+                        // Al no existir, reiniciamos el estado local para ese mes/año
                     }
                     updateUIFromState();
-                    // Recalcular solo si estamos en el dashboard o si ya había un resultado
-                    if (appState.currentView === 'monthly-history-view' || appState.calculationResult) {
-                         calculateSchedule(false);
-                    }
-                }, (error) => { console.error("Error fetching month data:", error); updateStatus('error', "Error al cargar datos de mes."); });
+                    // Volver a calcular para reflejar los datos recién cargados o vaciados
+                    if (appState.calculationResult) calculateSchedule(false);
+                }, (error) => {
+                    console.error("Error fetching month data:", error);
+                    updateStatus('error', "Error al cargar datos de mes.");
+                });
+            }
+            
+            // 3.3 Listener de Historial (NUEVO)
+            if (unsubscribeHistory) unsubscribeHistory();
+            const historyCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'history');
+            if (historyCollectionRef) {
+                unsubscribeHistory = onSnapshot(historyCollectionRef, (snapshot) => {
+                    appState.history = [];
+                    snapshot.forEach(doc => {
+                        appState.history.push(doc.data());
+                    });
+                    renderHistoryDashboard();
+                }, (error) => {
+                    console.error("Error fetching history:", error);
+                });
             }
         }
 
-
         // =====================================================================
-        // MANEJADORES DE EVENTOS
+        // MANEJADORES DE EVENTOS DE INTERACCIÓN (INPUTS DE LA TABLA)
         // =====================================================================
 
         function handleConfigChange() {
-            // Lógica existente para guardar la configuración (Valor Hora, Franco, etc.)
             const newConfig = {
                 month: parseInt(document.getElementById('input-month').value),
                 year: parseInt(document.getElementById('input-year').value),
@@ -729,32 +684,34 @@
                 lastFrancoDate: document.getElementById('input-lastFrancoDate').value,
                 initialTurn: document.getElementById('input-initialTurn').value,
                 discountRate: parseFloat(document.getElementById('input-discountRate').value) || appState.config.discountRate,
+                // NUEVOS CAMPOS
+                name: document.getElementById('input-name').value,
+                viaticoValue: parseFloat(document.getElementById('input-viaticoValue').value) || 0,
+                titleValue: parseFloat(document.getElementById('input-titleValue').value) || 0,
             };
            
+            const oldDocId = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
+            const newDocId = `${newConfig.year}-${String(newConfig.month).padStart(2, '0')}`;
+
             appState.config = newConfig;
-            saveConfig();
-            // Esto llamará a setupDataListeners, que llamará a setupMonthDataListener, que forzará el cálculo.
+            saveConfig(); // Guardar la nueva configuración
+
+            if (isFirebaseActive && oldDocId !== newDocId) {
+                // Si el mes/año cambió y estamos activos en Firebase, cambiamos el listener de datos para el nuevo mes.
+                setupDataListeners();
+            } else {
+                updateUIFromState();
+                calculateSchedule(false);
+            }
         }
+
         window.handleConfigChange = handleConfigChange;
-        
-        /** NUEVO: Maneja el cambio de mes/año en la vista Dashboard/Historial **/
-        function handleMonthSelectionChange() {
-             const newMonth = parseInt(document.getElementById('input-month').value);
-             const newYear = parseInt(document.getElementById('input-year').value);
-             
-             if (newMonth === appState.config.month && newYear === appState.config.year) return;
-             
-             // Actualizar la configuración para cargar el nuevo mes
-             appState.config.month = newMonth;
-             appState.config.year = newYear;
-             saveConfig(); // Guardar la selección del último mes activo
-             setupMonthDataListener(); // Forzar la carga de datos del nuevo mes
-        }
-        
+       
         window.handleExtraChange = function(dateKey, inputElement) {
             const hours = parseFloat(inputElement.value) || 0;
+            // Usamos el formato de display (DD/MM/YYYY) como clave en Firestore
             appState.extraHours[dateKey] = hours;
-            // No se llama saveData() aquí, solo se llama después de un cálculo completo
+            saveData();
             calculateSchedule(false);
         }
 
@@ -764,65 +721,24 @@
             } else {
                 delete appState.manualHolidays[dateKey];
             }
-            // No se llama saveData() aquí, solo se llama después de un cálculo completo
+            saveData();
             calculateSchedule(false);
         }
 
-        /** LÓGICA DE CÁLCULO AL HACER CLICK **/
-        calculateButtonEl.addEventListener('click', () => {
-             // 1. Ejecutar el cálculo completo
-             calculateSchedule(true);
-             // 2. Guardar el resultado del cálculo y los datos de entrada
-             saveData();
-        });
-
-        /** FUNCIÓN PARA AVANZAR AL MES SIGUIENTE **/
-        function handleNextMonth() {
-            setLoading(true);
-            
-            let newMonth = appState.config.month + 1;
-            let newYear = appState.config.year;
-
-            if (newMonth > 12) {
-                newMonth = 1;
-                newYear += 1;
-            }
-
-            // 1. Actualizar la configuración del mes/año en el estado
-            appState.config.month = newMonth;
-            appState.config.year = newYear;
-
-            // 2. Guardar la configuración (esto activará el listener de Firebase)
-            saveConfig(); 
-            
-            // 3. Forzar el cambio del listener de datos para cargar los datos del nuevo mes
-            setupMonthDataListener();
-            
-            updateStatus('info', `Cargando datos para el nuevo mes: ${newMonth}/${newYear}...`);
-            // Cambiar a la vista de Dashboard
-            navigateTo('monthly-history-view');
-        }
-        nextMonthButtonEl.addEventListener('click', handleNextMonth);
-        
-        // Configuración de los listeners de navegación
-        document.getElementById('tab-home').addEventListener('click', () => navigateTo('home-view'));
-        document.getElementById('tab-config').addEventListener('click', () => navigateTo('config-view'));
-        document.getElementById('tab-dashboard').addEventListener('click', () => navigateTo('monthly-history-view'));
-        document.getElementById('tab-comparisons').addEventListener('click', () => navigateTo('comparisons-view'));
-
         // =====================================================================
-        // LÓGICA DE CÁLCULO (Se mantiene igual, solo se mueve al final)
+        // LÓGICA DE CÁLCULO
         // =====================================================================
        
+        calculateButtonEl.addEventListener('click', () => calculateSchedule(true));
+
         function calculateSchedule(initialCalculation = true) {
-            // ... [Misma Lógica de Cálculo Salarial 6x2] ...
             if (initialCalculation) setLoading(true);
 
-            const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate } = appState.config;
+            const { month, year, lastFrancoDate, initialTurn, valorHora, discountRate, viaticoValue, titleValue } = appState.config;
            
             if (!lastFrancoDate || !valorHora || isNaN(valorHora) || valorHora <= 0) {
                  if (initialCalculation) setLoading(false);
-                 updateStatus('error', 'Por favor, ingrese un Valor de Hora Bruta y una Fecha de Último Franco válidos. (Ver Configuración)');
+                 updateStatus('error', 'Por favor, ingrese un Valor de Hora Bruta y una Fecha de Último Franco válidos.');
                  appState.calculationResult = null;
                  resultsSectionEl.classList.add('hidden');
                  updateUIFromState();
@@ -830,8 +746,7 @@
             }
 
             let currentDate = new Date(year, month - 1, 1, 0, 0, 0);
-            
-            // Ajustar la fecha inicial para el cálculo de rotación
+           
             const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
             const dayAfterFranco = new Date(lastFrancoDay2.getTime());
             dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
@@ -851,11 +766,12 @@
             if (initialTurn === 'Noche') baseOffset = 8;
             else if (initialTurn === 'Tarde') baseOffset = 16;
            
+            // Calcular el desplazamiento inicial basado en la diferencia de días
             const diffTime = currentDate.getTime() - dayAfterFranco.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
            
             let startOffset = (baseOffset + diffDays) % 24;
-            if (startOffset < 0) startOffset += 24;
+            if (startOffset < 0) startOffset += 24; // Asegurar offset positivo
 
             let dayCounter = 0;
             const daysInMonth = new Date(year, month, 0).getDate();
@@ -865,6 +781,7 @@
                 const dateKeyForSave = formatDateForDisplay(currentDate);
                 const dateKeyForInput = formatDateForInput(currentDate);
                
+                // Usar el estado de Feriado Manual cargado de Firebase (o local)
                 const isHolidayManual = appState.manualHolidays[dateKeyForSave] === true;
                
                 const cycleStatus = masterCycle[startOffset];
@@ -887,7 +804,7 @@
                     if (isHolidayManual) {
                         turnBaseName = `FERIADO - ${cycleStatus}`;
                         realHours = 8;
-                        equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS;
+                        equivalentHours = HOLIDAY_WORKED_EQUIV_HOURS; // 32 Horas equivalentes
                     } else {
                         const equivalences = getTurnEquivalencies(dayOfWeek, cycleStatus);
                         realHours = equivalences.realHours;
@@ -898,11 +815,10 @@
                
                 dailyResults.push({
                     date: dateKeyForSave,
-                    dateKey: dateKeyForInput,
+                    dateKey: dateKeyForInput, // Clave para el input de Fecha
                     day: dayNames[dayOfWeek],
                     turn: turnBaseName,
                     isHoliday: isHolidayManual,
-                    realHours: realHours,
                     equivHoursBase: equivalentHours,
                 });
                
@@ -913,22 +829,39 @@
            
             let totalEquivalentHours = 0;
             let totalExtraHoursReal = 0;
+            let extraDaysCount = 0; // NUEVO: Contador de días con horas extra
             const hourlyRate = parseFloat(valorHora) || 0;
 
+            const date15th = new Date(year, month - 1, 15, 0, 0, 0); // Para dividir por quincena
+            let hEqQuincena1 = 0;
+            let hEqQuincena2 = 0;
+            let extraDaysQ1 = 0;
+            let extraDaysQ2 = 0;
+
             const finalDailyResults = dailyResults.map(day => {
+                // Usamos la clave de display (DD/MM/YYYY) para buscar en extraHours
                 const dayExtraReal = appState.extraHours[day.date] || 0;
+                const dayDate = new Date(day.dateKey + 'T00:00:00');
                
                 let dayExtraEquivalent = 0;
                
                 if (dayExtraReal > 0) {
                     dayExtraEquivalent = (dayExtraReal * EXTRA_HOUR_MULTIPLIER);
                     totalExtraHoursReal += dayExtraReal;
+                    extraDaysCount++;
+                    
+                    if (dayDate.getTime() <= date15th.getTime()) extraDaysQ1++;
+                    else extraDaysQ2++;
                 }
                
                 const finalEquivHours = day.equivHoursBase + dayExtraEquivalent;
                 const finalDailyBruto = finalEquivHours * hourlyRate;
 
                 totalEquivalentHours += finalEquivHours;
+
+                if (dayDate.getTime() <= date15th.getTime()) hEqQuincena1 += finalEquivHours;
+                else hEqQuincena2 += finalEquivHours;
+
 
                 return {
                     ...day,
@@ -938,168 +871,214 @@
                     dailyBruto: finalDailyBruto,
                 };
             });
+           
+            // CÁLCULOS FINALES
+            const totalViatico = extraDaysCount * viaticoValue;
+            const totalBrutoBase = totalEquivalentHours * hourlyRate; // Bruto sin viáticos ni título
+            const totalDescuento = totalBrutoBase * discountRate;
+            
+            // Total Neto: (Bruto Base - Descuento) + Viático + Título
+            const totalNeto = totalBrutoBase - totalDescuento + totalViatico + titleValue;
+            
+            // CÁLCULO DE QUINCENAS NETAS
+            const brutoQ1 = hEqQuincena1 * hourlyRate;
+            const viaticoQ1 = extraDaysQ1 * viaticoValue;
+            const descuentoQ1 = brutoQ1 * discountRate;
+            const netoQ1 = brutoQ1 - descuentoQ1 + viaticoQ1;
 
-            const totalBruto = totalEquivalentHours * hourlyRate;
-            const totalDescuento = totalBruto * discountRate;
-            const totalNeto = totalBruto - totalDescuento;
-
+            const brutoQ2 = hEqQuincena2 * hourlyRate;
+            const viaticoQ2 = extraDaysQ2 * viaticoValue;
+            const descuentoQ2 = brutoQ2 * discountRate;
+            const netoQ2 = brutoQ2 - descuentoQ2 + viaticoQ2 + titleValue; // Título solo en Q2
+            
             appState.calculationResult = {
                 dailyResults: finalDailyResults,
                 francosDates,
                 totalEquivalentHours,
                 totalExtraHoursReal,
-                totalBruto,
+                totalBruto: totalBrutoBase + totalViatico + titleValue, // Bruto para resumen total
                 totalDescuento,
                 totalNeto,
                 discountRate: discountRate * 100,
+                
+                // NUEVOS RESULTADOS DE ADICIONALES Y QUINCENAS
+                totalViatico,
+                titleValue,
+                extraDaysCount,
+                quincena1: { neto: netoQ1, bruto: brutoQ1, viatico: viaticoQ1, descuento: descuentoQ1, hEq: hEqQuincena1 },
+                quincena2: { neto: netoQ2, bruto: brutoQ2, viatico: viaticoQ2, descuento: descuentoQ2, hEq: hEqQuincena2, title: titleValue },
             };
+            
+            // GUARDAR HISTORIAL
+            saveHistory(appState.calculationResult);
 
             if (initialCalculation) setLoading(false);
             updateUIFromState();
-            // Mostrar mensaje solo si es cálculo inicial
-            if (initialCalculation) updateStatus('success', `Cálculo generado para ${formatMonthYear(month, year)}. Los datos han sido guardados.`);
+            if (initialCalculation) updateStatus('success', `Cálculo generado para ${dailyResults.length} días. ¡Añade tus extras y feriados!`);
         }
        
         // =====================================================================
-        // RENDERIZADO DE VISTAS ESPECÍFICAS
+        // RENDERIZADO DE RESULTADOS
         // =====================================================================
         
-        /** RENDERIZADO DE VISTA INICIO **/
-        function renderHomeView() {
-            // --- 1. Calcular Próximos Francos ---
+        function findNextFrancos(lastFrancoDate, initialTurn) {
             const today = new Date();
-            const lastFrancoDay2 = new Date(appState.config.lastFrancoDate + 'T00:00:00');
-            const dayAfterFranco = new Date(lastFrancoDay2.getTime());
-            dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
-            
-            const dayNamesFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            // Asegurar que empezamos DESPUÉS del último franco
+            let currentDate = new Date(lastFrancoDate + 'T00:00:00');
+            currentDate.setDate(currentDate.getDate() + 1); // Día después del último franco (Día 1 del ciclo de trabajo)
+
+            // Ciclo 6x2 (24 días de rotación)
             const masterCycle = [
                 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco',
                 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco',
                 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'
             ];
-            let baseOffset = (appState.config.initialTurn === 'Noche' ? 8 : (appState.config.initialTurn === 'Tarde' ? 16 : 0));
+           
+            let baseOffset = 0;
+            if (initialTurn === 'Noche') baseOffset = 8;
+            else if (initialTurn === 'Tarde') baseOffset = 16;
+           
+            const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
+            const dayAfterFranco = new Date(lastFrancoDay2.getTime());
+            dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
+            
+            // Calcular el desplazamiento inicial basado en la diferencia de días entre *hoy* y el día después del franco
+            const diffTime = today.getTime() - dayAfterFranco.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            let startOffset = (baseOffset + diffDays) % 24;
+            if (startOffset < 0) startOffset += 24; // Asegurar offset positivo
 
             let nextFrancos = [];
-            let checkDate = new Date(today.getTime());
-            let safetyCounter = 0;
-            
-            while (nextFrancos.length < 2 && safetyCounter < 60) {
-                const diffTime = checkDate.getTime() - dayAfterFranco.getTime();
-                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                let offset = (baseOffset + diffDays) % 24;
-                if (offset < 0) offset += 24;
+            let searchDate = new Date(today.getTime());
+            const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-                if (masterCycle[offset] === 'Franco') {
-                    // Solo agregamos si la fecha es hoy o posterior
-                    if (checkDate.getTime() >= today.getTime() - 86400000) { // Un día atrás para incluir el franco de hoy si aplica
-                        nextFrancos.push({ 
-                            day: dayNamesFull[checkDate.getDay()],
-                            date: formatDateForDisplay(checkDate) 
-                        });
-                    }
+            // Buscar hasta 50 días en el futuro para encontrar los próximos dos francos
+            for (let i = 0; i < 50 && nextFrancos.length < 2; i++) {
+                const cycleStatus = masterCycle[startOffset];
+                const dayName = dayNames[searchDate.getDay()];
+
+                if (cycleStatus === 'Franco' && searchDate.getTime() >= today.getTime()) {
+                    nextFrancos.push({ day: dayName, date: formatDateForDisplay(searchDate) });
                 }
                 
-                checkDate.setDate(checkDate.getDate() + 1);
-                safetyCounter++;
+                startOffset = (startOffset + 1) % 24;
+                searchDate.setDate(searchDate.getDate() + 1);
             }
-            
-            if (nextFrancos.length > 0) {
-                 nextFrancosDisplayEl.innerHTML = nextFrancos.slice(0, 2).map(f => 
-                    `<p class="text-xl">${f.day.toUpperCase()} (${f.date})</p>`).join('');
-            } else {
-                 nextFrancosDisplayEl.textContent = 'No se encontraron próximos francos.';
-            }
-
-            // --- 2. Estimación de Quincenas ---
-            const currentMonthKey = `${appState.config.year}-${String(appState.config.month).padStart(2, '0')}`;
-            
-            // Próxima Quincena (Basada en el mes actual calculado)
-            const currentNet = appState.calculationResult ? appState.calculationResult.totalNeto : 0;
-            const nextQuincena = currentNet / 2;
-            nextQuincenaDisplayEl.textContent = formatCurrency(nextQuincena);
-            
-            currentMonthNetDisplayEl.textContent = currentNet > 0 
-                ? formatCurrency(currentNet) 
-                : 'Generar cálculo para ver el monto total del mes.';
-
-            // Última Quincena (Basada en el mes anterior guardado en historicalResults)
-            const prevMonthDate = new Date(appState.config.year, appState.config.month - 2, 1);
-            const prevMonthKey = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-            
-            const lastMonthNet = appState.historicalResults[prevMonthKey]?.neto || 0;
-            const lastQuincena = lastMonthNet / 2;
-            
-            // Usaremos el mismo display de quincena para ambos (por simplicidad, mostrando la próxima)
-            // Si quisiera mostrar la última, añadiría un card más. Por ahora, solo muestro el total del mes y la próxima.
+            return nextFrancos;
         }
 
-        /** RENDERIZADO DE VISTA COMPARACIONES **/
-        function renderComparisonsView() {
-            const keys = Object.keys(appState.historicalResults).sort().reverse();
-            comparisonsListEl.innerHTML = ''; // Limpiar
+        function renderPersonalDashboard(isNoCalculation = false, result = null) {
+            const config = appState.config;
+            const monthName = new Date(config.year, config.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+            
+            let content = '';
+            
+            if (isNoCalculation || !result) {
+                content = `
+                    <div class="col-span-4 p-4 text-center rounded-lg">
+                        <p class="text-xl font-bold text-indigo-700">Hola, ${config.name}!</p>
+                        <p class="text-sm text-gray-600 mt-2">No se ha generado el cálculo para ${monthName}.</p>
+                        <p class="text-sm text-gray-600">Presiona "Generar/Actualizar Horario y Calcular Salario" para comenzar.</p>
+                    </div>
+                `;
+            } else {
+                const nextFrancos = findNextFrancos(config.lastFrancoDate, config.initialTurn);
+                const francosDisplay = nextFrancos.length > 0 ? nextFrancos.map(f => `${f.day.substring(0, 3)}. ${f.date.substring(0, 5)}`).join(' y ') : 'No se encontraron';
 
-            if (keys.length < 2) {
-                 comparisonsListEl.innerHTML = `<p class="p-4 bg-yellow-100 text-yellow-800 rounded-lg">
-                    ⚠️ **Información Histórica Requerida:** Necesitas al menos dos meses con cálculos guardados para realizar comparaciones.
-                 </p>`;
+                content = `
+                    <div class="col-span-4 p-4 text-center bg-gray-50 rounded-lg md:border-b-0">
+                        <p class="text-xl font-bold text-indigo-700">Hola, ${config.name}!</p>
+                        <p class="text-sm text-gray-600">Calculando: ${monthName}</p>
+                    </div>
+                    <div class="col-span-2 md:col-span-1 p-3 bg-yellow-50 rounded-lg">
+                        <p class="text-gray-500">Próximo/s Francos</p>
+                        <p class="text-md text-yellow-800 font-bold">${francosDisplay}</p>
+                    </div>
+                    <div class="col-span-2 md:col-span-1 p-3 bg-red-50 rounded-lg">
+                        <p class="text-gray-500">Ganancia 1ra Quincena</p>
+                        <p class="text-md text-red-600 font-bold">${formatCurrency(result.quincena1.neto)}</p>
+                    </div>
+                    <div class="col-span-2 md:col-span-1 p-3 bg-green-50 rounded-lg">
+                        <p class="text-gray-500">Ganancia 2da Quincena</p>
+                        <p class="text-md text-green-800 font-bold">${formatCurrency(result.quincena2.neto)}</p>
+                    </div>
+                     <div class="col-span-2 md:col-span-1 p-3 bg-indigo-50 rounded-lg">
+                        <p class="text-gray-500">Neto Total del Mes</p>
+                        <p class="text-md text-indigo-700 font-bold">${formatCurrency(result.totalNeto)}</p>
+                    </div>
+                `;
+            }
+            personalDashboardEl.innerHTML = content;
+        }
+        
+        function renderHistoryDashboard() {
+            const history = appState.history;
+            historyButtonsEl.innerHTML = '';
+            historyLoadingEl.classList.add('hidden');
+
+            if (history.length === 0) {
+                 historyButtonsEl.innerHTML = '<p class="text-xs text-gray-500">Aún no hay meses calculados.</p>';
+                 comparisonTableEl.innerHTML = '<p id="comparison-placeholder" class="text-xs text-gray-500">Se requiere cargar el historial para generar el ranking.</p>';
                  return;
             }
-
-            // Renderizar comparación del mes más reciente con el anterior
-            const currentKey = keys[0];
-            const previousKey = keys[1];
-            
-            const current = appState.historicalResults[currentKey];
-            const previous = appState.historicalResults[previousKey];
-            
-            const [currentYear, currentMonth] = currentKey.split('-');
-            const [prevYear, prevMonth] = previousKey.split('-');
-
-            const currentMonthName = formatMonthYear(parseInt(currentMonth), parseInt(currentYear));
-            const prevMonthName = formatMonthYear(parseInt(prevMonth), parseInt(prevYear));
-
-            const netDiff = current.neto - previous.neto;
-            const hoursDiff = current.equivHours - previous.equivHours;
-
-            let explanation = '';
-            let color = 'bg-green-100 text-green-800';
-            
-            if (netDiff > 0) {
-                explanation += `Se ganó **${formatCurrency(netDiff)}** más en ${currentMonthName} que en ${prevMonthName}. Esto se debe principalmente a:`;
-                explanation += `<ul>
-                    <li>**Horas Equivalentes:** ${hoursDiff > 0 ? `Se generaron **${formatNumber(hoursDiff)} H.Eq.** más.` : `A pesar de generar **${formatNumber(Math.abs(hoursDiff))} H.Eq.** menos, el neto subió.`}</li>
-                    <li>**Recargos (Dominical/Nocturno/Feriado):** El aumento en las horas equivalentes base sugiere que hubo una **mayor cantidad de turnos con recargo** (Domingos y Noches) o **más días feriados trabajados** en ${currentMonthName} debido a la rotación.</li>
-                    <li>**Horas Extra:** El total de horas equivalentes incluye horas extra (si fueron añadidas).</li>
-                </ul>`;
-                color = 'bg-green-100 text-green-800';
-            } else if (netDiff < 0) {
-                 explanation += `Se ganó **${formatCurrency(Math.abs(netDiff))}** menos en ${currentMonthName} que en ${prevMonthName}. Esto se debe principalmente a:`;
-                 explanation += `<ul>
-                    <li>**Horas Equivalentes:** ${hoursDiff < 0 ? `Se generaron **${formatNumber(Math.abs(hoursDiff))} H.Eq.** menos.` : `A pesar de generar **${formatNumber(hoursDiff)} H.Eq.** más, el neto bajó.`}</li>
-                    <li>**Rotación Desfavorable:** La disminución en horas equivalentes base sugiere que la rotación en ${currentMonthName} tuvo **menos turnos con recargo** (Domingos y Noches) o más Francos que el mes anterior.</li>
-                 </ul>`;
-                 color = 'bg-red-100 text-red-800';
-            } else {
-                 explanation = `Los ingresos netos fueron casi idénticos en ambos meses.`;
-                 color = 'bg-blue-100 text-blue-800';
-            }
-
-            comparisonsListEl.innerHTML = `
-                 <div class="p-4 rounded-lg ${color}">
-                     <h3 class="font-bold text-lg mb-2">Análisis Detallado: ${currentMonthName} vs ${prevMonthName}</h3>
-                     <p>${explanation}</p>
-                 </div>
+           
+            // 1. Botones de Meses Calculados
+            history.sort((a, b) => new Date(a.year, a.month - 1) - new Date(b.year, b.month - 1)).forEach(item => {
+                const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-AR', { month: 'short' });
+                const button = document.createElement('button');
+                button.textContent = `${monthName} ${item.year}`;
+                
+                // Si es el mes activo, resaltarlo.
+                const isActiveMonth = item.month === appState.config.month && item.year === appState.config.year;
+                
+                button.className = `px-3 py-1 text-xs font-semibold rounded-lg transition duration-150 ${
+                    isActiveMonth ? 'bg-indigo-700 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                }`;
+                // TODO: La funcionalidad de cargar el mes desde la historia
+                // button.onclick = () => loadMonthFromHistory(item.month, item.year);
+                historyButtonsEl.appendChild(button);
+            });
+           
+            // 2. Tabla de Comparaciones (Ranking)
+            const sortedHistory = [...history].sort((a, b) => b.totalNeto - a.totalNeto);
+           
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-1 text-left text-gray-500">#</th>
+                            <th class="px-3 py-1 text-left text-gray-500">Mes</th>
+                            <th class="px-3 py-1 text-right text-gray-500">Neto Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
             `;
+
+            sortedHistory.forEach((item, index) => { 
+                const monthName = new Date(item.year, item.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+                tableHTML += `
+                    <tr>
+                        <td class="px-3 py-1 font-bold">${index + 1}</td>
+                        <td class="px-3 py-1">${monthName}</td>
+                        <td class="px-3 py-1 text-right font-bold text-green-700">${formatCurrency(item.totalNeto)}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            comparisonTableEl.innerHTML = tableHTML;
         }
-
-
-        // =====================================================================
-        // RENDERIZADO DE RESULTADOS (Se mantiene igual)
-        // =====================================================================
 
         function renderCalculationResults() {
              const result = appState.calculationResult;
+            
+            // 1. Renderizar el Dashboard Personal (siempre visible, incluye el Hola, Francos, Quincenas y Neto Mes)
+            renderPersonalDashboard(!result, result);
+            
             if (!result) {
                 resultsSectionEl.classList.add('hidden');
                 return;
@@ -1107,33 +1086,42 @@
 
             resultsSectionEl.classList.remove('hidden');
 
-            // 1. Renderizar Cards de Resumen
-            summaryCardsEl.innerHTML = `
-                <div class="p-3 bg-gray-50 rounded-lg">
-                    <p class="text-gray-500">H. Eq. Totales</p>
-                    <p class="text-lg text-gray-900 font-extrabold">${formatNumber(result.totalEquivalentHours)}</p>
+            // 2. Renderizar Totales del Mes y el Detalle de Adicionales
+             monthlyTotalsContainerEl.innerHTML = `
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium mb-6">
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <p class="text-gray-500">H. Eq. Totales</p>
+                        <p class="text-lg text-gray-900 font-extrabold">${formatNumber(result.totalEquivalentHours)}</p>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-lg">
+                        <p class="text-gray-500">Desc. (${result.discountRate.toFixed(0)}%)</p>
+                        <p class="text-lg text-red-600 font-extrabold">${formatCurrency(result.totalDescuento)}</p>
+                    </div>
+                    <div class="col-span-1 p-3 bg-indigo-50 rounded-lg">
+                        <p class="text-gray-500">Bruto Base</p>
+                        <p class="text-xl text-indigo-600 font-extrabold">${formatCurrency(result.totalBruto - result.totalViatico - result.titleValue)}</p>
+                    </div>
+                    <div class="col-span-1 p-3 bg-green-100 rounded-lg shadow-md">
+                        <p class="text-green-700 font-semibold">NETO FINAL</p>
+                        <p class="text-2xl text-green-800 font-extrabold">${formatCurrency(result.totalNeto)}</p>
+                    </div>
                 </div>
-                <div class="p-3 bg-red-50 rounded-lg">
-                    <p class="text-gray-500">Desc. (${result.discountRate.toFixed(0)}%)</p>
-                    <p class="text-lg text-red-600 font-extrabold">${formatCurrency(result.totalDescuento)}</p>
-                </div>
-                <div class="col-span-1 p-3 bg-indigo-50 rounded-lg">
-                    <p class="text-gray-500">Bruto Total</p>
-                    <p class="text-xl text-indigo-600 font-extrabold">${formatCurrency(result.totalBruto)}</p>
-                </div>
-                <div class="col-span-1 p-3 bg-green-100 rounded-lg shadow-md">
-                    <p class="text-green-700 font-semibold">NETO (EN MANO)</p>
-                    <p class="text-2xl text-green-800 font-extrabold">${formatCurrency(result.totalNeto)}</p>
+                <div class="p-3 bg-blue-50 rounded-lg text-sm mb-4">
+                    <p class="font-bold text-blue-800">Detalle de Adicionales:</p>
+                    <p class="mt-1">Viáticos por ${result.extraDaysCount} días extras: ${formatCurrency(result.totalViatico)}</p>
+                    <p class="mt-1">Monto Título (Añadido en 2da Q): ${formatCurrency(result.titleValue)}</p>
                 </div>
             `;
-            
-            // ... [Resto del renderizado de francos y tabla] ...
-             francosInfoEl.innerHTML = `
+
+            // 3. Renderizar Información de Francos
+            francosInfoEl.innerHTML = `
                 <p class="font-bold text-yellow-800">Días Francos en el Mes (${result.francosDates.length}):</p>
                 <p class="mt-1">${result.francosDates.join(' • ')}</p>
             `;
 
+            // 4. Renderizar Tabla de Detalle Diario
             tbodyEl.innerHTML = result.dailyResults.map(day => {
+                // Usamos la clave de display (DD/MM/YYYY) para guardar/cargar datos
                 const dateKeyForSave = day.date;
                 const dayExtraReal = appState.extraHours[dateKeyForSave] || 0;
                 const isFeriadoManual = appState.manualHolidays[dateKeyForSave] === true;
@@ -1172,22 +1160,18 @@
                     </tr>
                 `;
             }).join('');
-
-            // Aseguramos que se actualice la vista de Inicio con el neto actual
-            if (appState.currentView === 'home-view') renderHomeView();
         }
-
+       
         // Función de generación de PDF
         generatePdfButtonEl.addEventListener('click', generatePDFReport);
         function generatePDFReport() {
-             // ... [Misma Lógica de Generación de PDF] ...
             const result = appState.calculationResult;
             if (!result) return updateStatus('error', 'Debe generar el cálculo antes de descargar el reporte.');
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
            
-            const { month, year } = appState.config;
+            const { month, year, name, viaticoValue, titleValue } = appState.config;
             const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
            
             const title = `Reporte Salarial 6x2 - ${monthName}`;
@@ -1196,26 +1180,67 @@
             doc.text(title, 14, 20);
            
             doc.setFontSize(10);
-            doc.text(`Valor Hora Bruta: ${formatCurrency(appState.config.valorHora)}`, 14, 26);
-            doc.text(`Desc. Afiliación: ${result.discountRate.toFixed(0)}%`, 14, 31);
-            doc.text(`Horas Extra Reales: ${formatNumber(result.totalExtraHoursReal)}`, 14, 36);
+            doc.text(`Generado para: ${name}`, 14, 26);
+            doc.text(`Valor Hora Bruta: ${formatCurrency(appState.config.valorHora)}`, 14, 31);
+            doc.text(`Desc. Afiliación: ${result.discountRate.toFixed(0)}%`, 14, 36);
+            doc.text(`Viático por Día Extra: ${formatCurrency(viaticoValue)}`, 14, 41);
 
+            let tableY = 50;
+
+            // Tabla Resumen Quincenal
+            doc.setFontSize(12);
+            doc.text('Resumen Quincenal (Neto)', 14, tableY);
             doc.autoTable({
-                startY: 45,
-                head: [['Total Horas Eq.', 'Bruto Total', 'Descuento', 'NETO FINAL']],
+                startY: tableY + 5,
+                head: [['Quincena', 'Horas Eq.', 'Bruto Base', 'Desc.', 'Viático', 'Título', 'NETO']],
                 body: [[
-                    formatNumber(result.totalEquivalentHours, 2),
-                    formatCurrency(result.totalBruto),
-                    formatCurrency(result.totalDescuento),
-                    formatCurrency(result.totalNeto),
+                    '1ra (1-15)',
+                    formatNumber(result.quincena1.hEq, 2),
+                    formatCurrency(result.quincena1.bruto),
+                    formatCurrency(result.quincena1.descuento),
+                    formatCurrency(result.quincena1.viatico),
+                    formatCurrency(0),
+                    formatCurrency(result.quincena1.neto),
+                ],
+                [
+                    '2da (16-Fin)',
+                    formatNumber(result.quincena2.hEq, 2),
+                    formatCurrency(result.quincena2.bruto),
+                    formatCurrency(result.quincena2.descuento),
+                    formatCurrency(result.quincena2.viatico),
+                    formatCurrency(result.quincena2.title),
+                    formatCurrency(result.quincena2.neto),
                 ]],
                 theme: 'striped',
                 headStyles: { fillColor: [55, 48, 163] },
                 columnStyles: {
-                    0: { fontStyle: 'bold' },
-                    3: { fontStyle: 'bold', fillColor: [187, 247, 208] },
+                    6: { fontStyle: 'bold', fillColor: [187, 247, 208] },
                 },
-                styles: { fontSize: 10 }
+                styles: { fontSize: 8 }
+            });
+            
+            tableY = doc.autoTable.previous.finalY;
+            
+            // Tabla Totales
+            doc.setFontSize(12);
+            doc.text('Totales del Mes', 14, tableY + 10);
+            doc.autoTable({
+                startY: tableY + 15,
+                head: [['Total H. Eq.', 'Total H. Extra (R)', 'Bruto Base', 'Total Desc.', 'Total Adicionales', 'NETO FINAL']],
+                body: [[
+                    formatNumber(result.totalEquivalentHours, 2),
+                    formatNumber(result.totalExtraHoursReal, 1),
+                    formatCurrency(result.totalBruto - result.totalViatico - result.titleValue),
+                    formatCurrency(result.totalDescuento),
+                    formatCurrency(result.totalViatico + result.titleValue),
+                    formatCurrency(result.totalNeto),
+                ]],
+                theme: 'striped',
+                headStyles: { fillColor: [75, 85, 99] },
+                columnStyles: {
+                    5: { fontStyle: 'bold', fillColor: [187, 247, 208] },
+                },
+                styles: { fontSize: 8 }
             });
 
             const finalY = doc.autoTable.previous.finalY;
