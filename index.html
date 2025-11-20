@@ -108,7 +108,7 @@
                         <h1 class="text-3xl font-extrabold text-slate-800">
                             Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
                         </h1>
-                        <p class="text-slate-500 mt-1">Este es tu estado al día de hoy.</p>
+                        <p class="text-slate-500 mt-1">Tu estado al día de hoy.</p>
                     </div>
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
@@ -258,13 +258,9 @@
         // STATE
         let appState = {
             config: { userName: 'Usuario', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
-            
-            // View States (Independientes)
-            viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() }, // Dashboard
-            treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() }, // Tesorería
-            
-            // Data Cache
-            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null }, // Edición actual en Dashboard
+            viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+            treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null },
             historicalCache: {}
         };
 
@@ -272,7 +268,6 @@
         window.onload = () => {
             initFirebaseSystem();
             setupUI();
-            // Header Date
             const d = new Date();
             const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
             const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -302,7 +297,6 @@
             if (viewId === 'config-view') fillConfigInputs();
         };
 
-        // LOGIC: PAYMENT DATE
         function calculatePaymentDate(year, month, dayOfMonth) {
             const baseDate = new Date(year, month - 1, dayOfMonth);
             let paymentDate = new Date(baseDate);
@@ -315,7 +309,7 @@
             return paymentDate;
         }
 
-        // LOGIC: CALCULATION ENGINE (NO TOCAR)
+        // LOGIC: CALCULATION
         function performCalculation(month, year, extras, holidays, overrides) {
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue } = appState.config;
             if(!valorHora) return null;
@@ -337,6 +331,10 @@
             let q1_bruto = 0, q2_bruto = 0;
             let q1_viaticos = 0, q2_viaticos = 0;
             let q1_extras = 0, q2_extras = 0;
+            
+            // NUEVO: Acumuladores de Feriados
+            let q1_feriados_amt = 0, q2_feriados_amt = 0;
+            let q1_feriados_count = 0, q2_feriados_count = 0;
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const current = new Date(year, month - 1, i);
@@ -376,10 +374,13 @@
 
                 dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
 
+                // Acumular por Quincena
                 if (i <= 15) {
                     q1_bruto += dailyBruto; q1_viaticos += dailyViatico; if(extraHours > 0) q1_extras++;
+                    if (isManualHoliday) { q1_feriados_amt += dailyBruto; q1_feriados_count++; }
                 } else {
                     q2_bruto += dailyBruto; q2_viaticos += dailyViatico; if(extraHours > 0) q2_extras++;
+                    if (isManualHoliday) { q2_feriados_amt += dailyBruto; q2_feriados_count++; }
                 }
                 startOffset = (startOffset + 1) % 24;
             }
@@ -393,52 +394,47 @@
             const totalViaticos = q1_viaticos + q2_viaticos;
             const totalEquivHours = dailyResults.reduce((acc, curr) => acc + curr.totalEquiv, 0);
             const netoFinal = q1_neto + q2_neto;
+            const totalFeriadosAmt = q1_feriados_amt + q2_feriados_amt;
 
-            return { dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, tituloAmount: Number(tituloAmount), netoFinal, daysWithExtras: q1_extras + q2_extras, quincenas: { q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc }, q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc } } };
+            return { 
+                dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, tituloAmount: Number(tituloAmount), netoFinal, 
+                daysWithExtras: q1_extras + q2_extras, 
+                totalFeriadosAmt,
+                quincenas: { 
+                    q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc, feriados: q1_feriados_amt, feriadosCount: q1_feriados_count }, 
+                    q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc, feriados: q2_feriados_amt, feriadosCount: q2_feriados_count } 
+                } 
+            };
         }
 
-        // --- HELPER DE DATOS HISTORICOS ---
         function getCalculationFor(m, y) {
-            // Busca en cache o calcula "on the fly" si no existe
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
-            
-            if(cached) {
-                // Recalcula con la config actual para asegurar precisión si cambian valores
-                return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {});
-            } else {
-                // Si no existe guardado, calcula en limpio
-                return performCalculation(m, y, {}, {}, {});
-            }
+            if(cached) return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {});
+            else return performCalculation(m, y, {}, {}, {});
         }
 
-        // RENDERING VISTAS
+        // RENDERING
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
-            // FORZAMOS SIEMPRE EL MES ACTUAL REAL
             const now = new Date();
-            const realMonth = now.getMonth() + 1;
-            const realYear = now.getFullYear();
-            
-            // Buscar datos del mes actual (puede estar guardado o no)
-            const calc = getCalculationFor(realMonth, realYear);
+            const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
 
             if (calc) {
                 document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
-                
                 const dayOfMonth = now.getDate();
                 let nextPayAmount = 0;
                 let payDateObj = null;
 
                 if (dayOfMonth <= 15) {
                     nextPayAmount = calc.quincenas.q1.neto;
-                    payDateObj = calculatePaymentDate(realYear, realMonth, 15);
+                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15);
                 } else {
                     nextPayAmount = calc.quincenas.q2.neto;
-                    const daysInMonth = new Date(realYear, realMonth, 0).getDate();
-                    payDateObj = calculatePaymentDate(realYear, realMonth, daysInMonth);
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth()+1, daysInMonth);
                 }
 
                 document.getElementById('home-next-quincena').textContent = formatCurrency(nextPayAmount);
@@ -537,7 +533,6 @@
                 return;
             }
 
-            // Render Chips de Tesoreria
             historyKeys.forEach(key => {
                 const [year, month] = key.split('-');
                 const isActive = parseInt(month) === appState.treasuryViewMonth.month && parseInt(year) === appState.treasuryViewMonth.year;
@@ -551,9 +546,8 @@
                 chipContainer.appendChild(btn);
             });
 
-            // Render Data Independiente
             const { month, year } = appState.treasuryViewMonth;
-            const calc = getCalculationFor(month, year); // Calculo al vuelo para Tesoreria
+            const calc = getCalculationFor(month, year);
 
             const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             const dateQ1 = calculatePaymentDate(year, month, 15);
@@ -576,6 +570,7 @@
                         <div><p class="text-slate-400">Bruto Generado</p><p class="font-semibold text-slate-700">${formatCurrency(details.bruto)}</p></div>
                         <div><p class="text-slate-400">Descuentos</p><p class="font-semibold text-red-500">-${formatCurrency(details.desc)}</p></div>
                         <div><p class="text-slate-400">Viáticos</p><p class="font-semibold text-orange-500">+${formatCurrency(details.viaticos)}</p></div>
+                        ${details.feriados > 0 ? `<div><p class="text-slate-400">Feriados (${details.feriadosCount})</p><p class="font-semibold text-red-600">+${formatCurrency(details.feriados)}</p></div>` : ''}
                         ${title.includes('2') ? `<div><p class="text-slate-400">Título</p><p class="font-semibold text-blue-500">+${formatCurrency(appState.config.tituloAmount)}</p></div>` : ''}
                     </div>
                 </div>
@@ -606,7 +601,13 @@
                     <div class="p-4 rounded-xl border ${border} ${bg} shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                         <div class="flex items-center gap-4 w-full md:w-auto">
                             <div class="text-2xl font-bold w-8 text-center">${medal || (index+1)}</div>
-                            <div><h4 class="font-bold text-slate-800 capitalize">${monthName}</h4><div class="flex gap-2 text-xs mt-1"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0} días</span><span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viáticos: ${formatCurrency(item.results.totalViaticos)}</span></div></div>
+                            <div><h4 class="font-bold text-slate-800 capitalize">${monthName}</h4>
+                                <div class="flex gap-2 text-xs mt-1 flex-wrap">
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0}</span>
+                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viát: ${formatCurrency(item.results.totalViaticos)}</span>
+                                    ${item.results.totalFeriadosAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded">Fer: ${formatCurrency(item.results.totalFeriadosAmt)}</span>` : ''}
+                                </div>
+                            </div>
                         </div>
                         <div class="text-right w-full md:w-auto border-t md:border-0 pt-2 md:pt-0"><p class="text-xs text-slate-500">Neto Final</p><p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p></div>
                     </div>
@@ -645,7 +646,6 @@
             appState.activeData.shiftOverrides = {};
             triggerLocalRecalculate();
             saveCurrentData();
-            // Si no hay mes en Tesoreria seleccionado, seleccionar este
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
             showMessage(`Mes de ${m}/${y} generado.`);
         }
@@ -702,7 +702,7 @@
             if(keys.length > 0) { 
                 const [y, m] = keys[0].split('-'); 
                 switchDashboardMonth(parseInt(m), parseInt(y)); 
-                appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) }; // Sync inicial
+                appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) };
             }
         }
 
@@ -720,120 +720,188 @@
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+1; ty=d.getFullYear(); } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
 
-        // ================= NUEVA GENERACIÓN DE PDF MEJORADA =================
+        // ================= GENERADOR PDF DISEÑADO A MANO ( ESTILO VISUAL ) =================
         document.getElementById('btn-download-pdf').onclick = () => {
             const { jsPDF } = window.jspdf;
+            // Formato A4 (210mm x 297mm)
             const doc = new jsPDF();
             const calc = appState.activeData.calculation;
             if(!calc) return;
 
             const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'}).toUpperCase();
-            const userName = appState.config.userName;
+            
+            // --- FUNCIÓN DE DIBUJO DE TARJETA (TESORERÍA) ---
+            function drawTreasuryCard(yPos, title, dateText, netAmount, details) {
+                // Fondo Tarjeta (Borde gris claro, fondo blanco, esquinas redondeadas)
+                doc.setDrawColor(230, 230, 230);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(10, yPos, 190, 60, 3, 3, 'FD');
 
-            // --- PAGINA 1: TESORERIA (Resumen Ejecutivo) ---
-            
-            // Header Azul
-            doc.setFillColor(67, 56, 202); // Indigo 700
-            doc.rect(0, 0, 210, 40, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(22);
-            doc.setFont("helvetica", "bold");
-            doc.text(`LIQUIDACIÓN SALARIAL`, 15, 20);
-            
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "normal");
-            doc.text(`${monthLabel}`, 15, 30);
-            doc.text(`Empleado: ${userName}`, 195, 30, { align: 'right' });
+                // Título y Fecha (Izquierda)
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(12);
+                doc.setTextColor(55, 65, 81); // Slate 700
+                doc.text(title, 15, yPos + 10);
 
-            // Info General
-            doc.setTextColor(60, 60, 60);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                doc.setTextColor(5, 150, 105); // Emerald 600
+                doc.text(`Cobro: ${dateText}`, 15, yPos + 16);
+
+                // Monto Neto (Derecha, Grande)
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(22);
+                doc.setTextColor(30, 41, 59); // Slate 800
+                doc.text(formatCurrency(netAmount), 195, yPos + 12, { align: 'right' });
+                
+                doc.setFontSize(8);
+                doc.setTextColor(156, 163, 175); // Slate 400
+                doc.text("Neto a cobrar", 195, yPos + 17, { align: 'right' });
+
+                // Línea divisoria sutil
+                doc.setDrawColor(245, 245, 245);
+                doc.line(10, yPos + 22, 200, yPos + 22);
+
+                // Detalles (Grid inferior)
+                const detailY = yPos + 32;
+                doc.setFontSize(9);
+                
+                // Función interna para dibujar un bloque de detalle
+                const drawDetailBlock = (x, label, value, color = [55, 65, 81]) => {
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(156, 163, 175); // Slate 400 label
+                    doc.text(label, x, detailY);
+                    
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(color[0], color[1], color[2]);
+                    doc.text(value, x, detailY + 5);
+                };
+
+                drawDetailBlock(15, "Bruto Generado", formatCurrency(details.bruto));
+                drawDetailBlock(65, "Descuentos", `-${formatCurrency(details.desc)}`, [239, 68, 68]); // Red
+                drawDetailBlock(115, "Viáticos", `+${formatCurrency(details.viaticos)}`, [249, 115, 22]); // Orange
+                
+                // Cuarto bloque condicional (Titulo o Feriados)
+                if(title.includes('2')) {
+                    drawDetailBlock(160, "Título", `+${formatCurrency(appState.config.tituloAmount)}`, [59, 130, 246]); // Blue
+                } else if (details.feriados > 0) {
+                     drawDetailBlock(160, "Feriados", `+${formatCurrency(details.feriados)}`, [220, 38, 38]); // Red Dark
+                }
+            }
+
+            // --- PÁGINA 1: VISTA TESORERÍA ---
+            
+            // Etiqueta "Viendo: MES AÑO" estilo badge arriba derecha
+            doc.setFillColor(224, 231, 255); // Indigo 100
+            doc.roundedRect(140, 10, 60, 8, 2, 2, 'F');
             doc.setFontSize(10);
-            let y = 55;
-            doc.text(`Valor Hora: ${formatCurrency(appState.config.valorHora)}`, 15, y);
-            doc.text(`Viático Diario: ${formatCurrency(appState.config.viaticoValue)}`, 80, y);
-            doc.text(`Título: ${formatCurrency(appState.config.tituloAmount)}`, 150, y);
+            doc.setTextColor(67, 56, 202); // Indigo 700
+            doc.setFont("helvetica", "bold");
+            doc.text(`Viendo: ${monthLabel}`, 170, 15.5, { align: 'center' });
 
-            // Tabla de Resumen Financiero (Estilo Tarjeta)
-            y += 10;
-            
-            // Headers de Tabla
-            const headers = [['CONCEPTO', '1ª QUINCENA', '2ª QUINCENA', 'TOTAL MES']];
-            const data = [
-                ['Bruto Generado', formatCurrency(calc.quincenas.q1.bruto), formatCurrency(calc.quincenas.q2.bruto), formatCurrency(calc.brutoTotal)],
-                ['Descuentos', `-${formatCurrency(calc.quincenas.q1.desc)}`, `-${formatCurrency(calc.quincenas.q2.desc)}`, `-${formatCurrency(calc.descuentoTotal)}`],
-                ['Viáticos (No Rem)', formatCurrency(calc.quincenas.q1.viaticos), formatCurrency(calc.quincenas.q2.viaticos), formatCurrency(calc.totalViaticos)],
-                ['Título', '-', formatCurrency(appState.config.tituloAmount), formatCurrency(appState.config.tituloAmount)],
-                ['NETO A COBRAR', formatCurrency(calc.quincenas.q1.neto), formatCurrency(calc.quincenas.q2.neto), formatCurrency(calc.netoFinal)]
-            ];
+            // Tarjeta 1 (1ra Quincena)
+            const dateQ1 = calculatePaymentDate(appState.viewingMonth.year, appState.viewingMonth.month, 15);
+            drawTreasuryCard(30, "1ª Quincena", dateQ1.toLocaleDateString('es-AR'), calc.quincenas.q1.neto, calc.quincenas.q1);
 
-            doc.autoTable({
-                startY: y,
-                head: headers,
-                body: data,
-                theme: 'grid',
-                headStyles: { fillColor: [50, 50, 50], fontSize: 10, fontStyle: 'bold' },
-                columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 50 },
-                    1: { halign: 'right' },
-                    2: { halign: 'right' },
-                    3: { halign: 'right', fontStyle: 'bold', fillColor: [240, 253, 244] } // Verde claro para totales
-                },
-                styles: { fontSize: 10, cellPadding: 3 }
-            });
+            // Tarjeta 2 (2da Quincena)
+            const daysInMonth = new Date(appState.viewingMonth.year, appState.viewingMonth.month, 0).getDate();
+            const dateQ2 = calculatePaymentDate(appState.viewingMonth.year, appState.viewingMonth.month, daysInMonth);
+            drawTreasuryCard(100, "2ª Quincena (Cierre)", dateQ2.toLocaleDateString('es-AR'), calc.quincenas.q2.neto, calc.quincenas.q2);
 
             // Footer Pag 1
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text("Documento generado por Calculadora 6x2 Pro. Uso interno.", 105, 280, { align: "center" });
+            doc.text("Reporte generado por Calculadora 6x2 PRO", 105, 280, { align: 'center' });
 
-            // --- PAGINA 2: DETALLE DIARIO (Operativo) ---
+
+            // --- PÁGINA 2: VISTA GESTIÓN (TABLA DETALLADA) ---
             doc.addPage();
-
-            // Header Simple Pag 2
-            doc.setTextColor(67, 56, 202);
-            doc.setFontSize(16);
+            
+            // Título de la Tabla (Estilo "Detalle Diario enero de 2026")
             doc.setFont("helvetica", "bold");
-            doc.text("DETALLE DE JORNADAS Y HORAS", 15, 20);
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text("Desglose de turnos, horas equivalentes y novedades.", 15, 26);
+            doc.setFontSize(14);
+            doc.setTextColor(55, 65, 81);
+            doc.text("Detalle Diario", 14, 20);
+            
+            doc.setTextColor(79, 70, 229); // Indigo
+            doc.text(monthLabel.toLowerCase(), 50, 20);
 
-            // Tabla Diaria
-            const dailyData = calc.dailyResults.map(d => [
-                d.date,
-                d.dayName,
-                d.turn,
-                d.isHoliday ? 'Sí' : '-',
-                formatNumber(d.equivBase),
-                d.extraReal > 0 ? d.extraReal : '-',
-                formatNumber(d.totalEquiv),
-                formatCurrency(d.bruto)
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(156, 163, 175);
+            doc.text("Reporte completo de turnos, horas base, extras y feriados.", 14, 26);
+
+            // Totales Superiores (Mini cards)
+            const drawMiniStat = (x, label, value, colorHex) => {
+                 doc.setFontSize(8);
+                 doc.setTextColor(100);
+                 doc.text(label, x, 35);
+                 doc.setFontSize(12);
+                 doc.setFont("helvetica", "bold");
+                 doc.setTextColor(colorHex);
+                 doc.text(value, x, 41);
+            };
+            
+            drawMiniStat(14, "H. EQUIVALENTES", formatNumber(calc.totalEquivHours), "#4f46e5");
+            drawMiniStat(60, "VIÁTICOS", formatCurrency(calc.totalViaticos), "#ea580c");
+            drawMiniStat(110, "TÍTULO", formatCurrency(appState.config.tituloAmount), "#2563eb");
+            drawMiniStat(160, "NETO FINAL", formatCurrency(calc.netoFinal), "#059669");
+
+            // Tabla con Estilo Exacto a la Imagen
+            const tableData = calc.dailyResults.map(d => [
+                `${d.date.split('/')[0]} ${d.dayName.toUpperCase()}`, // 01 JUE
+                d.turn.replace('Mañana', 'Mañana').replace('Noche', 'Noche').replace('Tarde', 'Tarde'), // Turno
+                d.isHoliday ? 'Sí' : '', // Feriado check
+                formatNumber(d.equivBase), // H. Eq Base
+                d.extraReal > 0 ? d.extraReal : '-', // H. Extra
+                formatNumber(d.totalEquiv), // Total Eq
+                formatCurrency(d.bruto) // Bruto Dia
             ]);
 
             doc.autoTable({
-                startY: 35,
-                head: [['FECHA', 'DÍA', 'TURNO', 'FERIADO', 'H. BASE', 'EXTRAS', 'TOTAL EQ.', 'BRUTO']],
-                body: dailyData,
-                theme: 'striped',
-                headStyles: { fillColor: [79, 70, 229] }, // Indigo
-                styles: { fontSize: 8, halign: 'center' },
+                startY: 50,
+                head: [['FECHA', 'TURNO', 'FERIADO', 'H.EQ BASE', 'H.EXTRA', 'TOTAL EQ.', 'BRUTO DÍA']],
+                body: tableData,
+                theme: 'plain', // Empezamos limpio para personalizar
+                styles: { fontSize: 9, cellPadding: 4, valign: 'middle' },
+                headStyles: { 
+                    fillColor: [248, 250, 252], // Slate 50 background
+                    textColor: [100, 116, 139], // Slate 500 text
+                    fontStyle: 'bold',
+                    lineWidth: 0,
+                    fontSize: 8
+                },
                 columnStyles: {
-                    0: { fontStyle: 'bold' },
-                    2: { halign: 'left' },
-                    7: { halign: 'right', fontStyle: 'bold' }
+                    0: { fontStyle: 'bold', textColor: [71, 85, 105] }, // Fecha Darker
+                    1: { fontStyle: 'bold', textColor: [79, 70, 229] }, // Turno Indigo
+                    3: { halign: 'center', textColor: [100, 100, 100] },
+                    4: { halign: 'center' },
+                    5: { halign: 'right', fontStyle: 'bold' },
+                    6: { halign: 'right', textColor: [100, 100, 100] }
                 },
                 didParseCell: (data) => {
+                    // Colorear filas según lógica visual de la web
                     if (data.section === 'body') {
-                        const turn = data.row.raw[2];
-                        const isHoliday = data.row.raw[3] === 'Sí';
-                        // Colorear filas
-                        if (turn.includes('Franco') && !isHoliday) {
-                            data.cell.styles.fillColor = [255, 251, 235]; // Yellow tint
-                        }
-                        if (isHoliday) {
-                            data.cell.styles.textColor = [220, 38, 38]; // Red text
-                        }
+                         const rowRaw = data.row.raw;
+                         const turn = rowRaw[1];
+                         const isHoliday = rowRaw[2] === 'Sí';
+                         
+                         // Linea separadora sutil
+                         data.cell.styles.borderBottomWidth = 0.1;
+                         data.cell.styles.borderColor = [241, 245, 249];
+
+                         // Estilo Franco (Amarillo muy suave)
+                         if (turn.includes('Franco') && !isHoliday) {
+                             data.cell.styles.fillColor = [255, 252, 235]; // Yellow 50ish
+                             data.cell.styles.textColor = [161, 98, 7]; // Yellow 700 text
+                             // Override column 1 specific color for Francos
+                             if(data.column.index === 1) data.cell.styles.textColor = [202, 138, 4];
+                         }
+                         
+                         // Estilo Feriado (Texto Rojo, fondo suave rojo si se quiere, aqui solo texto)
+                         if (isHoliday) {
+                             data.cell.styles.textColor = [220, 38, 38]; // Red 600
+                         }
                     }
                 }
             });
