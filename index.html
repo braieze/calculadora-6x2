@@ -331,8 +331,6 @@
             let q1_bruto = 0, q2_bruto = 0;
             let q1_viaticos = 0, q2_viaticos = 0;
             let q1_extras = 0, q2_extras = 0;
-            
-            // NUEVO: Acumuladores de Feriados
             let q1_feriados_amt = 0, q2_feriados_amt = 0;
             let q1_feriados_count = 0, q2_feriados_count = 0;
 
@@ -374,7 +372,6 @@
 
                 dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
 
-                // Acumular por Quincena
                 if (i <= 15) {
                     q1_bruto += dailyBruto; q1_viaticos += dailyViatico; if(extraHours > 0) q1_extras++;
                     if (isManualHoliday) { q1_feriados_amt += dailyBruto; q1_feriados_count++; }
@@ -407,7 +404,15 @@
             };
         }
 
+        // CORRECCIÓN CLAVE: OBTENER DATOS EN TIEMPO REAL
         function getCalculationFor(m, y) {
+            // 1. Verificar si el mes solicitado es el que está activo en el Dashboard
+            if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
+                // Usar datos en memoria (edición en tiempo real)
+                return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
+            }
+
+            // 2. Si no, buscar en caché
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
             if(cached) return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {});
@@ -418,6 +423,7 @@
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
+            // Usamos la función inteligente que revisa si estamos editando el mes actual
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
@@ -624,6 +630,7 @@
             const { month, year } = appState.viewingMonth;
             appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
             renderDashboard();
+            renderHome(); // Actualiza el widget de Inicio en tiempo real
         }
 
         async function switchDashboardMonth(m, y) {
@@ -636,6 +643,9 @@
                 triggerLocalRecalculate();
             }
             renderDashboard();
+            // Si cambiamos al mes actual en el dashboard, queremos que Inicio se actualice también
+            const now = new Date();
+            if (m === now.getMonth()+1 && y === now.getFullYear()) renderHome();
         }
 
         async function generateMonth(m, y) {
