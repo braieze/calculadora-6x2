@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Salarial 6x2 Pro</title>
+    <title>Calculadora Salarial 6x2 Pro V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -13,26 +13,28 @@
         @import url('https://fonts.fonts.google.com/specimen/Inter:wght@300;400;600;700;800');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         
-        /* Scrollbar oculto para elementos horizontales */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Transiciones suaves */
+        /* Animaciones */
         .transition-all-300 { transition: all 0.3s ease-in-out; }
-
+        
         /* Estilo Sticky para la tabla */
         .sticky-header th { position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; }
         
-        /* Animación del Sidebar */
+        /* Sidebar */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
+
+        /* Inputs integrados en tabla */
+        .table-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
     </style>
 </head>
 <body class="text-slate-800 bg-slate-50 h-screen flex overflow-hidden">
@@ -60,6 +62,12 @@
                     <button onclick="navigateTo('monthly-history-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="monthly-history-view">
                         <i class="fa-solid fa-calendar-days text-indigo-400 w-6"></i>
                         <span>Mi Gestión (Dashboard)</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('treasury-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="treasury-view">
+                        <i class="fa-solid fa-wallet text-emerald-400 w-6"></i>
+                        <span>Tesorería (Quincenas)</span>
                     </button>
                 </li>
                 <li>
@@ -92,39 +100,48 @@
                 <i class="fa-solid fa-bars text-2xl"></i>
             </button>
             <h2 class="text-lg font-bold text-indigo-700">Calculadora 6x2</h2>
-            <div class="w-6"></div> </header>
+            <div class="w-6"></div>
+        </header>
 
         <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative">
-
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
-                <div class="mb-8">
-                    <h1 class="text-3xl font-extrabold text-slate-800">
-                        Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
-                    </h1>
-                    <p class="text-slate-500 mt-1">Aquí tienes el resumen de tu actividad salarial.</p>
+                
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 class="text-3xl font-extrabold text-slate-800">
+                            Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
+                        </h1>
+                        <p class="text-slate-500 mt-1">Resumen de actividad.</p>
+                    </div>
+                    <div class="text-right hidden md:block">
+                        <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
+                        <p id="header-current-date" class="text-xl font-bold text-slate-700">...</p>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Estimación Próxima Quincena</h3>
+                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena</h3>
                         <div class="flex items-baseline">
                             <span class="text-3xl font-extrabold text-emerald-600" id="home-next-quincena">$ 0</span>
-                            <span class="ml-2 text-xs text-emerald-500 font-medium bg-emerald-50 px-2 py-1 rounded-full">Aprox.</span>
+                            <span class="ml-2 text-xs text-emerald-500 font-medium bg-emerald-50 px-2 py-1 rounded-full">Estimado</span>
                         </div>
-                        <p class="text-xs text-slate-400 mt-2">Basado en el cálculo actual</p>
+                        <p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">
+                            <i class="fa-regular fa-clock mr-1"></i> Cobro est: Calculando...
+                        </p>
                     </div>
 
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                         <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Total Neto Mes Actual</h3>
-                        <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">NOVIEMBRE 2025</p>
+                        <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p>
                         <div class="flex items-baseline">
                             <span class="text-4xl font-extrabold text-slate-800" id="home-month-net">$ 0</span>
                         </div>
-                        <p id="home-status-msg" class="text-xs text-red-400 mt-2 hidden">⚠️ Cálculo pendiente</p>
+                        <p class="text-xs text-slate-400 mt-2">Calculado con descuentos aplicados</p>
                     </div>
                 </div>
 
@@ -133,11 +150,7 @@
                         <i class="fa-regular fa-calendar-check mr-2 text-indigo-500"></i> Próximos Francos
                     </h3>
                     <div id="home-next-francos-container" class="flex space-x-4 overflow-x-auto hide-scroll pb-2">
-                        <div class="flex-shrink-0 w-24 h-28 bg-slate-100 rounded-xl flex flex-col items-center justify-center animate-pulse">
-                            <div class="h-2 bg-slate-300 w-12 rounded mb-2"></div>
-                            <div class="h-8 bg-slate-300 w-8 rounded"></div>
                         </div>
-                    </div>
                 </div>
                 
                 <button onclick="navigateTo('monthly-history-view')" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95">
@@ -156,12 +169,10 @@
                 <div class="mb-6">
                     <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Meses Calculados</label>
                     <div id="months-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll py-1">
-                        <p class="text-sm text-slate-500 italic">No hay historial. Genera un mes para empezar.</p>
-                    </div>
+                        </div>
                 </div>
 
                 <div id="dashboard-content" class="hidden animate-fade-in">
-                    
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p>
@@ -176,32 +187,29 @@
                             <p class="text-xl font-bold text-blue-600" id="dash-titulo-total">$ 0</p>
                         </div>
                         <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100">
-                            <p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final (Bolsillo)</p>
+                            <p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p>
                             <p class="text-2xl font-extrabold text-emerald-700" id="dash-neto-final">$ 0</p>
                         </div>
                     </div>
 
-                    <div class="flex gap-3 mb-6">
-                        <button id="btn-recalculate" class="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition">
-                            <i class="fa-solid fa-rotate mr-2"></i> Recalcular & Guardar Cambios
-                        </button>
-                        <button id="btn-download-pdf" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition">
-                            <i class="fa-solid fa-file-pdf mr-2"></i> Reporte PDF
-                        </button>
-                    </div>
-                    
                     <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
-                            <span class="text-xs text-slate-500 bg-yellow-100 px-2 py-1 rounded text-yellow-700">Edita Extras y Feriados abajo</span>
+                            <div>
+                                <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
+                                <p class="text-xs text-slate-400">Si cambias turno, selecciónalo en la columna "Turno".</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="btn-recalculate" class="px-3 py-1 bg-slate-800 text-white rounded text-xs"><i class="fa-solid fa-save"></i> Guardar</button>
+                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto max-h-[500px]">
                             <table class="w-full text-sm text-left">
                                 <thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky-header">
                                     <tr>
                                         <th class="px-4 py-3">Fecha</th>
-                                        <th class="px-4 py-3">Turno</th>
-                                        <th class="px-4 py-3 text-center">¿Feriado?</th>
+                                        <th class="px-4 py-3">Turno (Cambiar)</th>
+                                        <th class="px-4 py-3 text-center">Feriado</th>
                                         <th class="px-4 py-3 text-right">H.Eq Base</th>
                                         <th class="px-4 py-3 text-center">H.Extra</th>
                                         <th class="px-4 py-3 text-right">Total Eq.</th>
@@ -213,68 +221,17 @@
                             </table>
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            <div id="config-view" class="view-section hidden max-w-3xl mx-auto">
-                <h2 class="text-2xl font-bold text-slate-800 mb-6">Configuración de Perfil</h2>
+            <div id="treasury-view" class="view-section hidden max-w-5xl mx-auto">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
+                    <i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería y Quincenas
+                </h2>
                 
-                <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="col-span-2">
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Nombre de Usuario</label>
-                            <input type="text" id="cfg-userName" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Valor Hora Bruta ($)</label>
-                            <input type="number" id="cfg-valorHora" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" step="0.01">
-                        </div>
-
-                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Afiliación (Descuento)</label>
-                            <select id="cfg-discountRate" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                <option value="0.18">No Afiliado (18%)</option>
-                                <option value="0.21">Afiliado (21%)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Valor Título ($)</label>
-                            <p class="text-xs text-slate-400 mb-1">Monto fijo, no sufre descuento.</p>
-                            <input type="number" id="cfg-tituloAmount" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value="0">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1">Valor Viático ($)</label>
-                            <p class="text-xs text-slate-400 mb-1">Se suma por cada día con extras.</p>
-                            <input type="number" id="cfg-viaticoValue" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" value="6200">
-                        </div>
-
-                        <div class="col-span-2 border-t border-slate-100 pt-4 mt-2">
-                            <h4 class="font-bold text-indigo-600 mb-4">Datos de Rotación (Ciclo 6x2)</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">Fecha Último Franco (Día 2)</label>
-                                    <input type="date" id="cfg-lastFrancoDate" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-bold text-slate-700 mb-1">Turno Post-Franco</label>
-                                    <select id="cfg-initialTurn" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                        <option value="Mañana">Mañana</option>
-                                        <option value="Noche">Noche</option>
-                                        <option value="Tarde">Tarde</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-4 flex justify-end">
-                        <button onclick="saveConfig()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">
-                            Guardar Configuración
-                        </button>
+                <div id="treasury-container" class="space-y-8">
+                    <div class="p-8 text-center text-slate-500 bg-white rounded-xl shadow-sm">
+                        Selecciona un mes en el Dashboard para ver el detalle de tesorería.
                     </div>
                 </div>
             </div>
@@ -283,329 +240,265 @@
                 <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
                     <i class="fa-solid fa-trophy text-yellow-500 mr-3"></i> Ranking de Ganancias
                 </h2>
-                
                 <div id="ranking-list" class="space-y-4">
-                    <div class="p-8 text-center text-slate-500 bg-white rounded-xl shadow-sm">
-                        Cargando historial...
                     </div>
-                </div>
             </div>
 
+            <div id="config-view" class="view-section hidden max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Configuración</h2>
+                <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-2"><label class="block text-sm font-bold text-slate-700">Nombre</label><input type="text" id="cfg-userName" class="w-full p-3 border rounded-lg"></div>
+                        <div><label class="block text-sm font-bold text-slate-700">Valor Hora ($)</label><input type="number" id="cfg-valorHora" class="w-full p-3 border rounded-lg" step="0.01"></div>
+                        <div><label class="block text-sm font-bold text-slate-700">Afiliación</label><select id="cfg-discountRate" class="w-full p-3 border rounded-lg bg-white"><option value="0.18">No Afiliado (18%)</option><option value="0.21">Afiliado (21%)</option></select></div>
+                        <div><label class="block text-sm font-bold text-slate-700">Valor Título ($)</label><input type="number" id="cfg-tituloAmount" class="w-full p-3 border rounded-lg"></div>
+                        <div><label class="block text-sm font-bold text-slate-700">Valor Viático ($)</label><input type="number" id="cfg-viaticoValue" class="w-full p-3 border rounded-lg"></div>
+                        <div class="col-span-2 border-t pt-4"><h4 class="font-bold text-indigo-600 mb-4">Rotación</h4><div class="grid grid-cols-2 gap-6">
+                            <div><label class="block text-sm font-bold text-slate-700">Fecha Último Franco (Día 2)</label><input type="date" id="cfg-lastFrancoDate" class="w-full p-3 border rounded-lg"></div>
+                            <div><label class="block text-sm font-bold text-slate-700">Turno Post-Franco</label><select id="cfg-initialTurn" class="w-full p-3 border rounded-lg bg-white"><option value="Mañana">Mañana</option><option value="Noche">Noche</option><option value="Tarde">Tarde</option></select></div>
+                        </div></div>
+                    </div>
+                    <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
         </div>
     </main>
 
     <script type="module">
-        // =====================================================================
-        // FIREBASE & CONFIG
-        // =====================================================================
+        // FIREBASE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw",
-            authDomain: "calculadora-6x2.firebaseapp.com",
-            projectId: "calculadora-6x2",
-            storageBucket: "calculadora-6x2.firebasestorage.app",
-            messagingSenderId: "238926197886",
-            appId: "1:238926197886:web:d05857b007dcb305e9d42f"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw", authDomain: "calculadora-6x2.firebaseapp.com", projectId: "calculadora-6x2", storageBucket: "calculadora-6x2.firebasestorage.app", messagingSenderId: "238926197886", appId: "1:238926197886:web:d05857b007dcb305e9d42f" };
 
-        let app, auth, db;
-        let userId = null;
-        let isFirebaseActive = false;
+        let app, auth, db, userId = null, isFirebaseActive = false;
 
-        // =====================================================================
         // STATE
-        // =====================================================================
         let appState = {
-            config: {
-                userName: 'Usuario',
-                valorHora: 3758,
-                discountRate: 0.18, // 0.18 o 0.21
-                tituloAmount: 0,
-                viaticoValue: 6200,
-                lastFrancoDate: new Date().toISOString().split('T')[0],
-                initialTurn: 'Mañana',
-                currentMonth: new Date().getMonth() + 1, // Mes actual del calendario
-                currentYear: new Date().getFullYear()
-            },
-            viewingMonth: { // El mes que se está viendo en el Dashboard
-                month: new Date().getMonth() + 1,
-                year: new Date().getFullYear()
-            },
-            activeData: { // Datos del mes viewingMonth
-                extras: {},
-                manualHolidays: {},
-                calculation: null
-            },
-            historicalCache: {} // { "2025-11": { neto: 100, ... } }
+            config: { userName: 'Usuario', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
+            viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null },
+            historicalCache: {}
         };
 
-        // =====================================================================
-        // INIT & NAVIGATION
-        // =====================================================================
+        // INIT
         window.onload = () => {
             initFirebaseSystem();
             setupUI();
+            // Header Date
+            const d = new Date();
+            const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+            const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            document.getElementById('header-current-date').textContent = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
         };
 
         function setupUI() {
-            // Sidebar Toggle
             const sidebar = document.getElementById('sidebar');
-            document.getElementById('open-sidebar-btn').onclick = () => {
-                sidebar.classList.remove('sidebar-closed');
-                sidebar.classList.add('sidebar-open');
-            };
-            document.getElementById('close-sidebar-btn').onclick = () => {
-                sidebar.classList.add('sidebar-closed');
-                sidebar.classList.remove('sidebar-open');
-            };
-
-            // Cerrar sidebar al hacer click en una opcion (Móvil)
+            document.getElementById('open-sidebar-btn').onclick = () => { sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open'); };
+            document.getElementById('close-sidebar-btn').onclick = () => { sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open'); };
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    if (window.innerWidth < 768) {
-                        sidebar.classList.add('sidebar-closed');
-                        sidebar.classList.remove('sidebar-open');
-                    }
-                });
+                btn.addEventListener('click', () => { if (window.innerWidth < 768) { sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open'); } });
             });
         }
 
         window.navigateTo = (viewId) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
-            
-            // Highlight menu
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 if(btn.dataset.target === viewId) btn.classList.add('bg-slate-800', 'text-white');
                 else btn.classList.remove('bg-slate-800', 'text-white');
             });
-
             if (viewId === 'home-view') renderHome();
             if (viewId === 'monthly-history-view') renderDashboard();
             if (viewId === 'ranking-view') renderRanking();
+            if (viewId === 'treasury-view') renderTreasury();
             if (viewId === 'config-view') fillConfigInputs();
         };
 
-        // =====================================================================
-        // LOGIC: CALCULATION 6x2
-        // =====================================================================
-        function performCalculation(month, year, extras, holidays) {
-            const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue } = appState.config;
+        // LOGIC: PAYMENT DATE (4 Business Days)
+        function calculatePaymentDate(year, month, dayOfMonth) {
+            // dayOfMonth: 15 for 1st quincena, lastDay for 2nd
+            const baseDate = new Date(year, month - 1, dayOfMonth);
+            let paymentDate = new Date(baseDate);
+            let businessDaysAdded = 0;
             
+            while (businessDaysAdded < 4) {
+                paymentDate.setDate(paymentDate.getDate() + 1);
+                const day = paymentDate.getDay();
+                if (day !== 0 && day !== 6) businessDaysAdded++;
+            }
+            return paymentDate;
+        }
+
+        // LOGIC: CALCULATION
+        function performCalculation(month, year, extras, holidays, overrides) {
+            const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue } = appState.config;
             if(!valorHora) return null;
 
             const daysInMonth = new Date(year, month, 0).getDate();
             const dailyResults = [];
             const francosList = [];
             
-            // Logica de Rotación
-            const masterCycle = [
-                'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco',
-                'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco',
-                'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'
-            ];
-            
+            const masterCycle = ['Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'];
             let baseOffset = (initialTurn === 'Noche') ? 8 : (initialTurn === 'Tarde' ? 16 : 0);
             const lastFrancoDay2 = new Date(lastFrancoDate + 'T00:00:00');
-            const dayAfterFranco = new Date(lastFrancoDay2); 
-            dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
-
+            const dayAfterFranco = new Date(lastFrancoDay2); dayAfterFranco.setDate(dayAfterFranco.getDate() + 1);
             const monthStart = new Date(year, month - 1, 1);
             
-            // Calcular offset inicial
             const diffTime = monthStart.getTime() - dayAfterFranco.getTime();
-            const diffDays = Math.floor(diffTime / (86400000)); // ms per day
+            const diffDays = Math.floor(diffTime / (86400000));
             let startOffset = (baseOffset + diffDays) % 24;
             if (startOffset < 0) startOffset += 24;
 
-            // Iterar días
-            let totalEquivHours = 0;
-            let daysWithExtras = 0;
+            let q1_bruto = 0, q2_bruto = 0;
+            let q1_viaticos = 0, q2_viaticos = 0;
+            let q1_extras = 0, q2_extras = 0;
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const current = new Date(year, month - 1, i);
-                const dateKey = current.toISOString().split('T')[0]; // YYYY-MM-DD
+                const dateKey = current.toISOString().split('T')[0];
                 const displayDate = current.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year:'numeric'});
-                const dayOfWeek = current.getDay(); // 0 Dom, 1 Lun...
+                const dayOfWeek = current.getDay();
                 const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-                const cycleState = masterCycle[startOffset];
+                let cycleState = masterCycle[startOffset];
+                
+                // --- OVERRIDE LOGIC (Cambio de turno) ---
+                if (overrides && overrides[dateKey] && overrides[dateKey] !== 'Original') {
+                    cycleState = overrides[dateKey];
+                }
+                // ----------------------------------------
+
                 const isManualHoliday = holidays[displayDate] === true;
                 const extraHours = extras[displayDate] || 0;
 
                 let turnLabel = cycleState;
                 let equivBase = 0;
 
-                // Determinar horas base
                 if (cycleState === 'Franco') {
                     francosList.push({ dayNum: i, dayName: dayNames[dayOfWeek].substring(0,3), fullDate: displayDate, isHoliday: isManualHoliday });
-                    if (isManualHoliday) {
-                        turnLabel = 'FERIADO (Franco)';
-                        equivBase = 8; // 8 Horas al 100% (Equivalencia Feriado no trabajado suele pagarse plus)
-                    }
+                    if (isManualHoliday) { turnLabel = 'FERIADO (Franco)'; equivBase = 8; }
                 } else {
-                    if (isManualHoliday) {
-                        turnLabel = `FERIADO (${cycleState})`;
-                        equivBase = 32; // Equivalencia alta por feriado trabajado
-                    } else {
-                        // Lógica estándar 6x2
+                    if (isManualHoliday) { turnLabel = `FERIADO (${cycleState})`; equivBase = 32; }
+                    else {
                         equivBase = 8; 
-                        if (dayOfWeek === 0) equivBase = 24; // Domingo base (x3)
-                        else if (dayOfWeek === 6 && cycleState === 'Tarde') equivBase = 12; // Sabado Tarde
-                        else if (dayOfWeek === 6 && cycleState === 'Noche') equivBase = 16; // Sabado Noche
-                        
-                        // Plus nocturno entre semana
+                        if (dayOfWeek === 0) equivBase = 24;
+                        else if (dayOfWeek === 6 && cycleState === 'Tarde') equivBase = 12;
+                        else if (dayOfWeek === 6 && cycleState === 'Noche') equivBase = 16;
                         if (dayOfWeek >= 1 && dayOfWeek <= 5 && cycleState === 'Noche') equivBase = 12;
-                        if (dayOfWeek === 0 && cycleState === 'Noche') equivBase = 28; // Dom Noche
+                        if (dayOfWeek === 0 && cycleState === 'Noche') equivBase = 28;
                     }
                 }
 
-                const extraEquiv = extraHours * 1.5; // Extras al 50% (Base + 50% = 1.5?? No, usually extra is 1.5x rate. Assuming calculator logic: 1 hour extra = 1.5 normal hours)
-                
-                if (extraHours > 0) daysWithExtras++;
-
+                const extraEquiv = extraHours * 1.5;
                 const totalDayEquiv = equivBase + extraEquiv;
                 const dailyBruto = totalDayEquiv * valorHora;
+                const dailyViatico = extraHours > 0 ? viaticoValue : 0;
 
-                totalEquivHours += totalDayEquiv;
+                dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
 
-                dailyResults.push({
-                    date: displayDate,
-                    key: dateKey,
-                    dayName: dayNames[dayOfWeek],
-                    turn: turnLabel,
-                    isHoliday: isManualHoliday,
-                    equivBase: equivBase,
-                    extraReal: extraHours,
-                    totalEquiv: totalDayEquiv,
-                    bruto: dailyBruto,
-                    isFranco: cycleState === 'Franco'
-                });
+                // Accumulators for Quincenas
+                if (i <= 15) {
+                    q1_bruto += dailyBruto;
+                    q1_viaticos += dailyViatico;
+                    if(extraHours > 0) q1_extras++;
+                } else {
+                    q2_bruto += dailyBruto;
+                    q2_viaticos += dailyViatico;
+                    if(extraHours > 0) q2_extras++;
+                }
 
                 startOffset = (startOffset + 1) % 24;
             }
 
-            // Totales
-            const brutoTotal = totalEquivHours * valorHora;
-            const descuentoTotal = brutoTotal * discountRate;
-            const netoParcial = brutoTotal - descuentoTotal;
-            
-            const totalViaticos = daysWithExtras * viaticoValue;
-            
-            // El titulo se suma al final (no remunerativo o post-descuento según requerimiento)
-            const netoFinal = netoParcial + Number(tituloAmount) + totalViaticos;
+            // Totals
+            const q1_desc = q1_bruto * discountRate;
+            const q1_neto = q1_bruto - q1_desc + q1_viaticos;
 
-            return {
-                dailyResults,
-                francosList,
-                totalEquivHours,
-                brutoTotal,
-                descuentoTotal,
-                totalViaticos,
-                tituloAmount: Number(tituloAmount),
-                netoFinal,
-                daysWithExtras
-            };
+            const q2_desc = q2_bruto * discountRate;
+            // Titulo is added to Q2 usually or monthly total. Adding to Q2 for simplicity/monthly balance
+            const q2_neto = q2_bruto - q2_desc + q2_viaticos + Number(tituloAmount);
+
+            const brutoTotal = q1_bruto + q2_bruto;
+            const descuentoTotal = q1_desc + q2_desc;
+            const totalViaticos = q1_viaticos + q2_viaticos;
+            const totalEquivHours = dailyResults.reduce((acc, curr) => acc + curr.totalEquiv, 0);
+            const netoFinal = q1_neto + q2_neto;
+
+            return { dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, tituloAmount: Number(tituloAmount), netoFinal, daysWithExtras: q1_extras + q2_extras, quincenas: { q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc }, q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc } } };
         }
 
-        // =====================================================================
-        // UI RENDERING
-        // =====================================================================
-
-        // --- HOME VIEW ---
+        // RENDERING
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
-            
-            // 1. Calcular mes actual para HOME (Independiente del dashboard)
             const now = new Date();
-            const currentCalc = performCalculation(
-                now.getMonth() + 1, 
-                now.getFullYear(), 
-                appState.activeData.extras, // Nota: Esto usa los extras cargados actualmente. Idealmente debería buscar los del mes actual si no coinciden.
-                appState.activeData.manualHolidays
-            );
-
-            const monthName = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
-            document.getElementById('home-current-month-label').textContent = monthName;
+            const currentCalc = performCalculation(now.getMonth() + 1, now.getFullYear(), appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
+            
+            document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
 
             if (currentCalc) {
                 document.getElementById('home-month-net').textContent = formatCurrency(currentCalc.netoFinal);
-                // Próxima Quincena (Estimación simple 50%)
-                document.getElementById('home-next-quincena').textContent = formatCurrency(currentCalc.netoFinal / 2);
                 
-                // Francos Próximos (Visual)
-                const francosContainer = document.getElementById('home-next-francos-container');
-                francosContainer.innerHTML = '';
-                
-                // Filtrar francos desde HOY
-                const todayDateNum = now.getDate();
-                const upcomingFrancos = currentCalc.francosList.filter(f => f.dayNum >= todayDateNum).slice(0, 5); // Mostrar max 5
+                // Next Quincena Logic
+                const dayOfMonth = now.getDate();
+                let nextPayAmount = 0;
+                let payDateObj = null;
 
-                if(upcomingFrancos.length === 0) {
-                     francosContainer.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos este mes.</p>';
+                if (dayOfMonth <= 15) {
+                    nextPayAmount = currentCalc.quincenas.q1.neto;
+                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth() + 1, 15);
                 } else {
-                    upcomingFrancos.forEach(f => {
-                        const div = document.createElement('div');
-                        div.className = `flex-shrink-0 w-20 h-24 ${f.isHoliday ? 'bg-red-100 border-red-200' : 'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3`;
-                        div.innerHTML = `
-                            <span class="text-xs uppercase font-bold ${f.isHoliday ? 'text-red-500' : 'text-indigo-400'}">${f.dayName}</span>
-                            <span class="text-3xl font-bold ${f.isHoliday ? 'text-red-700' : 'text-slate-700'}">${f.dayNum}</span>
-                            ${f.isHoliday ? '<i class="fa-solid fa-star text-[10px] text-red-500 mt-1"></i>' : ''}
-                        `;
-                        francosContainer.appendChild(div);
-                    });
+                    nextPayAmount = currentCalc.quincenas.q2.neto;
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth() + 1, daysInMonth);
                 }
 
-            } else {
-                document.getElementById('home-month-net').textContent = "$ --";
+                document.getElementById('home-next-quincena').textContent = formatCurrency(nextPayAmount);
+                const payDateStr = payDateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' });
+                document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDateStr}`;
+
+                // Francos
+                const francosContainer = document.getElementById('home-next-francos-container');
+                francosContainer.innerHTML = '';
+                const upcomingFrancos = currentCalc.francosList.filter(f => f.dayNum >= dayOfMonth).slice(0, 5);
+                if(upcomingFrancos.length === 0) francosContainer.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos este mes.</p>';
+                else upcomingFrancos.forEach(f => {
+                    const div = document.createElement('div');
+                    div.className = `flex-shrink-0 w-20 h-24 ${f.isHoliday ? 'bg-red-100 border-red-200' : 'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3`;
+                    div.innerHTML = `<span class="text-xs uppercase font-bold ${f.isHoliday ? 'text-red-500' : 'text-indigo-400'}">${f.dayName}</span><span class="text-3xl font-bold ${f.isHoliday ? 'text-red-700' : 'text-slate-700'}">${f.dayNum}</span>`;
+                    francosContainer.appendChild(div);
+                });
             }
         }
 
-        // --- DASHBOARD VIEW ---
         function renderDashboard() {
             const chipContainer = document.getElementById('months-chips-container');
             chipContainer.innerHTML = '';
-            
             const historyKeys = Object.keys(appState.historicalCache).sort().reverse();
             
             if (historyKeys.length === 0) {
-                // Si no hay historial, sugerir generar el mes actual
                 const btn = document.createElement('button');
-                btn.className = "px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold whitespace-nowrap border border-indigo-200";
+                btn.className = "px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold border border-indigo-200";
                 btn.textContent = "Generar Mes Actual";
-                btn.onclick = () => generateMonth(appState.config.currentMonth, appState.config.currentYear);
+                btn.onclick = () => generateMonth(appState.config.currentMonth || new Date().getMonth()+1, appState.config.currentYear || new Date().getFullYear());
                 chipContainer.appendChild(btn);
                 document.getElementById('dashboard-content').classList.add('hidden');
                 return;
             }
-
             document.getElementById('dashboard-content').classList.remove('hidden');
-
             historyKeys.forEach(key => {
                 const [year, month] = key.split('-');
                 const isActive = parseInt(month) === appState.viewingMonth.month && parseInt(year) === appState.viewingMonth.year;
-                
                 const btn = document.createElement('button');
-                const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
-                
-                btn.className = `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${
-                    isActive 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`;
-                btn.textContent = monthName.toUpperCase();
+                btn.className = `px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`;
+                btn.textContent = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }).toUpperCase();
                 btn.onclick = () => switchDashboardMonth(parseInt(month), parseInt(year));
                 chipContainer.appendChild(btn);
             });
 
-            // Renderizar datos del mes activo
             const calc = appState.activeData.calculation;
-            const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-            
-            document.getElementById('dash-detail-month-label').textContent = monthLabel;
+            document.getElementById('dash-detail-month-label').textContent = new Date(appState.viewingMonth.year, appState.viewingMonth.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
             
             if (calc) {
                 document.getElementById('dash-equiv-hours').textContent = formatNumber(calc.totalEquivHours);
@@ -615,30 +508,38 @@
 
                 const tbody = document.getElementById('daily-detail-tbody');
                 tbody.innerHTML = '';
-
                 calc.dailyResults.forEach(d => {
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-indigo-50/30 transition";
                     if (d.isFranco && !d.isHoliday) tr.className = "bg-yellow-50/50 hover:bg-yellow-50";
                     if (d.isHoliday) tr.className = "bg-red-50/50 hover:bg-red-50";
 
+                    // Determine Shift Select Value
+                    let selectVal = 'Original';
+                    const overrides = appState.activeData.shiftOverrides || {};
+                    if (overrides[d.key]) selectVal = overrides[d.key];
+                    // If it's franco by default, but user changed it, we show the change
+                    // Logic to build select options:
+                    const buildOptions = (curr) => `
+                        <option value="Original" ${curr==='Original'?'selected':''}>Auto</option>
+                        <option value="Mañana" ${curr==='Mañana'?'selected':''}>Mañana</option>
+                        <option value="Tarde" ${curr==='Tarde'?'selected':''}>Tarde</option>
+                        <option value="Noche" ${curr==='Noche'?'selected':''}>Noche</option>
+                        <option value="Franco" ${curr==='Franco'?'selected':''}>Franco</option>
+                    `;
+
                     tr.innerHTML = `
-                        <td class="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">
-                            ${d.date.split('/')[0]} <span class="text-xs text-slate-400 uppercase ml-1">${d.dayName.substring(0,3)}</span>
+                        <td class="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">${d.date.split('/')[0]} <span class="text-xs text-slate-400 uppercase ml-1">${d.dayName.substring(0,3)}</span></td>
+                        <td class="px-4 py-3">
+                            <select class="table-select bg-transparent border-none text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'} focus:ring-0 cursor-pointer"
+                                onchange="window.updateTurnOverride('${d.key}', this.value)">
+                                ${buildOptions(selectVal)}
+                            </select>
+                            <div class="text-[10px] text-slate-400">${d.turn}</div>
                         </td>
-                        <td class="px-4 py-3 text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'}">${d.turn}</td>
-                        <td class="px-4 py-3 text-center">
-                            <input type="checkbox" class="w-4 h-4 text-red-600 rounded focus:ring-red-500" 
-                                ${d.isHoliday ? 'checked' : ''} 
-                                onchange="window.updateHoliday('${d.date}', this.checked)">
-                        </td>
+                        <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-red-600 rounded focus:ring-red-500" ${d.isHoliday ? 'checked' : ''} onchange="window.updateHoliday('${d.date}', this.checked)"></td>
                         <td class="px-4 py-3 text-right text-slate-500">${formatNumber(d.equivBase)}</td>
-                        <td class="px-4 py-3 text-center">
-                             <input type="number" value="${d.extraReal || ''}" 
-                                class="w-16 text-center border rounded py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none bg-white/50" 
-                                placeholder="-" step="0.5" min="0"
-                                onchange="window.updateExtra('${d.date}', this.value)">
-                        </td>
+                        <td class="px-4 py-3 text-center"><input type="number" value="${d.extraReal || ''}" class="w-16 text-center border rounded py-1 text-xs" placeholder="-" step="0.5" min="0" onchange="window.updateExtra('${d.date}', this.value)"></td>
                         <td class="px-4 py-3 text-right font-bold text-slate-800">${formatNumber(d.totalEquiv)}</td>
                         <td class="px-4 py-3 text-right text-xs text-slate-500">${formatCurrency(d.bruto)}</td>
                     `;
@@ -647,136 +548,130 @@
             }
         }
 
-        // --- RANKING VIEW ---
+        function renderTreasury() {
+            const container = document.getElementById('treasury-container');
+            container.innerHTML = '';
+            const calc = appState.activeData.calculation;
+            
+            if (!calc) {
+                container.innerHTML = '<p class="text-center text-slate-400">Ve al Dashboard y genera un mes primero.</p>';
+                return;
+            }
+
+            const { month, year } = appState.viewingMonth;
+            const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
+
+            // Dates
+            const dateQ1 = calculatePaymentDate(year, month, 15);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const dateQ2 = calculatePaymentDate(year, month, daysInMonth);
+
+            const card = (title, amount, date, details) => `
+                <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-50 flex justify-between items-start bg-slate-50/50">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-700">${title}</h3>
+                            <p class="text-sm text-emerald-600 font-medium mt-1"><i class="fa-regular fa-calendar mr-1"></i> Cobro: ${date.toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'})}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-3xl font-extrabold text-slate-800">${formatCurrency(amount)}</p>
+                            <p class="text-xs text-slate-400">Neto a cobrar</p>
+                        </div>
+                    </div>
+                    <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div><p class="text-slate-400">Bruto Generado</p><p class="font-semibold text-slate-700">${formatCurrency(details.bruto)}</p></div>
+                        <div><p class="text-slate-400">Descuentos</p><p class="font-semibold text-red-500">-${formatCurrency(details.desc)}</p></div>
+                        <div><p class="text-slate-400">Viáticos (No Rem)</p><p class="font-semibold text-orange-500">+${formatCurrency(details.viaticos)}</p></div>
+                        ${title.includes('2') ? `<div><p class="text-slate-400">Título</p><p class="font-semibold text-blue-500">+${formatCurrency(appState.config.tituloAmount)}</p></div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = `
+                <div class="mb-4 text-right"><span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">${monthName}</span></div>
+                ${card('1ª Quincena', calc.quincenas.q1.neto, dateQ1, calc.quincenas.q1)}
+                ${card('2ª Quincena (Cierre)', calc.quincenas.q2.neto, dateQ2, calc.quincenas.q2)}
+            `;
+        }
+
         function renderRanking() {
             const list = document.getElementById('ranking-list');
             list.innerHTML = '';
-            
-            // Convertir cache a array y ordenar
-            const ranked = Object.entries(appState.historicalCache)
-                .map(([key, data]) => ({ key, ...data }))
-                .sort((a, b) => b.results.netoFinal - a.results.netoFinal);
+            const ranked = Object.entries(appState.historicalCache).map(([key, data]) => ({ key, ...data })).sort((a, b) => b.results.netoFinal - a.results.netoFinal);
 
-            if (ranked.length === 0) {
-                list.innerHTML = '<p class="text-center text-slate-400 mt-8">No hay historial suficiente para el ranking.</p>';
-                return;
-            }
+            if (ranked.length === 0) { list.innerHTML = '<p class="text-center text-slate-400 mt-8">Sin datos.</p>'; return; }
 
             ranked.forEach((item, index) => {
                 const [year, month] = item.key.split('-');
                 const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-                
-                let medal = '';
-                let borderClass = 'border-slate-100';
-                let bgClass = 'bg-white';
-                
-                if(index === 0) { medal = '🥇'; borderClass = 'border-yellow-400'; bgClass = 'bg-yellow-50'; }
-                if(index === 1) { medal = '🥈'; borderClass = 'border-slate-300'; }
-                if(index === 2) { medal = '🥉'; borderClass = 'border-orange-300'; }
+                let medal = '', border = 'border-slate-100', bg = 'bg-white';
+                if(index===0) { medal='🥇'; border='border-yellow-400'; bg='bg-yellow-50'; }
+                else if(index===1) { medal='🥈'; border='border-slate-300'; }
+                else if(index===2) { medal='🥉'; border='border-orange-300'; }
 
-                const div = document.createElement('div');
-                div.className = `flex items-center justify-between p-4 rounded-xl border ${borderClass} ${bgClass} shadow-sm`;
-                div.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <div class="text-2xl font-bold w-8 text-center">${medal || (index + 1)}</div>
-                        <div>
-                            <h4 class="font-bold text-slate-800 capitalize">${monthName}</h4>
-                            <p class="text-xs text-slate-500">H. Eq: ${formatNumber(item.results.totalEquivHours)}</p>
+                list.innerHTML += `
+                    <div class="p-4 rounded-xl border ${border} ${bg} shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex items-center gap-4 w-full md:w-auto">
+                            <div class="text-2xl font-bold w-8 text-center">${medal || (index+1)}</div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 capitalize">${monthName}</h4>
+                                <div class="flex gap-2 text-xs mt-1">
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0} días</span>
+                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viáticos: ${formatCurrency(item.results.totalViaticos)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right w-full md:w-auto border-t md:border-0 pt-2 md:pt-0">
+                             <p class="text-xs text-slate-500">Neto Final</p>
+                            <p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="text-lg font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p>
-                    </div>
                 `;
-                list.appendChild(div);
             });
         }
 
-        // =====================================================================
-        // ACTIONS & EVENTS
-        // =====================================================================
-        
-        // Actualizar Inputs Extra/Holidays
-        window.updateExtra = (dateStr, value) => {
-            const val = parseFloat(value) || 0;
-            if (val > 0) appState.activeData.extras[dateStr] = val;
-            else delete appState.activeData.extras[dateStr];
-            // Recalcular en tiempo real visualmente (sin guardar aun)
-            triggerLocalRecalculate();
-        };
-
-        window.updateHoliday = (dateStr, checked) => {
-            if (checked) appState.activeData.manualHolidays[dateStr] = true;
-            else delete appState.activeData.manualHolidays[dateStr];
-            triggerLocalRecalculate();
+        // ACTIONS
+        window.updateExtra = (d, v) => { const val = parseFloat(v) || 0; if (val > 0) appState.activeData.extras[d] = val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
+        window.updateHoliday = (d, c) => { if (c) appState.activeData.manualHolidays[d] = true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
+        // NEW: Shift Override
+        window.updateTurnOverride = (key, val) => { 
+            if(!appState.activeData.shiftOverrides) appState.activeData.shiftOverrides = {};
+            if(val === 'Original') delete appState.activeData.shiftOverrides[key];
+            else appState.activeData.shiftOverrides[key] = val;
+            triggerLocalRecalculate(); 
         };
 
         function triggerLocalRecalculate() {
             const { month, year } = appState.viewingMonth;
-            appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays);
-            renderDashboard(); // Re-render solo la tabla y totales
+            appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
+            renderDashboard();
         }
 
-        // Generar nuevo mes
-        document.getElementById('btn-generate-new').onclick = () => {
-            // Determinar el siguiente mes basado en el último historial o el actual
-            const historyKeys = Object.keys(appState.historicalCache).sort();
-            let targetMonth, targetYear;
-            
-            if(historyKeys.length > 0) {
-                const lastKey = historyKeys[historyKeys.length - 1];
-                const [ly, lm] = lastKey.split('-');
-                const lastDate = new Date(ly, lm, 1); // Mes siguiente al ultimo
-                targetMonth = lastDate.getMonth() + 1;
-                targetYear = lastDate.getFullYear();
-            } else {
-                const now = new Date();
-                targetMonth = now.getMonth() + 1;
-                targetYear = now.getFullYear();
-            }
-
-            // Si llegamos a mes 13, corregir
-             if(targetMonth > 12) { targetMonth = 1; targetYear++; }
-
-            generateMonth(targetMonth, targetYear);
-        };
-
-        // Cambiar mes visible en Dashboard
-        async function switchDashboardMonth(month, year) {
-            appState.viewingMonth = { month, year };
-            const key = `${year}-${String(month).padStart(2, '0')}`;
-            
-            // Cargar datos de ese mes desde cache o Firestore
+        async function switchDashboardMonth(m, y) {
+            appState.viewingMonth = { month: m, year: y };
+            const key = `${y}-${String(m).padStart(2, '0')}`;
             if(appState.historicalCache[key]) {
                 appState.activeData.extras = appState.historicalCache[key].extras || {};
                 appState.activeData.manualHolidays = appState.historicalCache[key].holidayFlags || {};
-                appState.activeData.calculation = appState.historicalCache[key].results; // Usar resultado guardado o recalcular
-                
-                // Siempre es mejor recalcular con la config actual? No, usar histórico es más seguro, 
-                // pero si el usuario cambia valor hora, querrá recalcular.
-                // Por ahora cargamos y recalculamos.
+                appState.activeData.shiftOverrides = appState.historicalCache[key].shiftOverrides || {};
                 triggerLocalRecalculate();
             }
             renderDashboard();
         }
 
-        async function generateMonth(month, year) {
-            appState.viewingMonth = { month, year };
+        async function generateMonth(m, y) {
+            if(m > 12) { m=1; y++; }
+            appState.viewingMonth = { month: m, year: y };
             appState.activeData.extras = {};
             appState.activeData.manualHolidays = {};
-            triggerLocalRecalculate();
-            saveCurrentData(); // Guardar inicial
-            showMessage(`Mes de ${month}/${year} generado.`);
-        }
-
-        // Boton Guardar/Recalcular Manual
-        document.getElementById('btn-recalculate').onclick = () => {
+            appState.activeData.shiftOverrides = {};
             triggerLocalRecalculate();
             saveCurrentData();
-            showMessage('Cambios guardados y recalculados.');
-        };
+            showMessage(`Mes de ${m}/${y} generado.`);
+        }
 
-        // Guardar Config
+        // SAVE & CONFIG
+        document.getElementById('btn-recalculate').onclick = () => { triggerLocalRecalculate(); saveCurrentData(); showMessage('Guardado.'); };
         window.saveConfig = async () => {
             appState.config.userName = document.getElementById('cfg-userName').value;
             appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
@@ -785,15 +680,10 @@
             appState.config.viaticoValue = parseFloat(document.getElementById('cfg-viaticoValue').value);
             appState.config.lastFrancoDate = document.getElementById('cfg-lastFrancoDate').value;
             appState.config.initialTurn = document.getElementById('cfg-initialTurn').value;
-
-            if(userId) {
-                await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), appState.config);
-            }
-            showMessage('Configuración guardada.', 'success');
-            renderHome(); // Actualizar nombre
+            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), appState.config);
+            showMessage('Configuración guardada.', 'success'); renderHome();
         };
 
-        // Llenar inputs de config
         function fillConfigInputs() {
             document.getElementById('cfg-userName').value = appState.config.userName;
             document.getElementById('cfg-valorHora').value = appState.config.valorHora;
@@ -804,136 +694,58 @@
             document.getElementById('cfg-initialTurn').value = appState.config.initialTurn;
         }
 
-        // =====================================================================
-        // UTILS
-        // =====================================================================
-        function formatCurrency(val) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0); }
-        function formatNumber(val) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(val || 0); }
-        
-        function showMessage(msg, type='info') {
-            const el = document.getElementById('status-message');
-            el.textContent = msg;
-            el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${type === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 3000);
-        }
-
-        // =====================================================================
-        // FIREBASE SYSTEM
-        // =====================================================================
+        // FIREBASE CORE
         async function initFirebaseSystem() {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                const authBtn = document.getElementById('auth-action-btn');
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isFirebaseActive = true;
-                        document.getElementById('user-info').textContent = user.displayName || user.email;
-                        authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir';
-                        authBtn.onclick = () => signOut(auth);
-                        loadUserData();
-                    } else {
-                        userId = null;
-                        isFirebaseActive = false;
-                        document.getElementById('user-info').textContent = 'Modo Invitado (Sin guardar)';
-                        authBtn.innerHTML = '<i class="fa-brands fa-google mr-2"></i> Acceder';
-                        authBtn.onclick = () => signInWithGoogle();
-                        // Modo Local Demo
-                        triggerLocalRecalculate();
-                        renderHome();
-                        navigateTo('home-view');
-                    }
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        async function signInWithGoogle() {
-            const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
+            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+            const authBtn = document.getElementById('auth-action-btn');
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid; isFirebaseActive = true;
+                    document.getElementById('user-info').textContent = user.displayName || user.email;
+                    authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir';
+                    authBtn.onclick = () => signOut(auth);
+                    loadUserData();
+                } else {
+                    userId = null; isFirebaseActive = false;
+                    document.getElementById('user-info').textContent = 'Invitado';
+                    authBtn.innerHTML = '<i class="fa-brands fa-google mr-2"></i> Acceder';
+                    authBtn.onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+                    triggerLocalRecalculate(); renderHome(); navigateTo('home-view');
+                }
+            });
         }
 
         async function loadUserData() {
-            // 1. Load Config
-            const configRef = doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary');
-            onSnapshot(configRef, (snap) => {
-                if(snap.exists()) {
-                    appState.config = { ...appState.config, ...snap.data() };
-                    renderHome(); // Actualizar nombre apenas cargue
-                }
-            });
-
-            // 2. Load Historical Months
-            const dataRef = collection(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data');
-            const snapshot = await getDocs(dataRef);
+            onSnapshot(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), (s) => { if(s.exists()) { appState.config = { ...appState.config, ...s.data() }; renderHome(); }});
+            const snapshot = await getDocs(collection(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data'));
             appState.historicalCache = {};
-            snapshot.forEach(doc => {
-                appState.historicalCache[doc.id] = doc.data();
-            });
-
-            // 3. Init Dashboard with latest
+            snapshot.forEach(d => appState.historicalCache[d.id] = d.data());
             const keys = Object.keys(appState.historicalCache).sort().reverse();
-            if(keys.length > 0) {
-                const [y, m] = keys[0].split('-');
-                switchDashboardMonth(parseInt(m), parseInt(y));
-            } else {
-                navigateTo('home-view');
-            }
+            if(keys.length > 0) { const [y, m] = keys[0].split('-'); switchDashboardMonth(parseInt(m), parseInt(y)); }
         }
 
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
             const docId = `${year}-${String(month).padStart(2, '0')}`;
-            
-            const dataToSave = {
-                extras: appState.activeData.extras,
-                holidayFlags: appState.activeData.manualHolidays,
-                results: appState.activeData.calculation
-            };
-
-            // Update Cache
-            appState.historicalCache[docId] = dataToSave;
-
-            // Save DB
-            await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), dataToSave);
+            const data = { extras: appState.activeData.extras, holidayFlags: appState.activeData.manualHolidays, shiftOverrides: appState.activeData.shiftOverrides, results: appState.activeData.calculation };
+            appState.historicalCache[docId] = data;
+            await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
         }
-        
-        // PDF Generation Hook
+
+        // UTILS
+        function formatCurrency(v) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v || 0); }
+        function formatNumber(v) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(v || 0); }
+        function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
+        document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+1; ty=d.getFullYear(); } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
+        // PDF
         document.getElementById('btn-download-pdf').onclick = () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const calc = appState.activeData.calculation;
-            if(!calc) return;
-
-            const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-            
-            doc.setFontSize(18);
-            doc.text(`Reporte Salarial - ${monthLabel}`, 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Empleado: ${appState.config.userName}`, 14, 30);
-            
-            doc.autoTable({
-                startY: 40,
-                head: [['Concepto', 'Monto']],
-                body: [
-                    ['Bruto (H.Eq)', formatCurrency(calc.brutoTotal)],
-                    ['Viáticos (No Rem)', formatCurrency(calc.totalViaticos)],
-                    ['Título', formatCurrency(calc.tituloAmount)],
-                    ['Descuentos', `-${formatCurrency(calc.descuentoTotal)}`],
-                    ['NETO FINAL', formatCurrency(calc.netoFinal)]
-                ],
-                theme: 'striped',
-                headStyles: { fillColor: [79, 70, 229] }
-            });
-            
-            doc.save(`Nomina_${monthLabel}.pdf`);
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const calc = appState.activeData.calculation; if(!calc) return;
+            const ml = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
+            doc.setFontSize(18); doc.text(`Nómina - ${ml}`, 14, 20); doc.setFontSize(10); doc.text(`Empleado: ${appState.config.userName}`, 14, 30);
+            doc.autoTable({ startY: 40, head: [['Concepto', 'Monto']], body: [['Bruto', formatCurrency(calc.brutoTotal)], ['Viáticos', formatCurrency(calc.totalViaticos)], ['Título', formatCurrency(calc.tituloAmount)], ['Descuentos', `-${formatCurrency(calc.descuentoTotal)}`], ['NETO FINAL', formatCurrency(calc.netoFinal)]], theme: 'striped', headStyles: { fillColor: [79, 70, 229] } });
+            doc.save(`Nomina_${ml}.pdf`);
         };
-
     </script>
 </body>
 </html>
