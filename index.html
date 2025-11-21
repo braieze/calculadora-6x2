@@ -12,48 +12,17 @@
     <style>
         @import url('https://fonts.fonts.google.com/specimen/Inter:wght@300;400;600;700;800');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .transition-all-300 { transition: all 0.3s ease-in-out; }
-        
-        /* Sidebar Animations */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
-
-        /* Inputs integrados en tabla */
-        .table-select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-        }
-
-        /* Fix para inputs en iOS */
+        .table-select { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
         input, select, textarea { font-size: 16px !important; }
-
-        /* ANIMACIÓN FOTO DE PERFIL */
-        @keyframes spin-border {
-            0% { --angle: 0deg; }
-            100% { --angle: 360deg; }
-        }
-        
-        .profile-animated-wrapper {
-            position: relative;
-            padding: 2px;
-            border-radius: 50%;
-            background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c);
-            animation: spin 4s linear infinite;
-            display: inline-block;
-        }
-        
-        @property --angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
+        @keyframes spin-border { 0% { --angle: 0deg; } 100% { --angle: 360deg; } }
+        .profile-animated-wrapper { position: relative; padding: 2px; border-radius: 50%; background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c); animation: spin 4s linear infinite; display: inline-block; }
+        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         @keyframes spin { to { --angle: 360deg; } }
     </style>
 </head>
@@ -61,82 +30,38 @@
 
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white sidebar-closed md:relative md:translate-x-0 flex flex-col shadow-2xl">
         <div class="p-6 border-b border-slate-700 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold text-indigo-400 tracking-wide">6x2 PRO</h1>
-                <p class="text-xs text-slate-400">Gestión Salarial</p>
-            </div>
-            <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white p-2">
-                <i class="fa-solid fa-times text-xl"></i>
-            </button>
+            <div><h1 class="text-xl font-bold text-indigo-400 tracking-wide">6x2 PRO</h1><p class="text-xs text-slate-400">Gestión Salarial</p></div>
+            <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white p-2"><i class="fa-solid fa-times text-xl"></i></button>
         </div>
-
         <nav class="flex-1 overflow-y-auto py-4">
             <ul class="space-y-2 px-4">
-                <li>
-                    <button onclick="navigateTo('home-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="home-view">
-                        <i class="fa-solid fa-house text-indigo-400 w-6"></i>
-                        <span>Inicio</span>
-                    </button>
-                </li>
-                <li>
-                    <button onclick="navigateTo('monthly-history-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="monthly-history-view">
-                        <i class="fa-solid fa-calendar-days text-indigo-400 w-6"></i>
-                        <span>Mi Gestión (Dashboard)</span>
-                    </button>
-                </li>
-                <li>
-                    <button onclick="navigateTo('treasury-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="treasury-view">
-                        <i class="fa-solid fa-wallet text-emerald-400 w-6"></i>
-                        <span>Tesorería (Quincenas)</span>
-                    </button>
-                </li>
-                <li>
-                    <button onclick="navigateTo('ranking-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="ranking-view">
-                        <i class="fa-solid fa-ranking-star text-yellow-400 w-6"></i>
-                        <span>Ranking Ganancias</span>
-                    </button>
-                </li>
-                <li>
-                    <button onclick="navigateTo('config-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3 focus:outline-none" data-target="config-view">
-                        <i class="fa-solid fa-gear text-gray-400 w-6"></i>
-                        <span>Configuración</span>
-                    </button>
-                </li>
+                <li><button onclick="navigateTo('home-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="home-view"><i class="fa-solid fa-house text-indigo-400 w-6"></i><span>Inicio</span></button></li>
+                <li><button onclick="navigateTo('monthly-history-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="monthly-history-view"><i class="fa-solid fa-calendar-days text-indigo-400 w-6"></i><span>Mi Gestión</span></button></li>
+                <li><button onclick="navigateTo('treasury-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="treasury-view"><i class="fa-solid fa-wallet text-emerald-400 w-6"></i><span>Tesorería</span></button></li>
+                <li><button onclick="navigateTo('ranking-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="ranking-view"><i class="fa-solid fa-ranking-star text-yellow-400 w-6"></i><span>Ranking</span></button></li>
+                <li><button onclick="navigateTo('config-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="config-view"><i class="fa-solid fa-gear text-gray-400 w-6"></i><span>Configuración</span></button></li>
             </ul>
         </nav>
-
         <div class="p-4 border-t border-slate-700 bg-slate-800">
             <div id="user-info-container" class="mb-3">
                 <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
                 <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
             </div>
-            
-            <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center">
-                <i class="fa-brands fa-google mr-2"></i> <span>Acceder</span>
-            </button>
+            <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center"><i class="fa-brands fa-google mr-2"></i> <span>Acceder</span></button>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col h-full relative overflow-hidden">
-        
         <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center md:hidden sticky top-0 z-50 w-full h-16">
             <div class="flex items-center">
-                <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg mr-3">
-                    <i class="fa-solid fa-bars text-2xl"></i>
-                </button>
+                <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg mr-3"><i class="fa-solid fa-bars text-2xl"></i></button>
                 <h2 class="text-lg font-bold text-indigo-700 truncate">Calculadora 6x2</h2>
             </div>
-
             <div class="flex items-center">
-                <div class="profile-animated-wrapper hidden" id="header-profile-wrapper">
-                    <div class="w-9 h-9 rounded-full bg-white overflow-hidden border border-white">
-                        <img id="header-profile-pic" src="" class="w-full h-full object-cover">
-                    </div>
-                </div>
+                <div class="profile-animated-wrapper hidden" id="header-profile-wrapper"><div class="w-9 h-9 rounded-full bg-white overflow-hidden border border-white"><img id="header-profile-pic" src="" class="w-full h-full object-cover"></div></div>
                 <i id="header-profile-icon" class="fa-solid fa-circle-user text-3xl text-slate-300"></i>
             </div>
         </header>
-
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 md:hidden hidden transition-opacity"></div>
 
         <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-32">
@@ -145,66 +70,24 @@
             <div id="home-view" class="view-section max-w-4xl mx-auto">
                 <div class="flex justify-between items-center mb-8">
                     <div class="flex items-center space-x-4">
-                        <div class="profile-animated-wrapper hidden" id="home-profile-wrapper">
-                            <div class="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-white">
-                                <img id="home-profile-pic" src="" class="w-full h-full object-cover">
-                            </div>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
-                                Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
-                            </h1>
-                            <p class="text-sm md:text-base text-slate-500 mt-1">Tu estado al día de hoy.</p>
-                        </div>
+                        <div class="profile-animated-wrapper hidden" id="home-profile-wrapper"><div class="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-white"><img id="home-profile-pic" src="" class="w-full h-full object-cover"></div></div>
+                        <div><h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋</h1><p class="text-sm md:text-base text-slate-500 mt-1">Resumen de actividad.</p></div>
                     </div>
-                    
-                    <div class="text-right hidden md:block">
-                        <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
-                        <p id="header-current-date" class="text-xl font-bold text-slate-700">...</p>
-                    </div>
+                    <div class="text-right hidden md:block"><p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p><p id="header-current-date" class="text-xl font-bold text-slate-700">...</p></div>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50"></div>
-                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3>
-                        <div class="flex items-baseline">
-                            <span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span>
-                        </div>
-                        <p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">Calculando...</p>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50"></div>
-                        <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3>
-                        <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p>
-                        <div class="flex items-baseline">
-                            <span class="text-4xl font-extrabold text-slate-800 truncate" id="home-month-net">$ 0</span>
-                        </div>
-                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden"><div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50"></div><h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3><div class="flex items-baseline"><span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span></div><p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">...</p></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden"><div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50"></div><h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3><p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p><div class="flex items-baseline"><span class="text-4xl font-extrabold text-slate-800 truncate" id="home-month-net">$ 0</span></div></div>
                 </div>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                    <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center">
-                        <i class="fa-regular fa-calendar-check mr-2 text-indigo-500"></i> Próximos Francos
-                    </h3>
-                    <div id="home-next-francos-container" class="flex space-x-4 overflow-x-auto hide-scroll pb-2"></div>
-                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6"><h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center"><i class="fa-regular fa-calendar-check mr-2 text-indigo-500"></i> Próximos Francos</h3><div id="home-next-francos-container" class="flex space-x-4 overflow-x-auto hide-scroll pb-2"></div></div>
             </div>
 
             <div id="monthly-history-view" class="view-section hidden max-w-6xl mx-auto">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
                     <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos</h2>
-                    <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md active:scale-95">
-                        <i class="fa-solid fa-plus mr-2"></i> Mes Siguiente
-                    </button>
+                    <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fa-solid fa-plus mr-2"></i> Mes Siguiente</button>
                 </div>
-
-                <div class="mb-6">
-                    <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Mes a Gestionar</label>
-                    <div id="months-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll py-1"></div>
-                </div>
-
+                <div class="mb-6"><label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Mes a Gestionar</label><div id="months-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll py-1"></div></div>
                 <div id="dashboard-content" class="hidden animate-fade-in">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 overflow-hidden"><p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p><p class="text-lg md:text-xl font-bold text-indigo-600 truncate" id="dash-equiv-hours">0</p></div>
@@ -212,53 +95,28 @@
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 overflow-hidden"><p class="text-xs text-slate-500 font-semibold">PRESENTISMO</p><p class="text-lg md:text-xl font-bold text-blue-600 truncate" id="dash-presentismo-total">$ 0</p></div>
                         <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100 overflow-hidden"><p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p><p class="text-xl md:text-2xl font-extrabold text-emerald-700 truncate" id="dash-neto-final">$ 0</p></div>
                     </div>
-
                     <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center sticky top-0 bg-white z-20">
-                            <div>
-                                <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
-                                <p class="text-xs text-slate-400">Controla llegadas tarde y feriados.</p>
-                            </div>
+                            <div><h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3><p class="text-xs text-slate-400">Controla llegadas tarde y feriados.</p></div>
                             <div class="flex gap-2">
-                                <button id="btn-delete-month" class="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-xs font-bold shadow-sm transition" title="Borrar Mes"><i class="fa-solid fa-trash"></i></button>
+                                <button id="btn-delete-month" class="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-xs font-bold shadow-sm transition"><i class="fa-solid fa-trash"></i></button>
                                 <button id="btn-recalculate" class="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 shadow-sm transition"><i class="fa-solid fa-save mr-1"></i> Guardar</button>
                                 <button id="btn-download-pdf" class="px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-red-700 transition"><i class="fa-solid fa-file-pdf"></i></button>
                             </div>
                         </div>
-                        <div class="overflow-x-auto max-h-[500px]">
-                            <table class="w-full text-sm text-left">
-                                <thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky-header">
-                                    <tr>
-                                        <th class="px-4 py-3">Fecha</th>
-                                        <th class="px-4 py-3">Turno</th>
-                                        <th class="px-4 py-3 text-center text-[10px]">Feriado</th>
-                                        <th class="px-4 py-3 text-center text-[10px] text-red-600">Tarde</th>
-                                        <th class="px-4 py-3 text-right">H.Eq</th>
-                                        <th class="px-4 py-3 text-center">Extras</th>
-                                        <th class="px-4 py-3 text-right">Bruto</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="daily-detail-tbody" class="divide-y divide-slate-100"></tbody>
-                            </table>
-                        </div>
+                        <div class="overflow-x-auto max-h-[500px]"><table class="w-full text-sm text-left"><thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky-header"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Turno</th><th class="px-4 py-3 text-center text-[10px]">Feriado</th><th class="px-4 py-3 text-center text-[10px] text-red-600">Tarde</th><th class="px-4 py-3 text-right">H.Eq</th><th class="px-4 py-3 text-center">Extras</th><th class="px-4 py-3 text-right">Bruto</th></tr></thead><tbody id="daily-detail-tbody" class="divide-y divide-slate-100"></tbody></table></div>
                     </div>
                 </div>
             </div>
 
             <div id="treasury-view" class="view-section hidden max-w-5xl mx-auto">
-                <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center">
-                    <i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería
-                </h2>
-                <div class="mb-6 bg-slate-100 p-3 rounded-xl">
-                    <div id="treasury-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll"></div>
-                </div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería</h2>
+                <div class="mb-6 bg-slate-100 p-3 rounded-xl"><div id="treasury-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll"></div></div>
                 <div id="treasury-container" class="space-y-8 animate-fade-in"></div>
             </div>
 
             <div id="ranking-view" class="view-section hidden max-w-4xl mx-auto">
-                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center">
-                    <i class="fa-solid fa-trophy text-yellow-500 mr-3"></i> Ranking de Ganancias
-                </h2>
+                <h2 class="text-2xl font-bold text-slate-800 mb-6 flex items-center"><i class="fa-solid fa-trophy text-yellow-500 mr-3"></i> Ranking de Ganancias</h2>
                 <div id="ranking-list" class="space-y-4"></div>
             </div>
 
@@ -269,26 +127,16 @@
                         <div class="col-span-1 md:col-span-2 border-b pb-6">
                             <h4 class="font-bold text-indigo-600 mb-4">Foto de Perfil</h4>
                             <div class="flex items-center space-x-4">
-                                <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden">
-                                    <img id="profile-pic-preview" src="" alt="Preview" class="w-full h-full object-cover hidden">
-                                    <i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i>
-                                </div>
-                                <div>
-                                    <input type="file" id="cfg-profilePicture" accept="image/*" class="hidden">
-                                    <button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md">
-                                        <i class="fa-solid fa-upload mr-2"></i> Cambiar Foto
-                                    </button>
-                                </div>
+                                <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden"><img id="profile-pic-preview" src="" class="w-full h-full object-cover hidden"><i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i></div>
+                                <div><input type="file" id="cfg-profilePicture" accept="image/*" class="hidden"><button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md"><i class="fa-solid fa-upload mr-2"></i> Cambiar Foto</button></div>
                             </div>
                         </div>
-
                         <div class="col-span-1 md:col-span-2"><label class="block text-sm font-bold text-slate-700 mb-1">Nombre</label><input type="text" id="cfg-userName" class="w-full p-3 border rounded-lg bg-slate-50"></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Hora ($)</label><input type="number" id="cfg-valorHora" class="w-full p-3 border rounded-lg" step="0.01"></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Afiliación</label><select id="cfg-discountRate" class="w-full p-3 border rounded-lg bg-white"><option value="0.18">No Afiliado (18%)</option><option value="0.21">Afiliado (21%)</option></select></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Viático ($)</label><input type="number" id="cfg-viaticoValue" class="w-full p-3 border rounded-lg"></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Presentismo ($)</label><input type="number" id="cfg-presentismoAmount" class="w-full p-3 border rounded-lg" placeholder="Ej. 50000"></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Título ($)</label><input type="number" id="cfg-tituloAmount" class="w-full p-3 border rounded-lg"></div>
-
                         <div class="col-span-1 md:col-span-2 border-t pt-4 mt-2">
                             <h4 class="font-bold text-indigo-600 mb-4">Rotación (6x2)</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -314,11 +162,7 @@
         let app, auth, db, storage, userId = null;
 
         let appState = {
-            config: { 
-                userName: 'Usuario', profilePicUrl: '', valorHora: 3758, discountRate: 0.18, 
-                tituloAmount: 0, viaticoValue: 6200, presentismoAmount: 0,
-                lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' 
-            },
+            config: { userName: 'Usuario', profilePicUrl: '', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, presentismoAmount: 0, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
             viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null },
@@ -326,8 +170,7 @@
         };
 
         window.onload = () => {
-            initFirebaseSystem();
-            setupUI();
+            initFirebaseSystem(); setupUI();
             const d = new Date();
             document.getElementById('header-current-date').textContent = `${d.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]}`;
             const fileInput = document.getElementById('cfg-profilePicture');
@@ -354,11 +197,16 @@
             if (viewId === 'config-view') fillConfigInputs();
         };
 
+        // --- CORE CALCULATION ENGINE ---
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
-            // FALLBACK: Si valorHora es 0 o null, usamos un default seguro para evitar errores de cálculo visuales
-            const safeHourlyRate = valorHora && valorHora > 0 ? valorHora : 0;
+            
+            // SAFETY: Never return null. Use 0 if undefined.
+            const safeValHora = Number(valorHora) || 0; 
+            const safeViat = Number(viaticoValue) || 0;
+            const safePres = Number(presentismoAmount) || 0;
+            const safeTitulo = Number(tituloAmount) || 0;
 
             const daysInMonth = new Date(year, month, 0).getDate();
             const dailyResults = [];
@@ -398,8 +246,8 @@
                 }
 
                 const eqTot = eqBase + (ext * 1.5);
-                const dBruto = eqTot * safeHourlyRate;
-                const dViat = ext > 0 ? viaticoValue : 0;
+                const dBruto = eqTot * safeValHora;
+                const dViat = ext > 0 ? safeViat : 0;
 
                 dailyResults.push({ date: dDisp, key: dKey, dayName: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][current.getDay()], turn: tLbl, isHoliday: isHol, isLate: isLate, equivBase: eqBase, extraReal: ext, totalEquiv: eqTot, bruto: dBruto, isFranco: cState === 'Franco' });
 
@@ -408,13 +256,13 @@
                 startOffset = (startOffset + 1) % 24;
             }
 
-            const pres = hasLateness ? 0 : Number(presentismoAmount || 0);
+            const pres = hasLateness ? 0 : safePres;
             const q1_n = q1_bruto - (q1_bruto * discountRate) + q1_viaticos;
-            const q2_n = q2_bruto - (q2_bruto * discountRate) + q2_viaticos + Number(tituloAmount) + pres;
+            const q2_n = q2_bruto - (q2_bruto * discountRate) + q2_viaticos + safeTitulo + pres;
 
             return { 
                 dailyResults, francosList, totalEquivHours: dailyResults.reduce((a,b)=>a+b.totalEquiv,0), 
-                totalViaticos: q1_viaticos + q2_viaticos, tituloAmount: Number(tituloAmount), presentismo: pres, hasLateness,
+                totalViaticos: q1_viaticos + q2_viaticos, tituloAmount: safeTitulo, presentismo: pres, hasLateness,
                 netoFinal: q1_n + q2_n, totalFeriadosAmt: q1_fer + q2_fer,
                 quincenas: { q1: { bruto: q1_bruto, neto: q1_n, viaticos: q1_viaticos, desc: q1_bruto * discountRate, feriados: q1_fer }, 
                              q2: { bruto: q2_bruto, neto: q2_n, viaticos: q2_viaticos, desc: q2_bruto * discountRate, feriados: q2_fer } } 
@@ -422,30 +270,29 @@
         }
 
         function getCalculationFor(m, y) {
+            // Use live config if editing current view, else use cached snapshot
             if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
                 return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
             }
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
-            if(cached) {
-                return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {}, cached.lateness || {}, cached.configSnapshot || null);
-            }
-            // FIXED: Return calculations even if no history exists (on-the-fly calculation)
-            return performCalculation(m, y, {}, {}, {}, {}, null);
+            return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, cached?.configSnapshot||null);
         }
 
+        // --- BUTTON LOGIC FIXES ---
+        
+        // 1. DELETE
         document.getElementById('btn-delete-month').onclick = async () => {
-            if(!confirm("¿Seguro que quieres eliminar este mes y todos sus datos?")) return;
+            if(!confirm("¿Borrar este mes?")) return;
             const { month, year } = appState.viewingMonth;
             const docId = `${year}-${String(month).padStart(2, '0')}`;
             try {
                 if(userId) await deleteDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId));
                 delete appState.historicalCache[docId];
-                
+                // Go to latest available or current
                 const keys = Object.keys(appState.historicalCache).sort();
                 if (keys.length > 0) {
-                    const lastKey = keys[keys.length - 1];
-                    const [ly, lm] = lastKey.split('-');
+                    const [ly, lm] = keys[keys.length - 1].split('-');
                     switchDashboardMonth(parseInt(lm), parseInt(ly));
                 } else {
                     const now = new Date();
@@ -453,10 +300,38 @@
                     appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
                     renderDashboard();
                 }
-                showMessage('Mes eliminado.', 'success');
-            } catch(e) { console.error(e); showMessage('Error al eliminar.', 'error'); }
+                showMessage('Eliminado.', 'success');
+            } catch(e) { console.error(e); showMessage('Error.', 'error'); }
         };
 
+        // 2. GENERATE NEXT MONTH (LOGIC REWRITE)
+        document.getElementById('btn-generate-new').onclick = () => { 
+            const keys = Object.keys(appState.historicalCache).sort();
+            let m, y;
+            if(keys.length > 0) {
+                const [ly, lm] = keys[keys.length-1].split('-'); // Get LAST generated month
+                m = parseInt(lm) + 1; 
+                y = parseInt(ly);
+                if(m > 12) { m = 1; y++; }
+            } else {
+                // No history? Start from CURRENT month
+                const now = new Date();
+                m = now.getMonth() + 1; 
+                y = now.getFullYear();
+            }
+            generateMonth(m, y); 
+        };
+
+        async function generateMonth(m, y) {
+            appState.viewingMonth = { month: m, year: y };
+            appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
+            triggerLocalRecalculate(); 
+            await saveCurrentData(); // Wait for save
+            if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
+            showMessage(`Mes ${m}/${y} creado.`);
+        }
+
+        // --- UI UPDATES ---
         function updateProfilePictureUI(url) {
             const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
             els.forEach(id => {
@@ -483,32 +358,29 @@
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
-            // FORCE CALCULATION FOR CURRENT MONTH (Even if not saved)
+            // SAFETY: FORCE CALCULATION TO REMOVE "CALCULANDO..."
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             updateProfilePictureUI(appState.config.profilePicUrl);
 
-            if (calc) {
-                // FIXED: Override any "Calculando..." text immediately with results
-                document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
-                const d = now.getDate();
-                const payDate = d <= 15 ? calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15) : calculatePaymentDate(now.getFullYear(), now.getMonth()+1, new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
-                document.getElementById('home-next-quincena').textContent = formatCurrency(d <= 15 ? calc.quincenas.q1.neto : calc.quincenas.q2.neto);
-                document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
-                
-                const fCont = document.getElementById('home-next-francos-container'); fCont.innerHTML = '';
-                const fList = calc.francosList.filter(f => f.dayNum >= d).slice(0, 5);
-                if(fList.length===0) fCont.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos.</p>';
-                else fList.forEach(f => {
-                    fCont.innerHTML += `<div class="flex-shrink-0 w-20 h-24 ${f.isHoliday?'bg-red-100 border-red-200':'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3"><span class="text-xs uppercase font-bold ${f.isHoliday?'text-red-500':'text-indigo-400'}">${f.dayName}</span><span class="text-3xl font-bold ${f.isHoliday?'text-red-700':'text-slate-700'}">${f.dayNum}</span></div>`;
-                });
-            }
+            // ALWAYS UPDATE VALUES, EVEN IF 0
+            document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
+            const d = now.getDate();
+            const payDate = d <= 15 ? calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15) : calculatePaymentDate(now.getFullYear(), now.getMonth()+1, new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
+            document.getElementById('home-next-quincena').textContent = formatCurrency(d <= 15 ? calc.quincenas.q1.neto : calc.quincenas.q2.neto);
+            document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
+            
+            const fCont = document.getElementById('home-next-francos-container'); fCont.innerHTML = '';
+            const fList = calc.francosList.filter(f => f.dayNum >= d).slice(0, 5);
+            if(fList.length===0) fCont.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos.</p>';
+            else fList.forEach(f => {
+                fCont.innerHTML += `<div class="flex-shrink-0 w-20 h-24 ${f.isHoliday?'bg-red-100 border-red-200':'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3"><span class="text-xs uppercase font-bold ${f.isHoliday?'text-red-500':'text-indigo-400'}">${f.dayName}</span><span class="text-3xl font-bold ${f.isHoliday?'text-red-700':'text-slate-700'}">${f.dayNum}</span></div>`;
+            });
         }
 
         function renderDashboard() {
             const chipCont = document.getElementById('months-chips-container'); chipCont.innerHTML = '';
             const keys = Object.keys(appState.historicalCache).sort().reverse();
-            // Allow generating current month even if history is empty
             if (keys.length === 0) { 
                 const btn = document.createElement('button'); btn.className = "px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold border border-indigo-200"; btn.textContent = "Generar Mes Actual"; 
                 btn.onclick = () => generateMonth(new Date().getMonth()+1, new Date().getFullYear()); chipCont.appendChild(btn); 
@@ -581,11 +453,6 @@
             });
         }
 
-        window.updateExtra = (d, v) => { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
-        window.updateHoliday = (d, c) => { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
-        window.updateLateness = (d, c) => { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); };
-        window.updateTurnOverride = (k, v) => { if(v==='Original') delete appState.activeData.shiftOverrides[k]; else appState.activeData.shiftOverrides[k]=v; triggerLocalRecalculate(); };
-        
         function triggerLocalRecalculate() {
             const {month, year} = appState.viewingMonth;
             appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
@@ -601,24 +468,6 @@
                 appState.activeData.calculation = performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, cached.configSnapshot || null);
             }
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
-        }
-
-        // FIX: GENERATE NEXT MONTH LOGIC
-        async function generateMonth(m, y) {
-            const keys = Object.keys(appState.historicalCache).sort();
-            if(keys.length > 0) {
-                // If history exists, find last month and add 1
-                const [ly, lm] = keys[keys.length-1].split('-');
-                m = parseInt(lm) + 1; y = parseInt(ly);
-                if(m>12) { m=1; y++; }
-            }
-            // Else: Use default params (current month) which is handled by the button click call
-            
-            appState.viewingMonth = { month: m, year: y };
-            appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
-            triggerLocalRecalculate(); saveCurrentData();
-            if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
-            showMessage(`Mes de ${m}/${y} generado.`);
         }
 
         async function saveCurrentData() {
@@ -647,15 +496,13 @@
                 if (u) { 
                     userId = u.uid; 
                     document.getElementById('user-info-email').textContent = u.email; 
-                    
-                    // FIX: Force Name Update immediately on Sidebar
-                    if(u.displayName) {
-                        appState.config.userName = u.displayName;
-                        document.getElementById('user-info-name').textContent = u.displayName;
-                    }
-
                     document.getElementById('auth-action-btn').innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir'; 
                     document.getElementById('auth-action-btn').onclick = () => signOut(auth); 
+                    // FORCE NAME OVERWRITE
+                    if(u.displayName) { 
+                        appState.config.userName = u.displayName; 
+                        document.getElementById('user-info-name').textContent = u.displayName; 
+                    }
                     loadUserData(); 
                 }
                 else { userId = null; document.getElementById('user-info-name').textContent = 'Invitado'; document.getElementById('auth-action-btn').innerHTML = '<i class="fa-brands fa-google mr-2"></i> Acceder'; document.getElementById('auth-action-btn').onclick = () => signInWithPopup(auth, new GoogleAuthProvider()); updateProfilePictureUI(''); triggerLocalRecalculate(); renderHome(); }
@@ -667,10 +514,8 @@
                 if(s.exists()) { 
                     const data = s.data();
                     appState.config = { ...appState.config, ...data };
-                    // Preserve Google Name if Firestore has "Usuario"
-                    if(auth.currentUser && auth.currentUser.displayName && (!data.userName || data.userName === 'Usuario')) {
-                        appState.config.userName = auth.currentUser.displayName;
-                    }
+                    // Preserve Google Name if already set
+                    if(auth.currentUser && auth.currentUser.displayName) appState.config.userName = auth.currentUser.displayName;
                     renderHome(); 
                     updateProfilePictureUI(appState.config.profilePicUrl); 
                     document.getElementById('user-info-name').textContent = appState.config.userName; 
@@ -694,6 +539,22 @@
             const dd = calc.dailyResults.map(d => [d.date, d.turn, d.isHoliday?'Sí':'', d.isLate?'TARDE':'', formatNumber(d.equivBase), d.extraReal>0?d.extraReal:'-', formatCurrency(d.bruto)]);
             doc.autoTable({ startY: 25, head: [['FECHA', 'TURNO', 'FERIADO', 'TARDE', 'BASE', 'EXTRAS', 'BRUTO']], body: dd, theme: 'striped', headStyles: { fillColor: [79, 70, 229] } });
             doc.save(`Nomina_${ml}.pdf`);
+        };
+        
+        // SAVE CONFIG HANDLER (Ensure name persistence)
+        document.querySelector('#config-view button').onclick = async () => {
+            appState.config.userName = document.getElementById('cfg-userName').value;
+            appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
+            appState.config.discountRate = parseFloat(document.getElementById('cfg-discountRate').value);
+            appState.config.tituloAmount = parseFloat(document.getElementById('cfg-tituloAmount').value);
+            appState.config.viaticoValue = parseFloat(document.getElementById('cfg-viaticoValue').value);
+            appState.config.presentismoAmount = parseFloat(document.getElementById('cfg-presentismoAmount').value);
+            appState.config.lastFrancoDate = document.getElementById('cfg-lastFrancoDate').value;
+            appState.config.initialTurn = document.getElementById('cfg-initialTurn').value;
+            const configToSave = { ...appState.config };
+            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), configToSave);
+            showMessage('Configuración guardada.', 'success'); renderHome();
+            document.getElementById('user-info-name').textContent = appState.config.userName;
         };
     </script>
 </body>
