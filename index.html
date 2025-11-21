@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Calculadora Salarial 6x2 Pro Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -18,7 +18,7 @@
         .transition-all-300 { transition: all 0.3s ease-in-out; }
         .sticky-header th { position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; }
         
-        /* Sidebar */
+        /* Sidebar Animations */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
@@ -31,6 +31,30 @@
             background-repeat: no-repeat;
             background-size: 1.5em 1.5em;
         }
+
+        /* ANIMACIÓN FOTO DE PERFIL (Borde Giratorio) */
+        @keyframes spin-border {
+            0% { --angle: 0deg; }
+            100% { --angle: 360deg; }
+        }
+        
+        .profile-animated-wrapper {
+            position: relative;
+            padding: 3px; /* Grosor del borde */
+            border-radius: 50%;
+            background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c);
+            animation: spin 4s linear infinite;
+            display: inline-block;
+        }
+        
+        @property --angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @keyframes spin {
+            to { --angle: 360deg; }
+        }
     </style>
 </head>
 <body class="text-slate-800 bg-slate-50 h-screen flex overflow-hidden">
@@ -41,7 +65,7 @@
                 <h1 class="text-xl font-bold text-indigo-400 tracking-wide">6x2 PRO</h1>
                 <p class="text-xs text-slate-400">Gestión Salarial</p>
             </div>
-            <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white">
+            <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white p-2">
                 <i class="fa-solid fa-times text-xl"></i>
             </button>
         </div>
@@ -101,8 +125,8 @@
 
     <main class="flex-1 flex flex-col h-full relative overflow-hidden">
         
-        <header class="bg-white shadow-sm p-4 flex justify-between items-center md:hidden z-40">
-            <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center md:hidden z-40 relative">
+            <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2">
                 <i class="fa-solid fa-bars text-2xl"></i>
             </button>
             <h2 class="text-lg font-bold text-indigo-700">Calculadora 6x2</h2>
@@ -115,13 +139,21 @@
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h1 class="text-3xl font-extrabold text-slate-800">
-                            Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
-                        </h1>
-                        <p class="text-slate-500 mt-1">Resumen de tu actividad.</p>
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center space-x-4">
+                        <div class="profile-animated-wrapper hidden" id="home-profile-wrapper">
+                            <div class="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-white">
+                                <img id="home-profile-pic" src="" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
+                                Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
+                            </h1>
+                            <p class="text-sm md:text-base text-slate-500 mt-1">Resumen de actividad.</p>
+                        </div>
                     </div>
+                    
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
                         <p id="header-current-date" class="text-xl font-bold text-slate-700">...</p>
@@ -198,7 +230,8 @@
                                         <th class="px-4 py-3">Fecha</th>
                                         <th class="px-4 py-3">Turno</th>
                                         <th class="px-4 py-3 text-center text-[10px]">Feriado</th>
-                                        <th class="px-4 py-3 text-center text-[10px] text-red-600">Tarde/Aus</th> <th class="px-4 py-3 text-right">H.Eq</th>
+                                        <th class="px-4 py-3 text-center text-[10px] text-red-600">Tarde/Aus</th>
+                                        <th class="px-4 py-3 text-right">H.Eq</th>
                                         <th class="px-4 py-3 text-center">Extras</th>
                                         <th class="px-4 py-3 text-right">Bruto</th>
                                     </tr>
@@ -303,13 +336,13 @@
                 discountRate: 0.18, 
                 tituloAmount: 0, 
                 viaticoValue: 6200,
-                presentismoAmount: 0, // NUEVO
+                presentismoAmount: 0,
                 lastFrancoDate: new Date().toISOString().split('T')[0], 
                 initialTurn: 'Mañana' 
             },
             viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
-            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null }, // Added lateness
+            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null },
             historicalCache: {}
         };
 
@@ -489,7 +522,7 @@
             return { 
                 dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, 
                 tituloAmount: Number(tituloAmount), 
-                presentismo: finalPresentismo, // Resultado calculado
+                presentismo: finalPresentismo, 
                 hasLateness: hasLateness,
                 netoFinal, 
                 daysWithExtras: q1_extras + q2_extras, 
@@ -513,10 +546,25 @@
 
         // GOOGLE AUTH & PROFILE
         function updateProfilePictureUI(url) {
-            const picElements = [document.getElementById('profile-pic-sidebar'), document.getElementById('profile-pic-preview')];
-            const iconElements = [document.getElementById('profile-icon-sidebar'), document.getElementById('profile-icon-preview')];
-            picElements.forEach(el => { if(url) { el.src = url; el.classList.remove('hidden'); } else { el.classList.add('hidden'); } });
-            iconElements.forEach(el => { if(url) el.classList.add('hidden'); else el.classList.remove('hidden'); });
+            const sidebarPic = document.getElementById('profile-pic-sidebar');
+            const sidebarIcon = document.getElementById('profile-icon-sidebar');
+            const configPic = document.getElementById('profile-pic-preview');
+            const configIcon = document.getElementById('profile-icon-preview');
+            const homeWrapper = document.getElementById('home-profile-wrapper');
+            const homePic = document.getElementById('home-profile-pic');
+
+            if (url) {
+                // Sidebar
+                sidebarPic.src = url; sidebarPic.classList.remove('hidden'); sidebarIcon.classList.add('hidden');
+                // Config
+                configPic.src = url; configPic.classList.remove('hidden'); configIcon.classList.add('hidden');
+                // Home (Animated)
+                homePic.src = url; homeWrapper.classList.remove('hidden');
+            } else {
+                sidebarPic.classList.add('hidden'); sidebarIcon.classList.remove('hidden');
+                configPic.classList.add('hidden'); configIcon.classList.remove('hidden');
+                homeWrapper.classList.add('hidden');
+            }
         }
 
         async function uploadProfilePicture(file) {
@@ -541,6 +589,7 @@
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
+            updateProfilePictureUI(appState.config.profilePicUrl); // Ensure home pic is updated
 
             if (calc) {
                 document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
@@ -604,7 +653,6 @@
                 document.getElementById('dash-equiv-hours').textContent = formatNumber(calc.totalEquivHours);
                 document.getElementById('dash-viaticos-total').textContent = formatCurrency(calc.totalViaticos);
                 
-                // PRESENTISMO
                 const presEl = document.getElementById('dash-presentismo-total');
                 presEl.textContent = formatCurrency(calc.presentismo);
                 if(calc.hasLateness) { presEl.classList.remove('text-blue-600'); presEl.classList.add('text-red-500', 'line-through', 'decoration-2'); }
@@ -637,9 +685,7 @@
                         <td class="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">${d.date.split('/')[0]} <span class="text-xs text-slate-400 uppercase ml-1">${d.dayName.substring(0,3)}</span></td>
                         <td class="px-4 py-3"><select class="table-select bg-transparent border-none text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'} focus:ring-0 cursor-pointer" onchange="window.updateTurnOverride('${d.key}', this.value)">${buildOptions(selectVal)}</select><div class="text-[10px] text-slate-400">${d.turn}</div></td>
                         <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-red-600 rounded focus:ring-red-500" ${d.isHoliday ? 'checked' : ''} onchange="window.updateHoliday('${d.date}', this.checked)"></td>
-                        
                         <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-orange-500 rounded focus:ring-orange-500" ${d.isLate ? 'checked' : ''} onchange="window.updateLateness('${d.date}', this.checked)"></td>
-
                         <td class="px-4 py-3 text-right text-slate-500">${formatNumber(d.equivBase)}</td>
                         <td class="px-4 py-3 text-center"><input type="number" value="${d.extraReal || ''}" class="w-16 text-center border rounded py-1 text-xs" placeholder="-" step="0.5" min="0" onchange="window.updateExtra('${d.date}', this.value)"></td>
                         <td class="px-4 py-3 text-right text-xs text-slate-500">${formatCurrency(d.bruto)}</td>
@@ -762,15 +808,34 @@
             const now = new Date(); if (m === now.getMonth()+1 && y === now.getFullYear()) renderHome();
         }
 
+        // FIX DE GENERACION DE MES
         async function generateMonth(m, y) {
-            if(m > 12) { m=1; y++; }
+            // Usar lógica de mes siguiente basada en historial si existe, sino usar m, y
+            const keys = Object.keys(appState.historicalCache).sort();
+            if(keys.length > 0) {
+                const lastKey = keys[keys.length-1];
+                const [yStr, mStr] = lastKey.split('-');
+                let nextM = parseInt(mStr) + 1;
+                let nextY = parseInt(yStr);
+                if(nextM > 12) { nextM = 1; nextY++; }
+                m = nextM;
+                y = nextY;
+            }
+            // Si no hay historial, usa el mes proporcionado por el botón (mes actual)
+
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
             triggerLocalRecalculate();
             saveCurrentData();
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
-            showMessage(`Mes generado.`);
+            showMessage(`Mes de ${m}/${y} generado.`);
         }
+
+        document.getElementById('btn-generate-new').onclick = () => { 
+            // Por defecto intenta generar el mes actual si no hay historial
+            const now = new Date();
+            generateMonth(now.getMonth()+1, now.getFullYear()); 
+        };
 
         document.getElementById('btn-recalculate').onclick = () => { triggerLocalRecalculate(); saveCurrentData(); showMessage('Guardado.'); };
         window.saveConfig = async () => {
@@ -808,12 +873,9 @@
                 if (user) {
                     userId = user.uid; isFirebaseActive = true;
                     document.getElementById('user-info-email').textContent = user.email;
-                    
-                    // GOOGLE NAME SYNC
                     if(user.displayName && (!appState.config.userName || appState.config.userName === 'Usuario')) {
                          appState.config.userName = user.displayName;
                     }
-                    
                     authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir';
                     authBtn.onclick = () => signOut(auth);
                     loadUserData();
@@ -856,7 +918,6 @@
         function formatCurrency(v) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v || 0); }
         function formatNumber(v) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(v || 0); }
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
-        document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+2; ty=d.getFullYear(); if(tm>12) { tm=1; ty++; } } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
 
         // PDF
         document.getElementById('btn-download-pdf').onclick = () => {
@@ -867,7 +928,6 @@
 
             const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'}).toUpperCase();
             
-            // HEADER
             doc.setFillColor(67, 56, 202); doc.rect(0, 0, 210, 40, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.setFont("helvetica", "bold"); doc.text(`LIQUIDACIÓN`, 15, 20);
             doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.text(`${monthLabel}`, 15, 30); doc.text(`Empleado: ${appState.config.userName}`, 195, 30, { align: 'right' });
@@ -875,7 +935,6 @@
             doc.setTextColor(60, 60, 60); doc.setFontSize(10);
             let y = 55; doc.text(`Valor Hora: ${formatCurrency(appState.config.valorHora)}`, 15, y);
             
-            // Resumen Financiero
             y += 10;
             const headers = [['CONCEPTO', '1ª QUINCENA', '2ª QUINCENA', 'TOTAL MES']];
             const data = [
@@ -888,7 +947,6 @@
 
             doc.autoTable({ startY: y, head: headers, body: data, theme: 'grid', headStyles: { fillColor: [50, 50, 50] }, columnStyles: { 3: { fontStyle: 'bold', fillColor: [240, 253, 244] } } });
 
-            // Detalle Diario
             doc.addPage();
             doc.setFontSize(14); doc.setTextColor(55, 65, 81); doc.text("Detalle Diario", 14, 20);
             
