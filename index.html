@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Calculadora Salarial 6x2 Pro Final</title>
+    <title>Calculadora Salarial 6x2 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -31,10 +31,10 @@
             background-size: 1.5em 1.5em;
         }
 
-        /* Evita zoom en iOS al tocar inputs */
+        /* Fix para inputs en iOS */
         input, select, textarea { font-size: 16px !important; }
 
-        /* ANIMACIÓN FOTO DE PERFIL (Borde Giratorio) */
+        /* ANIMACIÓN FOTO DE PERFIL */
         @keyframes spin-border {
             0% { --angle: 0deg; }
             100% { --angle: 360deg; }
@@ -42,7 +42,7 @@
         
         .profile-animated-wrapper {
             position: relative;
-            padding: 2px; /* Grosor del borde */
+            padding: 2px;
             border-radius: 50%;
             background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c);
             animation: spin 4s linear infinite;
@@ -143,13 +143,21 @@
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
-                            Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
-                        </h1>
-                        <p class="text-sm md:text-base text-slate-500 mt-1">Tu estado al día de hoy.</p>
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex items-center space-x-4">
+                        <div class="profile-animated-wrapper hidden" id="home-profile-wrapper">
+                            <div class="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-white">
+                                <img id="home-profile-pic" src="" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
+                                Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
+                            </h1>
+                            <p class="text-sm md:text-base text-slate-500 mt-1">Tu estado al día de hoy.</p>
+                        </div>
                     </div>
+                    
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
                         <p id="header-current-date" class="text-xl font-bold text-slate-700">...</p>
@@ -157,8 +165,8 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50"></div>
                         <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3>
                         <div class="flex items-baseline">
                             <span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span>
@@ -166,8 +174,8 @@
                         <p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">Calculando...</p>
                     </div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden group hover:shadow-xl transition-all-300">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50"></div>
                         <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3>
                         <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p>
                         <div class="flex items-baseline">
@@ -347,10 +355,10 @@
         };
 
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
-            // FREEZE LOGIC: USE SNAPSHOT IF EXISTS
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
-            if(!valorHora) return null;
+            // FALLBACK: Si valorHora es 0 o null, usamos un default seguro para evitar errores de cálculo visuales
+            const safeHourlyRate = valorHora && valorHora > 0 ? valorHora : 0;
 
             const daysInMonth = new Date(year, month, 0).getDate();
             const dailyResults = [];
@@ -390,7 +398,7 @@
                 }
 
                 const eqTot = eqBase + (ext * 1.5);
-                const dBruto = eqTot * valorHora;
+                const dBruto = eqTot * safeHourlyRate;
                 const dViat = ext > 0 ? viaticoValue : 0;
 
                 dailyResults.push({ date: dDisp, key: dKey, dayName: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][current.getDay()], turn: tLbl, isHoliday: isHol, isLate: isLate, equivBase: eqBase, extraReal: ext, totalEquiv: eqTot, bruto: dBruto, isFranco: cState === 'Franco' });
@@ -420,13 +428,12 @@
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
             if(cached) {
-                // USE CACHED CONFIG IF AVAILABLE (FREEZE)
                 return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {}, cached.lateness || {}, cached.configSnapshot || null);
             }
-            else return performCalculation(m, y, {}, {}, {}, {}, null);
+            // FIXED: Return calculations even if no history exists (on-the-fly calculation)
+            return performCalculation(m, y, {}, {}, {}, {}, null);
         }
 
-        // DELETE MONTH FIX
         document.getElementById('btn-delete-month').onclick = async () => {
             if(!confirm("¿Seguro que quieres eliminar este mes y todos sus datos?")) return;
             const { month, year } = appState.viewingMonth;
@@ -435,7 +442,6 @@
                 if(userId) await deleteDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId));
                 delete appState.historicalCache[docId];
                 
-                // FIND NEW TARGET MONTH
                 const keys = Object.keys(appState.historicalCache).sort();
                 if (keys.length > 0) {
                     const lastKey = keys[keys.length - 1];
@@ -451,26 +457,14 @@
             } catch(e) { console.error(e); showMessage('Error al eliminar.', 'error'); }
         };
 
-        // PROFILE UI
         function updateProfilePictureUI(url) {
-            const headerPic = document.getElementById('header-profile-pic');
-            const headerWrapper = document.getElementById('header-profile-wrapper');
-            const headerIcon = document.getElementById('header-profile-icon');
-            
-            const sidebarPic = document.getElementById('profile-pic-sidebar');
-            const configPic = document.getElementById('profile-pic-preview');
-            
-            if (url) {
-                // HEADER
-                headerPic.src = url; headerWrapper.classList.remove('hidden'); headerIcon.classList.add('hidden');
-                // SIDEBAR & CONFIG
-                sidebarPic.src = url; sidebarPic.classList.remove('hidden'); 
-                configPic.src = url; configPic.classList.remove('hidden'); 
-            } else {
-                headerWrapper.classList.add('hidden'); headerIcon.classList.remove('hidden');
-                sidebarPic.classList.add('hidden');
-                configPic.classList.add('hidden');
-            }
+            const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
+            els.forEach(id => {
+                const el = document.getElementById(id);
+                if(url) { el.src = url; el.classList.remove('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.add('hidden'); }
+                else { el.src = ''; el.classList.add('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.remove('hidden'); }
+            });
+            document.getElementById('home-profile-wrapper').classList.toggle('hidden', !url);
         }
 
         async function uploadProfilePicture(file) {
@@ -489,11 +483,13 @@
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
+            // FORCE CALCULATION FOR CURRENT MONTH (Even if not saved)
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             updateProfilePictureUI(appState.config.profilePicUrl);
 
             if (calc) {
+                // FIXED: Override any "Calculando..." text immediately with results
                 document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
                 const d = now.getDate();
                 const payDate = d <= 15 ? calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15) : calculatePaymentDate(now.getFullYear(), now.getMonth()+1, new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
@@ -512,10 +508,12 @@
         function renderDashboard() {
             const chipCont = document.getElementById('months-chips-container'); chipCont.innerHTML = '';
             const keys = Object.keys(appState.historicalCache).sort().reverse();
+            // Allow generating current month even if history is empty
             if (keys.length === 0) { 
                 const btn = document.createElement('button'); btn.className = "px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold border border-indigo-200"; btn.textContent = "Generar Mes Actual"; 
-                btn.onclick = () => generateMonth(new Date().getMonth()+1, new Date().getFullYear()); chipCont.appendChild(btn); document.getElementById('dashboard-content').classList.add('hidden'); return; 
+                btn.onclick = () => generateMonth(new Date().getMonth()+1, new Date().getFullYear()); chipCont.appendChild(btn); 
             }
+            
             document.getElementById('dashboard-content').classList.remove('hidden');
             keys.forEach(key => {
                 const [y, m] = key.split('-');
@@ -605,13 +603,17 @@
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
         }
 
+        // FIX: GENERATE NEXT MONTH LOGIC
         async function generateMonth(m, y) {
             const keys = Object.keys(appState.historicalCache).sort();
             if(keys.length > 0) {
+                // If history exists, find last month and add 1
                 const [ly, lm] = keys[keys.length-1].split('-');
                 m = parseInt(lm) + 1; y = parseInt(ly);
                 if(m>12) { m=1; y++; }
             }
+            // Else: Use default params (current month) which is handled by the button click call
+            
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
             triggerLocalRecalculate(); saveCurrentData();
@@ -638,16 +640,42 @@
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         function calculatePaymentDate(y, m, d) { const b = new Date(y, m-1, d); let p = new Date(b), c = 0; while(c<4) { p.setDate(p.getDate()+1); if(p.getDay()!==0 && p.getDay()!==6) c++; } return p; }
 
+        // INIT & AUTH
         async function initFirebaseSystem() {
             app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
             onAuthStateChanged(auth, (u) => {
-                if (u) { userId = u.uid; document.getElementById('user-info-email').textContent = u.email; if(u.displayName && !appState.config.userName) appState.config.userName = u.displayName; document.getElementById('auth-action-btn').innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir'; document.getElementById('auth-action-btn').onclick = () => signOut(auth); loadUserData(); }
+                if (u) { 
+                    userId = u.uid; 
+                    document.getElementById('user-info-email').textContent = u.email; 
+                    
+                    // FIX: Force Name Update immediately on Sidebar
+                    if(u.displayName) {
+                        appState.config.userName = u.displayName;
+                        document.getElementById('user-info-name').textContent = u.displayName;
+                    }
+
+                    document.getElementById('auth-action-btn').innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir'; 
+                    document.getElementById('auth-action-btn').onclick = () => signOut(auth); 
+                    loadUserData(); 
+                }
                 else { userId = null; document.getElementById('user-info-name').textContent = 'Invitado'; document.getElementById('auth-action-btn').innerHTML = '<i class="fa-brands fa-google mr-2"></i> Acceder'; document.getElementById('auth-action-btn').onclick = () => signInWithPopup(auth, new GoogleAuthProvider()); updateProfilePictureUI(''); triggerLocalRecalculate(); renderHome(); }
             });
         }
 
         async function loadUserData() {
-            onSnapshot(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), (s) => { if(s.exists()) { appState.config = { ...appState.config, ...s.data() }; renderHome(); updateProfilePictureUI(appState.config.profilePicUrl); document.getElementById('user-info-name').textContent = appState.config.userName; } });
+            onSnapshot(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), (s) => { 
+                if(s.exists()) { 
+                    const data = s.data();
+                    appState.config = { ...appState.config, ...data };
+                    // Preserve Google Name if Firestore has "Usuario"
+                    if(auth.currentUser && auth.currentUser.displayName && (!data.userName || data.userName === 'Usuario')) {
+                        appState.config.userName = auth.currentUser.displayName;
+                    }
+                    renderHome(); 
+                    updateProfilePictureUI(appState.config.profilePicUrl); 
+                    document.getElementById('user-info-name').textContent = appState.config.userName; 
+                } 
+            });
             const snap = await getDocs(collection(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data'));
             appState.historicalCache = {}; snap.forEach(d => appState.historicalCache[d.id] = d.data());
             const k = Object.keys(appState.historicalCache).sort().reverse();
