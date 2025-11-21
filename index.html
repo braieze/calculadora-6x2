@@ -202,12 +202,9 @@
             if (viewId === 'config-view') fillConfigInputs();
         };
 
-        // --- CORE CALCULATION ENGINE ---
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
-            
-            // SAFETY: Ensure values are numbers. If valorHora is 0, calculate anyway (returns 0 money, but dates work)
             const safeValHora = Number(valorHora) || 0; 
             const safeViat = Number(viaticoValue) || 0;
             const safePres = Number(presentismoAmount) || 0;
@@ -219,13 +216,14 @@
             const masterCycle = ['Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'];
             let baseOffset = (initialTurn === 'Noche') ? 8 : (initialTurn === 'Tarde' ? 16 : 0);
             
-            // Date parsing safety
+            // FIX: Better date parsing for lastFrancoDate
             let lastFrancoMs = new Date().getTime();
             if (lastFrancoDate) {
-                const lfParts = lastFrancoDate.split('-');
-                lastFrancoMs = new Date(lfParts[0], lfParts[1]-1, lfParts[2]).getTime();
-                // Adjust for Day 2 of Franco to start cycle next day
-                lastFrancoMs += 86400000; 
+                const parts = lastFrancoDate.split('-');
+                // Create date object treating input as local time YYYY, MM-1, DD
+                const localLF = new Date(parts[0], parts[1] - 1, parts[2]);
+                lastFrancoMs = localLF.getTime();
+                lastFrancoMs += 86400000; // +1 day
             }
             
             const diffDays = Math.floor((new Date(year, month - 1, 1).getTime() - lastFrancoMs) / 86400000);
@@ -285,13 +283,11 @@
         }
 
         function getCalculationFor(m, y) {
-            // Always return a valid calculation object, never null
             if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
                 return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
             }
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
-            // If cached exists use it, otherwise calculate fresh (config might be empty but it handles it now)
             return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, cached?.configSnapshot||appState.config);
         }
 
@@ -316,7 +312,6 @@
             } catch(e) { console.error(e); showMessage('Error.', 'error'); }
         };
 
-        // 2. GENERATE NEXT MONTH (CRITICAL FIX)
         document.getElementById('btn-generate-new').onclick = async () => { 
             const keys = Object.keys(appState.historicalCache).sort();
             let m, y;
@@ -336,21 +331,35 @@
         async function generateMonth(m, y) {
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
-            // Ensure calculation happens before saving
+            // CRITICAL FIX: Force UI Update immediately, don't wait for save
             triggerLocalRecalculate(); 
+            // Save in background
             await saveCurrentData(); 
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
             showMessage(`Mes ${m}/${y} generado.`);
         }
 
+        // CRASH PROOF PROFILE PICTURE UI
         function updateProfilePictureUI(url) {
             const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
+            const icons = ['profile-icon-sidebar', 'profile-icon-preview', 'header-profile-icon'];
+            
             els.forEach(id => {
                 const el = document.getElementById(id);
-                if(url) { el.src = url; el.classList.remove('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.add('hidden'); }
-                else { el.src = ''; el.classList.add('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.remove('hidden'); }
+                if(el) { // NULL CHECK ADDED
+                    if(url) { el.src = url; el.classList.remove('hidden'); }
+                    else { el.src = ''; el.classList.add('hidden'); }
+                }
             });
-            document.getElementById('home-profile-wrapper').classList.toggle('hidden', !url);
+            // Wrappers / Icons visibility toggling
+            const hw = document.getElementById('home-profile-wrapper');
+            if(hw) hw.classList.toggle('hidden', !url);
+            
+            const headerWrapper = document.getElementById('header-profile-wrapper');
+            if(headerWrapper) headerWrapper.classList.toggle('hidden', !url);
+            
+            const headerIcon = document.getElementById('header-profile-icon');
+            if(headerIcon) headerIcon.classList.toggle('hidden', !!url);
         }
 
         async function uploadProfilePicture(file) {
@@ -373,7 +382,6 @@
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             updateProfilePictureUI(appState.config.profilePicUrl);
 
-            // Immediate rendering of whatever calculation returned (even if 0)
             if (calc) {
                 document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
                 const d = now.getDate();
@@ -465,11 +473,6 @@
             });
         }
 
-        window.updateExtra = (d, v) => { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
-        window.updateHoliday = (d, c) => { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
-        window.updateLateness = (d, c) => { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); };
-        window.updateTurnOverride = (k, v) => { if(v==='Original') delete appState.activeData.shiftOverrides[k]; else appState.activeData.shiftOverrides[k]=v; triggerLocalRecalculate(); };
-        
         function triggerLocalRecalculate() {
             const {month, year} = appState.viewingMonth;
             appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
@@ -487,7 +490,7 @@
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
         }
 
-        // CRITICAL FIX: Explicitly insert into cache BEFORE render
+        // UPDATE: ADDED EXPLICIT CACHE UPDATE BEFORE DB SAVE
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
@@ -498,7 +501,8 @@
                 results: appState.activeData.calculation,
                 configSnapshot: { ...appState.config }
             };
-            // UPDATE CACHE IMMEDIATELY TO REFLECT IN UI
+            
+            // INSTANT UI UPDATE
             appState.historicalCache[docId] = data;
             renderDashboard(); 
             
@@ -510,7 +514,6 @@
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         function calculatePaymentDate(y, m, d) { const b = new Date(y, m-1, d); let p = new Date(b), c = 0; while(c<4) { p.setDate(p.getDate()+1); if(p.getDay()!==0 && p.getDay()!==6) c++; } return p; }
 
-        // INIT & AUTH
         async function initFirebaseSystem() {
             app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
             onAuthStateChanged(auth, (u) => {
@@ -519,7 +522,6 @@
                     document.getElementById('user-info-email').textContent = u.email; 
                     document.getElementById('auth-action-btn').innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir'; 
                     document.getElementById('auth-action-btn').onclick = () => signOut(auth); 
-                    // FORCE NAME OVERWRITE from Google
                     if(u.displayName) { 
                         appState.config.userName = u.displayName; 
                         document.getElementById('user-info-name').textContent = u.displayName; 
@@ -561,7 +563,6 @@
             doc.save(`Nomina_${ml}.pdf`);
         };
         
-        // SAVE CONFIG HANDLER
         document.querySelector('#config-view button').onclick = async () => {
             appState.config.userName = document.getElementById('cfg-userName').value;
             appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
