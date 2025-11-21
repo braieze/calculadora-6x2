@@ -11,22 +11,51 @@
     
     <style>
         @import url('https://fonts.fonts.google.com/specimen/Inter:wght@300;400;600;700;800');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overscroll-behavior-y: contain; }
+        
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .transition-all-300 { transition: all 0.3s ease-in-out; }
+        
+        /* Sidebar Animations */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
-        .table-select { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
+
+        /* Inputs integrados en tabla */
+        .table-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+
+        /* Fix inputs iOS */
         input, select, textarea { font-size: 16px !important; }
+
+        /* Animación Foto Perfil */
         @keyframes spin-border { 0% { --angle: 0deg; } 100% { --angle: 360deg; } }
-        .profile-animated-wrapper { position: relative; padding: 2px; border-radius: 50%; background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c); animation: spin 4s linear infinite; display: inline-block; }
+        .profile-animated-wrapper {
+            position: relative; padding: 2px; border-radius: 50%;
+            background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c);
+            animation: spin 4s linear infinite; display: inline-block;
+        }
         @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         @keyframes spin { to { --angle: 360deg; } }
+
+        /* Spinner de carga para Pull-to-Refresh */
+        #refresh-spinner { transition: transform 0.3s; transform: translateY(-100%); }
+        #refresh-spinner.visible { transform: translateY(20px); }
     </style>
 </head>
 <body class="text-slate-800 bg-slate-50 h-[100dvh] flex overflow-hidden">
+
+    <div id="refresh-spinner" class="fixed top-0 left-0 w-full flex justify-center z-[60] pointer-events-none">
+        <div class="bg-white p-2 rounded-full shadow-lg border border-slate-200">
+            <i class="fa-solid fa-arrows-rotate fa-spin text-indigo-600 text-xl"></i>
+        </div>
+    </div>
 
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white sidebar-closed md:relative md:translate-x-0 flex flex-col shadow-2xl">
         <div class="p-6 border-b border-slate-700 flex justify-between items-center">
@@ -35,23 +64,29 @@
         </div>
         <nav class="flex-1 overflow-y-auto py-4">
             <ul class="space-y-2 px-4">
-                <li><button onclick="navigateTo('home-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="home-view"><i class="fa-solid fa-house text-indigo-400 w-6"></i><span>Inicio</span></button></li>
-                <li><button onclick="navigateTo('monthly-history-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="monthly-history-view"><i class="fa-solid fa-calendar-days text-indigo-400 w-6"></i><span>Mi Gestión</span></button></li>
-                <li><button onclick="navigateTo('treasury-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="treasury-view"><i class="fa-solid fa-wallet text-emerald-400 w-6"></i><span>Tesorería</span></button></li>
-                <li><button onclick="navigateTo('ranking-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="ranking-view"><i class="fa-solid fa-ranking-star text-yellow-400 w-6"></i><span>Ranking</span></button></li>
-                <li><button onclick="navigateTo('config-view')" class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="config-view"><i class="fa-solid fa-gear text-gray-400 w-6"></i><span>Configuración</span></button></li>
+                <li><button class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="home-view"><i class="fa-solid fa-house text-indigo-400 w-6"></i><span>Inicio</span></button></li>
+                <li><button class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="monthly-history-view"><i class="fa-solid fa-calendar-days text-indigo-400 w-6"></i><span>Mi Gestión</span></button></li>
+                <li><button class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="treasury-view"><i class="fa-solid fa-wallet text-emerald-400 w-6"></i><span>Tesorería</span></button></li>
+                <li><button class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="ranking-view"><i class="fa-solid fa-ranking-star text-yellow-400 w-6"></i><span>Ranking</span></button></li>
+                <li><button class="nav-btn w-full text-left px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-3" data-target="config-view"><i class="fa-solid fa-gear text-gray-400 w-6"></i><span>Configuración</span></button></li>
             </ul>
         </nav>
         <div class="p-4 border-t border-slate-700 bg-slate-800">
-            <div id="user-info-container" class="mb-3">
-                <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
-                <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
+            <div id="user-info-container" class="mb-3 flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center overflow-hidden">
+                    <img id="sidebar-profile-pic" class="w-full h-full object-cover hidden">
+                    <i id="sidebar-profile-icon" class="fa-solid fa-user text-white text-xs"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
+                    <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
+                </div>
             </div>
             <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center"><i class="fa-brands fa-google mr-2"></i> <span>Acceder</span></button>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col h-full relative overflow-hidden">
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden" id="main-content">
         <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center md:hidden sticky top-0 z-50 w-full h-16">
             <div class="flex items-center">
                 <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg mr-3"><i class="fa-solid fa-bars text-2xl"></i></button>
@@ -64,7 +99,7 @@
         </header>
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 md:hidden hidden transition-opacity"></div>
 
-        <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-32">
+        <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-32 scroll-smooth">
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
@@ -76,7 +111,7 @@
                     <div class="text-right hidden md:block"><p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p><p id="header-current-date" class="text-xl font-bold text-slate-700">...</p></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden"><div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50"></div><h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3><div class="flex items-baseline"><span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span></div><p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">...</p></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden"><div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50"></div><h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3><div class="flex items-baseline"><span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span></div><p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">Calculando...</p></div>
                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden"><div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-100 rounded-full opacity-50"></div><h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3><p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p><div class="flex items-baseline"><span class="text-4xl font-extrabold text-slate-800 truncate" id="home-month-net">$ 0</span></div></div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6"><h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center"><i class="fa-regular fa-calendar-check mr-2 text-indigo-500"></i> Próximos Francos</h3><div id="home-next-francos-container" class="flex space-x-4 overflow-x-auto hide-scroll pb-2"></div></div>
@@ -145,21 +180,24 @@
                             </div>
                         </div>
                     </div>
-                    <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">Guardar Cambios</button>
+                    <button id="btn-save-config" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">Guardar Cambios</button>
                 </div>
             </div>
         </div>
     </main>
 
     <script type="module">
+        // ---------------------------------------------------------
+        // CONFIGURACIÓN E IMPORTACIONES
+        // ---------------------------------------------------------
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        // NOTA: Eliminado Storage para evitar pagos. Usaremos Base64.
 
         const firebaseConfig = { apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw", authDomain: "calculadora-6x2.firebaseapp.com", projectId: "calculadora-6x2", storageBucket: "calculadora-6x2.firebasestorage.app", messagingSenderId: "238926197886", appId: "1:238926197886:web:d05857b007dcb305e9d42f" };
 
-        let app, auth, db, storage, userId = null;
+        let app, auth, db, userId = null;
 
         let appState = {
             config: { 
@@ -173,15 +211,26 @@
             historicalCache: {}
         };
 
+        // ---------------------------------------------------------
+        // INICIALIZACIÓN (INIT)
+        // ---------------------------------------------------------
         window.onload = () => {
             initFirebaseSystem();
             setupUI();
+            setupPullToRefresh(); // Nuevo: Pull to Refresh
             const d = new Date();
             document.getElementById('header-current-date').textContent = `${d.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]}`;
+            
             const fileInput = document.getElementById('cfg-profilePicture');
             if (fileInput) fileInput.onchange = (e) => { if(e.target.files[0]) uploadProfilePicture(e.target.files[0]); };
+            
+            // Listener para el botón de guardar configuración (SOLUCION ERROR CONSOLA)
+            document.getElementById('btn-save-config').addEventListener('click', saveConfigHandler);
         };
 
+        // ---------------------------------------------------------
+        // UI & NAVEGACIÓN
+        // ---------------------------------------------------------
         function setupUI() {
             const sidebar = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
@@ -189,12 +238,56 @@
             document.getElementById('open-sidebar-btn').onclick = () => { sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open'); backdrop.classList.remove('hidden'); };
             document.getElementById('close-sidebar-btn').onclick = closeMenu;
             backdrop.onclick = closeMenu;
-            document.querySelectorAll('.nav-btn').forEach(btn => { btn.addEventListener('click', () => { if (window.innerWidth < 768) closeMenu(); }); });
+            
+            // Navegación segura sin inline onclick
+            document.querySelectorAll('.nav-btn').forEach(btn => { 
+                btn.addEventListener('click', (e) => { 
+                    const target = e.currentTarget.dataset.target;
+                    navigateTo(target);
+                    if (window.innerWidth < 768) closeMenu(); 
+                }); 
+            });
+        }
+
+        // NUEVO: Lógica Pull-to-Refresh
+        function setupPullToRefresh() {
+            let touchStart = 0;
+            const spinner = document.getElementById('refresh-spinner');
+            
+            window.addEventListener('touchstart', e => {
+                if (window.scrollY === 0) touchStart = e.touches[0].clientY;
+            }, {passive: true});
+
+            window.addEventListener('touchmove', e => {
+                const touchY = e.touches[0].clientY;
+                if (touchStart > 0 && touchY > touchStart && window.scrollY === 0) {
+                    if (touchY - touchStart > 150) spinner.classList.add('visible');
+                }
+            }, {passive: true});
+
+            window.addEventListener('touchend', e => {
+                const touchY = e.changedTouches[0].clientY;
+                if (touchStart > 0 && touchY - touchStart > 150 && window.scrollY === 0) {
+                    location.reload(); // Recarga completa
+                }
+                spinner.classList.remove('visible');
+                touchStart = 0;
+            });
         }
 
         window.navigateTo = (viewId) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
+            
+            // Actualizar estado activo en menú
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+               if(btn.dataset.target === viewId) {
+                   btn.classList.remove('text-slate-400'); btn.classList.add('text-indigo-400', 'bg-slate-800');
+               } else {
+                   btn.classList.add('text-slate-400'); btn.classList.remove('text-indigo-400', 'bg-slate-800');
+               }
+            });
+
             if (viewId === 'home-view') renderHome();
             if (viewId === 'monthly-history-view') renderDashboard();
             if (viewId === 'ranking-view') renderRanking();
@@ -202,6 +295,9 @@
             if (viewId === 'config-view') fillConfigInputs();
         };
 
+        // ---------------------------------------------------------
+        // LÓGICA MATEMÁTICA
+        // ---------------------------------------------------------
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
@@ -216,14 +312,11 @@
             const masterCycle = ['Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'];
             let baseOffset = (initialTurn === 'Noche') ? 8 : (initialTurn === 'Tarde' ? 16 : 0);
             
-            // FIX: Better date parsing for lastFrancoDate
             let lastFrancoMs = new Date().getTime();
             if (lastFrancoDate) {
                 const parts = lastFrancoDate.split('-');
-                // Create date object treating input as local time YYYY, MM-1, DD
                 const localLF = new Date(parts[0], parts[1] - 1, parts[2]);
-                lastFrancoMs = localLF.getTime();
-                lastFrancoMs += 86400000; // +1 day
+                lastFrancoMs = localLF.getTime() + 86400000; 
             }
             
             const diffDays = Math.floor((new Date(year, month - 1, 1).getTime() - lastFrancoMs) / 86400000);
@@ -291,6 +384,9 @@
             return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, cached?.configSnapshot||appState.config);
         }
 
+        // ---------------------------------------------------------
+        // FUNCIONALIDADES (BOTONES)
+        // ---------------------------------------------------------
         document.getElementById('btn-delete-month').onclick = async () => {
             if(!confirm("¿Borrar este mes?")) return;
             const { month, year } = appState.viewingMonth;
@@ -331,50 +427,61 @@
         async function generateMonth(m, y) {
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
-            // CRITICAL FIX: Force UI Update immediately, don't wait for save
             triggerLocalRecalculate(); 
-            // Save in background
             await saveCurrentData(); 
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
             showMessage(`Mes ${m}/${y} generado.`);
         }
 
-        // CRASH PROOF PROFILE PICTURE UI
+        // ---------------------------------------------------------
+        // UI & PERFIL (BASE64)
+        // ---------------------------------------------------------
         function updateProfilePictureUI(url) {
-            const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
+            const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic', 'header-profile-pic'];
             const icons = ['profile-icon-sidebar', 'profile-icon-preview', 'header-profile-icon'];
             
             els.forEach(id => {
                 const el = document.getElementById(id);
-                if(el) { // NULL CHECK ADDED
+                if(el) { 
                     if(url) { el.src = url; el.classList.remove('hidden'); }
                     else { el.src = ''; el.classList.add('hidden'); }
                 }
             });
-            // Wrappers / Icons visibility toggling
+            
+            // Wrappers / Icons
             const hw = document.getElementById('home-profile-wrapper');
             if(hw) hw.classList.toggle('hidden', !url);
-            
             const headerWrapper = document.getElementById('header-profile-wrapper');
             if(headerWrapper) headerWrapper.classList.toggle('hidden', !url);
-            
             const headerIcon = document.getElementById('header-profile-icon');
             if(headerIcon) headerIcon.classList.toggle('hidden', !!url);
+            
+            const iconPrev = document.getElementById('profile-icon-preview');
+            if(iconPrev) iconPrev.classList.toggle('hidden', !!url);
+            const iconSide = document.getElementById('profile-icon-sidebar');
+            if(iconSide) iconSide.classList.toggle('hidden', !!url);
         }
 
         async function uploadProfilePicture(file) {
             if (!userId) { showMessage('Inicia sesión.', 'error'); return; }
-            showMessage('Subiendo...', 'info');
-            try {
-                const sRef = ref(storage, `users/${userId}/profile.jpg`);
-                await uploadBytes(sRef, file);
-                const url = await getDownloadURL(sRef);
-                appState.config.profilePicUrl = url;
-                await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), { profilePicUrl: url }, { merge: true });
-                updateProfilePictureUI(url); showMessage('Foto actualizada.', 'success');
-            } catch (e) { console.error(e); showMessage('Error subiendo.', 'error'); }
+            if (file.size > 800000) { showMessage('Imagen muy grande (max 800kb).', 'error'); return; }
+            showMessage('Guardando...', 'info');
+            
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result;
+                try {
+                    appState.config.profilePicUrl = base64;
+                    await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), { profilePicUrl: base64 }, { merge: true });
+                    updateProfilePictureUI(base64); showMessage('Foto guardada.', 'success');
+                } catch(e) { showMessage('Error guardando.', 'error'); }
+            };
+            reader.readAsDataURL(file);
         }
 
+        // ---------------------------------------------------------
+        // RENDERERS
+        // ---------------------------------------------------------
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
@@ -490,7 +597,6 @@
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
         }
 
-        // UPDATE: ADDED EXPLICIT CACHE UPDATE BEFORE DB SAVE
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
@@ -501,12 +607,9 @@
                 results: appState.activeData.calculation,
                 configSnapshot: { ...appState.config }
             };
-            
-            // INSTANT UI UPDATE
             appState.historicalCache[docId] = data;
-            renderDashboard(); 
-            
             await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
+            renderDashboard(); // Refresh buttons
         }
 
         function formatCurrency(v) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v||0); }
@@ -514,8 +617,9 @@
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         function calculatePaymentDate(y, m, d) { const b = new Date(y, m-1, d); let p = new Date(b), c = 0; while(c<4) { p.setDate(p.getDate()+1); if(p.getDay()!==0 && p.getDay()!==6) c++; } return p; }
 
+        // INIT & AUTH
         async function initFirebaseSystem() {
-            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
+            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
             onAuthStateChanged(auth, (u) => {
                 if (u) { 
                     userId = u.uid; 
@@ -563,7 +667,8 @@
             doc.save(`Nomina_${ml}.pdf`);
         };
         
-        document.querySelector('#config-view button').onclick = async () => {
+        // SAVE CONFIG (EVENT LISTENER)
+        async function saveConfigHandler() {
             appState.config.userName = document.getElementById('cfg-userName').value;
             appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
             appState.config.discountRate = parseFloat(document.getElementById('cfg-discountRate').value);
@@ -572,11 +677,13 @@
             appState.config.presentismoAmount = parseFloat(document.getElementById('cfg-presentismoAmount').value);
             appState.config.lastFrancoDate = document.getElementById('cfg-lastFrancoDate').value;
             appState.config.initialTurn = document.getElementById('cfg-initialTurn').value;
-            const configToSave = { ...appState.config };
-            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), configToSave);
-            showMessage('Configuración guardada.', 'success'); renderHome();
+            
+            // PERSIST CONFIG
+            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), appState.config, {merge: true});
+            showMessage('Configuración guardada.', 'success'); 
+            renderHome();
             document.getElementById('user-info-name').textContent = appState.config.userName;
-        };
+        }
     </script>
 </body>
 </html>
