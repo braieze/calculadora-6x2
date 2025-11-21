@@ -31,10 +31,10 @@
             background-size: 1.5em 1.5em;
         }
 
-        /* Fix para inputs en iOS (evita zoom) */
+        /* Evita zoom en iOS al tocar inputs */
         input, select, textarea { font-size: 16px !important; }
 
-        /* ANIMACIÓN FOTO DE PERFIL */
+        /* ANIMACIÓN FOTO DE PERFIL (Borde Giratorio) */
         @keyframes spin-border {
             0% { --angle: 0deg; }
             100% { --angle: 360deg; }
@@ -42,7 +42,7 @@
         
         .profile-animated-wrapper {
             position: relative;
-            padding: 3px;
+            padding: 2px; /* Grosor del borde */
             border-radius: 50%;
             background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c);
             animation: spin 4s linear infinite;
@@ -106,15 +106,9 @@
         </nav>
 
         <div class="p-4 border-t border-slate-700 bg-slate-800">
-            <div class="flex items-center space-x-3 mb-3">
-                <div class="relative w-10 h-10 rounded-full bg-indigo-700 flex-shrink-0 overflow-hidden border-2 border-slate-500">
-                    <img id="profile-pic-sidebar" src="" alt="Perfil" class="w-full h-full object-cover hidden">
-                    <i id="profile-icon-sidebar" class="fa-solid fa-user text-white text-xl absolute inset-0 flex items-center justify-center"></i>
-                </div>
-                <div class="overflow-hidden">
-                    <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
-                    <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
-                </div>
+            <div id="user-info-container" class="mb-3">
+                <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
+                <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
             </div>
             
             <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center">
@@ -125,34 +119,37 @@
 
     <main class="flex-1 flex flex-col h-full relative overflow-hidden">
         
-        <header class="bg-white shadow-sm p-4 flex justify-between items-center md:hidden sticky top-0 z-50 w-full">
-            <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg">
-                <i class="fa-solid fa-bars text-2xl"></i>
-            </button>
-            <h2 class="text-lg font-bold text-indigo-700">Calculadora 6x2</h2>
-            <div class="w-6"></div>
+        <header class="bg-white shadow-sm px-4 py-3 flex justify-between items-center md:hidden sticky top-0 z-50 w-full h-16">
+            <div class="flex items-center">
+                <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg mr-3">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
+                <h2 class="text-lg font-bold text-indigo-700 truncate">Calculadora 6x2</h2>
+            </div>
+
+            <div class="flex items-center">
+                <div class="profile-animated-wrapper hidden" id="header-profile-wrapper">
+                    <div class="w-9 h-9 rounded-full bg-white overflow-hidden border border-white">
+                        <img id="header-profile-pic" src="" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <i id="header-profile-icon" class="fa-solid fa-circle-user text-3xl text-slate-300"></i>
+            </div>
         </header>
 
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 md:hidden hidden transition-opacity"></div>
 
-        <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-24"> <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
+        <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative pb-32">
+            <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
             <div id="home-view" class="view-section max-w-4xl mx-auto">
-                <div class="flex justify-between items-center mb-8">
-                    <div class="flex items-center space-x-4">
-                        <div class="profile-animated-wrapper hidden" id="home-profile-wrapper">
-                            <div class="w-14 h-14 rounded-full bg-white overflow-hidden border-2 border-white">
-                                <img id="home-profile-pic" src="" class="w-full h-full object-cover">
-                            </div>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
-                                Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
-                            </h1>
-                            <p class="text-sm md:text-base text-slate-500 mt-1">Resumen de actividad.</p>
-                        </div>
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">
+                            Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
+                        </h1>
+                        <p class="text-sm md:text-base text-slate-500 mt-1">Tu estado al día de hoy.</p>
                     </div>
-                    
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
                         <p id="header-current-date" class="text-xl font-bold text-slate-700">...</p>
@@ -190,7 +187,7 @@
             <div id="monthly-history-view" class="view-section hidden max-w-6xl mx-auto">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
                     <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos</h2>
-                    <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md">
+                    <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md active:scale-95">
                         <i class="fa-solid fa-plus mr-2"></i> Mes Siguiente
                     </button>
                 </div>
@@ -209,17 +206,15 @@
                     </div>
 
                     <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-                        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center sticky top-0 bg-white z-20">
                             <div>
                                 <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
                                 <p class="text-xs text-slate-400">Controla llegadas tarde y feriados.</p>
                             </div>
                             <div class="flex gap-2">
-                                <button id="btn-delete-month" class="px-3 py-1 bg-red-100 text-red-600 hover:bg-red-200 rounded text-xs font-bold" title="Borrar este mes">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                                <button id="btn-recalculate" class="px-3 py-1 bg-slate-800 text-white rounded text-xs hover:bg-slate-900"><i class="fa-solid fa-save"></i> Guardar</button>
-                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold shadow-sm hover:bg-red-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                                <button id="btn-delete-month" class="px-3 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-xs font-bold shadow-sm transition" title="Borrar Mes"><i class="fa-solid fa-trash"></i></button>
+                                <button id="btn-recalculate" class="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 shadow-sm transition"><i class="fa-solid fa-save mr-1"></i> Guardar</button>
+                                <button id="btn-download-pdf" class="px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-red-700 transition"><i class="fa-solid fa-file-pdf"></i></button>
                             </div>
                         </div>
                         <div class="overflow-x-auto max-h-[500px]">
@@ -261,7 +256,7 @@
 
             <div id="config-view" class="view-section hidden max-w-3xl mx-auto">
                 <h2 class="text-2xl font-bold text-slate-800 mb-6">Configuración</h2>
-                <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+                <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6 mb-12">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="col-span-1 md:col-span-2 border-b pb-6">
                             <h4 class="font-bold text-indigo-600 mb-4">Foto de Perfil</h4>
@@ -352,7 +347,7 @@
         };
 
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
-            // USE CONFIG OVERRIDE (SNAPSHOT) IF EXISTS, ELSE GLOBAL CONFIG
+            // FREEZE LOGIC: USE SNAPSHOT IF EXISTS
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
             if(!valorHora) return null;
@@ -420,19 +415,18 @@
 
         function getCalculationFor(m, y) {
             if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
-                // If editing, use active data + current config (unless active data has snapshot, which it shouldn't yet until saved)
                 return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
             }
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
             if(cached) {
-                // HERE IS THE FREEZE LOGIC: Pass cached.configSnapshot if available
+                // USE CACHED CONFIG IF AVAILABLE (FREEZE)
                 return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {}, cached.lateness || {}, cached.configSnapshot || null);
             }
             else return performCalculation(m, y, {}, {}, {}, {}, null);
         }
 
-        // DELETE FUNCTION
+        // DELETE MONTH FIX
         document.getElementById('btn-delete-month').onclick = async () => {
             if(!confirm("¿Seguro que quieres eliminar este mes y todos sus datos?")) return;
             const { month, year } = appState.viewingMonth;
@@ -440,20 +434,43 @@
             try {
                 if(userId) await deleteDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId));
                 delete appState.historicalCache[docId];
+                
+                // FIND NEW TARGET MONTH
+                const keys = Object.keys(appState.historicalCache).sort();
+                if (keys.length > 0) {
+                    const lastKey = keys[keys.length - 1];
+                    const [ly, lm] = lastKey.split('-');
+                    switchDashboardMonth(parseInt(lm), parseInt(ly));
+                } else {
+                    const now = new Date();
+                    appState.viewingMonth = { month: now.getMonth() + 1, year: now.getFullYear() };
+                    appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
+                    renderDashboard();
+                }
                 showMessage('Mes eliminado.', 'success');
-                loadUserData(); // Refresh
             } catch(e) { console.error(e); showMessage('Error al eliminar.', 'error'); }
         };
 
-        // AUTH & PROFILE
+        // PROFILE UI
         function updateProfilePictureUI(url) {
-            const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
-            els.forEach(id => {
-                const el = document.getElementById(id);
-                if(url) { el.src = url; el.classList.remove('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.add('hidden'); }
-                else { el.src = ''; el.classList.add('hidden'); if(id!=='home-profile-pic') el.nextElementSibling.classList.remove('hidden'); }
-            });
-            document.getElementById('home-profile-wrapper').classList.toggle('hidden', !url);
+            const headerPic = document.getElementById('header-profile-pic');
+            const headerWrapper = document.getElementById('header-profile-wrapper');
+            const headerIcon = document.getElementById('header-profile-icon');
+            
+            const sidebarPic = document.getElementById('profile-pic-sidebar');
+            const configPic = document.getElementById('profile-pic-preview');
+            
+            if (url) {
+                // HEADER
+                headerPic.src = url; headerWrapper.classList.remove('hidden'); headerIcon.classList.add('hidden');
+                // SIDEBAR & CONFIG
+                sidebarPic.src = url; sidebarPic.classList.remove('hidden'); 
+                configPic.src = url; configPic.classList.remove('hidden'); 
+            } else {
+                headerWrapper.classList.add('hidden'); headerIcon.classList.remove('hidden');
+                sidebarPic.classList.add('hidden');
+                configPic.classList.add('hidden');
+            }
         }
 
         async function uploadProfilePicture(file) {
@@ -469,7 +486,6 @@
             } catch (e) { console.error(e); showMessage('Error subiendo.', 'error'); }
         }
 
-        // RENDER
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
@@ -567,7 +583,6 @@
             });
         }
 
-        // HELPERS & SYNC
         window.updateExtra = (d, v) => { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
         window.updateHoliday = (d, c) => { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
         window.updateLateness = (d, c) => { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); };
@@ -585,42 +600,35 @@
             const cached = appState.historicalCache[key];
             if(cached) {
                 appState.activeData = { extras: cached.extras||{}, manualHolidays: cached.holidayFlags||{}, shiftOverrides: cached.shiftOverrides||{}, lateness: cached.lateness||{} };
-                // Recalculate using cached snapshot if available
                 appState.activeData.calculation = performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, cached.configSnapshot || null);
             }
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
         }
 
         async function generateMonth(m, y) {
-            if(m>12) { m=1; y++; }
-            // FIX: Check historical to find true next month
             const keys = Object.keys(appState.historicalCache).sort();
             if(keys.length > 0) {
                 const [ly, lm] = keys[keys.length-1].split('-');
                 m = parseInt(lm) + 1; y = parseInt(ly);
                 if(m>12) { m=1; y++; }
             }
-            
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
             triggerLocalRecalculate(); saveCurrentData();
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
-            showMessage(`Mes generado.`);
+            showMessage(`Mes de ${m}/${y} generado.`);
         }
 
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
             const docId = `${year}-${String(month).padStart(2, '0')}`;
-            
-            // FREEZE LOGIC: SAVE CURRENT CONFIG AS SNAPSHOT
             const data = { 
                 extras: appState.activeData.extras, holidayFlags: appState.activeData.manualHolidays, 
                 shiftOverrides: appState.activeData.shiftOverrides, lateness: appState.activeData.lateness, 
                 results: appState.activeData.calculation,
-                configSnapshot: { ...appState.config } // <--- THIS FREEZES VALUES
+                configSnapshot: { ...appState.config }
             };
-            
             appState.historicalCache[docId] = data;
             await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
         }
@@ -630,7 +638,6 @@
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
         function calculatePaymentDate(y, m, d) { const b = new Date(y, m-1, d); let p = new Date(b), c = 0; while(c<4) { p.setDate(p.getDate()+1); if(p.getDay()!==0 && p.getDay()!==6) c++; } return p; }
 
-        // INIT & AUTH
         async function initFirebaseSystem() {
             app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
             onAuthStateChanged(auth, (u) => {
