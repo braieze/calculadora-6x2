@@ -82,7 +82,17 @@
         </nav>
 
         <div class="p-4 border-t border-slate-700 bg-slate-800">
-            <div id="user-info" class="text-sm font-medium mb-2 text-slate-300 truncate">Cargando...</div>
+            <div class="flex items-center space-x-3 mb-3">
+                <div class="relative w-10 h-10 rounded-full bg-indigo-700 flex-shrink-0 overflow-hidden border-2 border-slate-500">
+                    <img id="profile-pic-sidebar" src="" alt="Perfil" class="w-full h-full object-cover hidden">
+                    <i id="profile-icon-sidebar" class="fa-solid fa-user text-white text-xl absolute inset-0 flex items-center justify-center"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
+                    <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
+                </div>
+            </div>
+            
             <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center">
                 <i class="fa-brands fa-google mr-2"></i> <span>Acceder</span>
             </button>
@@ -99,6 +109,8 @@
             <div class="w-6"></div>
         </header>
 
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-40 md:hidden hidden transition-opacity"></div>
+
         <div id="view-container" class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative">
             <div id="status-message" class="hidden mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300"></div>
 
@@ -108,7 +120,7 @@
                         <h1 class="text-3xl font-extrabold text-slate-800">
                             Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋
                         </h1>
-                        <p class="text-slate-500 mt-1">Tu estado al día de hoy.</p>
+                        <p class="text-slate-500 mt-1">Resumen de tu actividad.</p>
                     </div>
                     <div class="text-right hidden md:block">
                         <p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p>
@@ -121,7 +133,7 @@
                         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-100 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
                         <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Próxima Quincena (Estimada)</h3>
                         <div class="flex items-baseline">
-                            <span class="text-3xl font-extrabold text-emerald-600" id="home-next-quincena">$ 0</span>
+                            <span class="text-3xl font-extrabold text-emerald-600 truncate" id="home-next-quincena">$ 0</span>
                         </div>
                         <p id="home-payment-date" class="text-xs text-emerald-700 font-bold mt-2 bg-emerald-50 inline-block px-2 py-1 rounded border border-emerald-100">
                             Calculando fecha...
@@ -133,7 +145,7 @@
                         <h3 class="text-slate-500 font-semibold text-sm uppercase tracking-wider mb-2">Mes Actual (Proyectado)</h3>
                         <p class="text-xs text-indigo-400 font-bold mb-1" id="home-current-month-label">...</p>
                         <div class="flex items-baseline">
-                            <span class="text-4xl font-extrabold text-slate-800" id="home-month-net">$ 0</span>
+                            <span class="text-4xl font-extrabold text-slate-800 truncate" id="home-month-net">$ 0</span>
                         </div>
                     </div>
                 </div>
@@ -149,9 +161,9 @@
 
             <div id="monthly-history-view" class="view-section hidden max-w-6xl mx-auto">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos y Extras</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos</h2>
                     <button id="btn-generate-new" class="mt-2 md:mt-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition shadow-md">
-                        <i class="fa-solid fa-plus mr-2"></i> Generar Mes Siguiente
+                        <i class="fa-solid fa-plus mr-2"></i> Mes Siguiente
                     </button>
                 </div>
 
@@ -162,21 +174,21 @@
 
                 <div id="dashboard-content" class="hidden animate-fade-in">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p><p class="text-xl font-bold text-indigo-600" id="dash-equiv-hours">0</p></div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">VIÁTICOS</p><p class="text-xl font-bold text-orange-600" id="dash-viaticos-total">$ 0</p></div>
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100"><p class="text-xs text-slate-500 font-semibold">TÍTULO</p><p class="text-xl font-bold text-blue-600" id="dash-titulo-total">$ 0</p></div>
-                        <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100"><p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p><p class="text-2xl font-extrabold text-emerald-700" id="dash-neto-final">$ 0</p></div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 overflow-hidden"><p class="text-xs text-slate-500 font-semibold">H. EQUIVALENTES</p><p class="text-lg md:text-xl font-bold text-indigo-600 truncate" id="dash-equiv-hours">0</p></div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 overflow-hidden"><p class="text-xs text-slate-500 font-semibold">VIÁTICOS</p><p class="text-lg md:text-xl font-bold text-orange-600 truncate" id="dash-viaticos-total">$ 0</p></div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 overflow-hidden"><p class="text-xs text-slate-500 font-semibold">PRESENTISMO</p><p class="text-lg md:text-xl font-bold text-blue-600 truncate" id="dash-presentismo-total">$ 0</p></div>
+                        <div class="bg-emerald-50 p-4 rounded-xl shadow-sm border border-emerald-100 overflow-hidden"><p class="text-xs text-emerald-700 font-semibold uppercase">Neto Final</p><p class="text-xl md:text-2xl font-extrabold text-emerald-700 truncate" id="dash-neto-final">$ 0</p></div>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
                         <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <div>
                                 <h3 class="font-bold text-slate-700">Detalle Diario <span id="dash-detail-month-label" class="text-indigo-600"></span></h3>
-                                <p class="text-xs text-slate-400">Modifica tus turnos, feriados y extras aquí.</p>
+                                <p class="text-xs text-slate-400">Controla llegadas tarde y feriados.</p>
                             </div>
                             <div class="flex gap-2">
                                 <button id="btn-recalculate" class="px-3 py-1 bg-slate-800 text-white rounded text-xs"><i class="fa-solid fa-save"></i> Guardar</button>
-                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold shadow-sm hover:bg-red-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF Full</button>
+                                <button id="btn-download-pdf" class="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold shadow-sm hover:bg-red-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
                             </div>
                         </div>
                         <div class="overflow-x-auto max-h-[500px]">
@@ -185,11 +197,10 @@
                                     <tr>
                                         <th class="px-4 py-3">Fecha</th>
                                         <th class="px-4 py-3">Turno</th>
-                                        <th class="px-4 py-3 text-center">Feriado</th>
-                                        <th class="px-4 py-3 text-right">H.Eq Base</th>
-                                        <th class="px-4 py-3 text-center">H.Extra</th>
-                                        <th class="px-4 py-3 text-right">Total Eq.</th>
-                                        <th class="px-4 py-3 text-right">Bruto Día</th>
+                                        <th class="px-4 py-3 text-center text-[10px]">Feriado</th>
+                                        <th class="px-4 py-3 text-center text-[10px] text-red-600">Tarde/Aus</th> <th class="px-4 py-3 text-right">H.Eq</th>
+                                        <th class="px-4 py-3 text-center">Extras</th>
+                                        <th class="px-4 py-3 text-right">Bruto</th>
                                     </tr>
                                 </thead>
                                 <tbody id="daily-detail-tbody" class="divide-y divide-slate-100"></tbody>
@@ -201,19 +212,19 @@
 
             <div id="treasury-view" class="view-section hidden max-w-5xl mx-auto">
                 <h2 class="text-2xl font-bold text-slate-800 mb-4 flex items-center">
-                    <i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería y Quincenas
+                    <i class="fa-solid fa-wallet text-emerald-500 mr-3"></i> Tesorería
                 </h2>
                 
                 <div class="mb-6 bg-slate-100 p-3 rounded-xl">
-                    <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Consultar Liquidación de:</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase mb-2 block">Consultar Mes:</label>
                     <div id="treasury-chips-container" class="flex space-x-3 overflow-x-auto hide-scroll">
-                         <p class="text-sm text-slate-400 italic">Genera meses en "Mi Gestión" para verlos aquí.</p>
+                         <p class="text-sm text-slate-400 italic">Genera meses primero.</p>
                     </div>
                 </div>
 
                 <div id="treasury-container" class="space-y-8 animate-fade-in">
                     <div class="p-8 text-center text-slate-500 bg-white rounded-xl shadow-sm">
-                        Selecciona un mes arriba para ver el detalle.
+                        Selecciona un mes arriba.
                     </div>
                 </div>
             </div>
@@ -229,38 +240,76 @@
                 <h2 class="text-2xl font-bold text-slate-800 mb-6">Configuración</h2>
                 <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="col-span-2"><label class="block text-sm font-bold text-slate-700">Nombre</label><input type="text" id="cfg-userName" class="w-full p-3 border rounded-lg"></div>
-                        <div><label class="block text-sm font-bold text-slate-700">Valor Hora ($)</label><input type="number" id="cfg-valorHora" class="w-full p-3 border rounded-lg" step="0.01"></div>
-                        <div><label class="block text-sm font-bold text-slate-700">Afiliación</label><select id="cfg-discountRate" class="w-full p-3 border rounded-lg bg-white"><option value="0.18">No Afiliado (18%)</option><option value="0.21">Afiliado (21%)</option></select></div>
-                        <div><label class="block text-sm font-bold text-slate-700">Valor Título ($)</label><input type="number" id="cfg-tituloAmount" class="w-full p-3 border rounded-lg"></div>
-                        <div><label class="block text-sm font-bold text-slate-700">Valor Viático ($)</label><input type="number" id="cfg-viaticoValue" class="w-full p-3 border rounded-lg"></div>
-                        <div class="col-span-2 border-t pt-4"><h4 class="font-bold text-indigo-600 mb-4">Rotación</h4><div class="grid grid-cols-2 gap-6">
-                            <div><label class="block text-sm font-bold text-slate-700">Fecha Último Franco (Día 2)</label><input type="date" id="cfg-lastFrancoDate" class="w-full p-3 border rounded-lg"></div>
-                            <div><label class="block text-sm font-bold text-slate-700">Turno Post-Franco</label><select id="cfg-initialTurn" class="w-full p-3 border rounded-lg bg-white"><option value="Mañana">Mañana</option><option value="Noche">Noche</option><option value="Tarde">Tarde</option></select></div>
-                        </div></div>
+                        
+                        <div class="col-span-1 md:col-span-2 border-b pb-6">
+                            <h4 class="font-bold text-indigo-600 mb-4">Foto de Perfil</h4>
+                            <div class="flex items-center space-x-4">
+                                <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden">
+                                    <img id="profile-pic-preview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                                    <i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i>
+                                </div>
+                                <div>
+                                    <input type="file" id="cfg-profilePicture" accept="image/*" class="hidden">
+                                    <button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md">
+                                        <i class="fa-solid fa-upload mr-2"></i> Cambiar Foto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2"><label class="block text-sm font-bold text-slate-700 mb-1">Nombre</label><input type="text" id="cfg-userName" class="w-full p-3 border rounded-lg bg-slate-50"></div>
+                        
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Hora ($)</label><input type="number" id="cfg-valorHora" class="w-full p-3 border rounded-lg" step="0.01"></div>
+                        
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Afiliación</label><select id="cfg-discountRate" class="w-full p-3 border rounded-lg bg-white"><option value="0.18">No Afiliado (18%)</option><option value="0.21">Afiliado (21%)</option></select></div>
+                        
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Viático ($)</label><input type="number" id="cfg-viaticoValue" class="w-full p-3 border rounded-lg"></div>
+
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Presentismo ($)</label><input type="number" id="cfg-presentismoAmount" class="w-full p-3 border rounded-lg" placeholder="Ej. 50000"></div>
+
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Título ($)</label><input type="number" id="cfg-tituloAmount" class="w-full p-3 border rounded-lg"></div>
+
+                        <div class="col-span-1 md:col-span-2 border-t pt-4 mt-2">
+                            <h4 class="font-bold text-indigo-600 mb-4">Rotación (6x2)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label class="block text-sm font-bold text-slate-700 mb-1">Fecha Último Franco (Día 2)</label><input type="date" id="cfg-lastFrancoDate" class="w-full p-3 border rounded-lg"></div>
+                                <div><label class="block text-sm font-bold text-slate-700 mb-1">Turno Post-Franco</label><select id="cfg-initialTurn" class="w-full p-3 border rounded-lg bg-white"><option value="Mañana">Mañana</option><option value="Noche">Noche</option><option value="Tarde">Tarde</option></select></div>
+                            </div>
+                        </div>
                     </div>
-                    <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700">Guardar</button>
+                    <button onclick="saveConfig()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg">Guardar Cambios</button>
                 </div>
             </div>
         </div>
     </main>
 
     <script type="module">
-        // FIREBASE
+        // FIREBASE IMPORT
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
         const firebaseConfig = { apiKey: "AIzaSyC_gewonkD_XnzQmwmUnQuhfzOf5zdm9lw", authDomain: "calculadora-6x2.firebaseapp.com", projectId: "calculadora-6x2", storageBucket: "calculadora-6x2.firebasestorage.app", messagingSenderId: "238926197886", appId: "1:238926197886:web:d05857b007dcb305e9d42f" };
 
-        let app, auth, db, userId = null, isFirebaseActive = false;
+        let app, auth, db, storage, userId = null, isFirebaseActive = false;
 
         // STATE
         let appState = {
-            config: { userName: 'Usuario', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
+            config: { 
+                userName: 'Usuario', 
+                profilePicUrl: '', 
+                valorHora: 3758, 
+                discountRate: 0.18, 
+                tituloAmount: 0, 
+                viaticoValue: 6200,
+                presentismoAmount: 0, // NUEVO
+                lastFrancoDate: new Date().toISOString().split('T')[0], 
+                initialTurn: 'Mañana' 
+            },
             viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
-            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, calculation: null },
+            activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null }, // Added lateness
             historicalCache: {}
         };
 
@@ -269,27 +318,54 @@
             initFirebaseSystem();
             setupUI();
             const d = new Date();
-            const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
             const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-            document.getElementById('header-current-date').textContent = `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+            document.getElementById('header-current-date').textContent = `${d.getDate()} ${months[d.getMonth()]}`;
+
+            // Foto upload listener
+            const fileInput = document.getElementById('cfg-profilePicture');
+            if (fileInput) {
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            document.getElementById('profile-pic-preview').src = e.target.result;
+                            document.getElementById('profile-pic-preview').classList.remove('hidden');
+                            document.getElementById('profile-icon-preview').classList.add('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                        uploadProfilePicture(file);
+                    }
+                };
+            }
         };
 
         function setupUI() {
             const sidebar = document.getElementById('sidebar');
-            document.getElementById('open-sidebar-btn').onclick = () => { sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open'); };
-            document.getElementById('close-sidebar-btn').onclick = () => { sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open'); };
+            const backdrop = document.getElementById('sidebar-backdrop');
+            
+            const closeMenu = () => {
+                sidebar.classList.add('sidebar-closed');
+                sidebar.classList.remove('sidebar-open');
+                backdrop.classList.add('hidden');
+            };
+
+            document.getElementById('open-sidebar-btn').onclick = () => { 
+                sidebar.classList.remove('sidebar-closed'); 
+                sidebar.classList.add('sidebar-open');
+                backdrop.classList.remove('hidden');
+            };
+            document.getElementById('close-sidebar-btn').onclick = closeMenu;
+            backdrop.onclick = closeMenu;
+
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => { if (window.innerWidth < 768) { sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open'); } });
+                btn.addEventListener('click', () => { if (window.innerWidth < 768) closeMenu(); });
             });
         }
 
         window.navigateTo = (viewId) => {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                if(btn.dataset.target === viewId) btn.classList.add('bg-slate-800', 'text-white');
-                else btn.classList.remove('bg-slate-800', 'text-white');
-            });
             if (viewId === 'home-view') renderHome();
             if (viewId === 'monthly-history-view') renderDashboard();
             if (viewId === 'ranking-view') renderRanking();
@@ -310,8 +386,8 @@
         }
 
         // LOGIC: CALCULATION
-        function performCalculation(month, year, extras, holidays, overrides) {
-            const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue } = appState.config;
+        function performCalculation(month, year, extras, holidays, overrides, lateness) {
+            const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = appState.config;
             if(!valorHora) return null;
 
             const daysInMonth = new Date(year, month, 0).getDate();
@@ -332,7 +408,9 @@
             let q1_viaticos = 0, q2_viaticos = 0;
             let q1_extras = 0, q2_extras = 0;
             let q1_feriados_amt = 0, q2_feriados_amt = 0;
-            let q1_feriados_count = 0, q2_feriados_count = 0;
+            
+            // PRESENTISMO LOGIC
+            let hasLateness = false;
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const current = new Date(year, month - 1, i);
@@ -346,11 +424,20 @@
 
                 const isManualHoliday = holidays[displayDate] === true;
                 const extraHours = extras[displayDate] || 0;
+                
+                // Lateness Check
+                const isLate = lateness && lateness[displayDate] === true;
+                if(isLate) hasLateness = true;
 
                 let turnLabel = cycleState;
                 let equivBase = 0;
 
-                if (cycleState === 'Franco') {
+                // LOGICA TURNOS ESPECIALES
+                if (cycleState === 'Vacaciones' || cycleState === 'Licencia') {
+                    turnLabel = cycleState;
+                    equivBase = 8; // 8 horas base pagas
+                } 
+                else if (cycleState === 'Franco') {
                     francosList.push({ dayNum: i, dayName: dayNames[dayOfWeek].substring(0,3), fullDate: displayDate, isHoliday: isManualHoliday });
                     if (isManualHoliday) { turnLabel = 'FERIADO (Franco)'; equivBase = 8; }
                 } else {
@@ -370,22 +457,28 @@
                 const dailyBruto = totalDayEquiv * valorHora;
                 const dailyViatico = extraHours > 0 ? viaticoValue : 0;
 
-                dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
+                dailyResults.push({ date: displayDate, key: dateKey, dayName: dayNames[dayOfWeek], turn: turnLabel, isHoliday: isManualHoliday, isLate: isLate, equivBase: equivBase, extraReal: extraHours, totalEquiv: totalDayEquiv, bruto: dailyBruto, isFranco: cycleState === 'Franco' });
 
                 if (i <= 15) {
                     q1_bruto += dailyBruto; q1_viaticos += dailyViatico; if(extraHours > 0) q1_extras++;
-                    if (isManualHoliday) { q1_feriados_amt += dailyBruto; q1_feriados_count++; }
+                    if (isManualHoliday) q1_feriados_amt += dailyBruto; 
                 } else {
                     q2_bruto += dailyBruto; q2_viaticos += dailyViatico; if(extraHours > 0) q2_extras++;
-                    if (isManualHoliday) { q2_feriados_amt += dailyBruto; q2_feriados_count++; }
+                    if (isManualHoliday) q2_feriados_amt += dailyBruto;
                 }
                 startOffset = (startOffset + 1) % 24;
             }
 
+            // CALCULO FINAL
             const q1_desc = q1_bruto * discountRate;
             const q1_neto = q1_bruto - q1_desc + q1_viaticos;
+            
+            // Presentismo: Se cobra todo o nada (regla general)
+            const finalPresentismo = hasLateness ? 0 : Number(presentismoAmount || 0);
+
             const q2_desc = q2_bruto * discountRate;
-            const q2_neto = q2_bruto - q2_desc + q2_viaticos + Number(tituloAmount);
+            const q2_neto = q2_bruto - q2_desc + q2_viaticos + Number(tituloAmount) + finalPresentismo; // Sumo presentismo a fin de mes
+
             const brutoTotal = q1_bruto + q2_bruto;
             const descuentoTotal = q1_desc + q2_desc;
             const totalViaticos = q1_viaticos + q2_viaticos;
@@ -394,36 +487,57 @@
             const totalFeriadosAmt = q1_feriados_amt + q2_feriados_amt;
 
             return { 
-                dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, tituloAmount: Number(tituloAmount), netoFinal, 
+                dailyResults, francosList, totalEquivHours, brutoTotal, descuentoTotal, totalViaticos, 
+                tituloAmount: Number(tituloAmount), 
+                presentismo: finalPresentismo, // Resultado calculado
+                hasLateness: hasLateness,
+                netoFinal, 
                 daysWithExtras: q1_extras + q2_extras, 
                 totalFeriadosAmt,
                 quincenas: { 
-                    q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc, feriados: q1_feriados_amt, feriadosCount: q1_feriados_count }, 
-                    q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc, feriados: q2_feriados_amt, feriadosCount: q2_feriados_count } 
+                    q1: { bruto: q1_bruto, neto: q1_neto, viaticos: q1_viaticos, desc: q1_desc, feriados: q1_feriados_amt }, 
+                    q2: { bruto: q2_bruto, neto: q2_neto, viaticos: q2_viaticos, desc: q2_desc, feriados: q2_feriados_amt } 
                 } 
             };
         }
 
-        // CORRECCIÓN CLAVE: OBTENER DATOS EN TIEMPO REAL
         function getCalculationFor(m, y) {
-            // 1. Verificar si el mes solicitado es el que está activo en el Dashboard
             if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
-                // Usar datos en memoria (edición en tiempo real)
-                return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
+                return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness);
             }
-
-            // 2. Si no, buscar en caché
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
-            if(cached) return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {});
-            else return performCalculation(m, y, {}, {}, {});
+            if(cached) return performCalculation(m, y, cached.extras || {}, cached.holidayFlags || {}, cached.shiftOverrides || {}, cached.lateness || {});
+            else return performCalculation(m, y, {}, {}, {}, {});
+        }
+
+        // GOOGLE AUTH & PROFILE
+        function updateProfilePictureUI(url) {
+            const picElements = [document.getElementById('profile-pic-sidebar'), document.getElementById('profile-pic-preview')];
+            const iconElements = [document.getElementById('profile-icon-sidebar'), document.getElementById('profile-icon-preview')];
+            picElements.forEach(el => { if(url) { el.src = url; el.classList.remove('hidden'); } else { el.classList.add('hidden'); } });
+            iconElements.forEach(el => { if(url) el.classList.add('hidden'); else el.classList.remove('hidden'); });
+        }
+
+        async function uploadProfilePicture(file) {
+            if (!userId) { showMessage('Debes iniciar sesión.', 'error'); return; }
+            const statusEl = document.getElementById('status-message');
+            showMessage('Subiendo foto...', 'info');
+            try {
+                const storageRef = ref(storage, `users/${userId}/profile.jpg`);
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+                appState.config.profilePicUrl = downloadURL;
+                await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), { profilePicUrl: downloadURL }, { merge: true });
+                updateProfilePictureUI(downloadURL);
+                showMessage('Foto actualizada.', 'success');
+            } catch (e) { console.error(e); showMessage('Error al subir.', 'error'); }
         }
 
         // RENDERING
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
-            // Usamos la función inteligente que revisa si estamos editando el mes actual
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
@@ -433,7 +547,6 @@
                 const dayOfMonth = now.getDate();
                 let nextPayAmount = 0;
                 let payDateObj = null;
-
                 if (dayOfMonth <= 15) {
                     nextPayAmount = calc.quincenas.q1.neto;
                     payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15);
@@ -442,7 +555,6 @@
                     const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
                     payDateObj = calculatePaymentDate(now.getFullYear(), now.getMonth()+1, daysInMonth);
                 }
-
                 document.getElementById('home-next-quincena').textContent = formatCurrency(nextPayAmount);
                 const payDateStr = payDateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' });
                 document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDateStr}`;
@@ -450,7 +562,7 @@
                 const francosContainer = document.getElementById('home-next-francos-container');
                 francosContainer.innerHTML = '';
                 const upcomingFrancos = calc.francosList.filter(f => f.dayNum >= dayOfMonth).slice(0, 5);
-                if(upcomingFrancos.length === 0) francosContainer.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos este mes.</p>';
+                if(upcomingFrancos.length === 0) francosContainer.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos.</p>';
                 else upcomingFrancos.forEach(f => {
                     const div = document.createElement('div');
                     div.className = `flex-shrink-0 w-20 h-24 ${f.isHoliday ? 'bg-red-100 border-red-200' : 'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3`;
@@ -491,7 +603,13 @@
             if (calc) {
                 document.getElementById('dash-equiv-hours').textContent = formatNumber(calc.totalEquivHours);
                 document.getElementById('dash-viaticos-total').textContent = formatCurrency(calc.totalViaticos);
-                document.getElementById('dash-titulo-total').textContent = formatCurrency(calc.tituloAmount);
+                
+                // PRESENTISMO
+                const presEl = document.getElementById('dash-presentismo-total');
+                presEl.textContent = formatCurrency(calc.presentismo);
+                if(calc.hasLateness) { presEl.classList.remove('text-blue-600'); presEl.classList.add('text-red-500', 'line-through', 'decoration-2'); }
+                else { presEl.classList.add('text-blue-600'); presEl.classList.remove('text-red-500', 'line-through'); }
+
                 document.getElementById('dash-neto-final').textContent = formatCurrency(calc.netoFinal);
 
                 const tbody = document.getElementById('daily-detail-tbody');
@@ -511,15 +629,19 @@
                         <option value="Tarde" ${curr==='Tarde'?'selected':''}>Tarde</option>
                         <option value="Noche" ${curr==='Noche'?'selected':''}>Noche</option>
                         <option value="Franco" ${curr==='Franco'?'selected':''}>Franco</option>
+                        <option value="Licencia" ${curr==='Licencia'?'selected':''}>Licencia</option>
+                        <option value="Vacaciones" ${curr==='Vacaciones'?'selected':''}>Vacaciones</option>
                     `;
 
                     tr.innerHTML = `
                         <td class="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">${d.date.split('/')[0]} <span class="text-xs text-slate-400 uppercase ml-1">${d.dayName.substring(0,3)}</span></td>
                         <td class="px-4 py-3"><select class="table-select bg-transparent border-none text-xs font-bold ${d.isFranco ? 'text-yellow-600' : 'text-indigo-600'} focus:ring-0 cursor-pointer" onchange="window.updateTurnOverride('${d.key}', this.value)">${buildOptions(selectVal)}</select><div class="text-[10px] text-slate-400">${d.turn}</div></td>
                         <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-red-600 rounded focus:ring-red-500" ${d.isHoliday ? 'checked' : ''} onchange="window.updateHoliday('${d.date}', this.checked)"></td>
+                        
+                        <td class="px-4 py-3 text-center"><input type="checkbox" class="w-4 h-4 text-orange-500 rounded focus:ring-orange-500" ${d.isLate ? 'checked' : ''} onchange="window.updateLateness('${d.date}', this.checked)"></td>
+
                         <td class="px-4 py-3 text-right text-slate-500">${formatNumber(d.equivBase)}</td>
                         <td class="px-4 py-3 text-center"><input type="number" value="${d.extraReal || ''}" class="w-16 text-center border rounded py-1 text-xs" placeholder="-" step="0.5" min="0" onchange="window.updateExtra('${d.date}', this.value)"></td>
-                        <td class="px-4 py-3 text-right font-bold text-slate-800">${formatNumber(d.totalEquiv)}</td>
                         <td class="px-4 py-3 text-right text-xs text-slate-500">${formatCurrency(d.bruto)}</td>
                     `;
                     tbody.appendChild(tr);
@@ -534,10 +656,7 @@
             container.innerHTML = '';
 
             const historyKeys = Object.keys(appState.historicalCache).sort().reverse();
-            if (historyKeys.length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-400">Genera un mes en "Mi Gestión" primero.</p>';
-                return;
-            }
+            if (historyKeys.length === 0) { container.innerHTML = '<p class="text-center text-slate-400 mt-8">Genera un mes primero.</p>'; return; }
 
             historyKeys.forEach(key => {
                 const [year, month] = key.split('-');
@@ -545,17 +664,13 @@
                 const btn = document.createElement('button');
                 btn.className = `px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition ${isActive ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`;
                 btn.textContent = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }).toUpperCase();
-                btn.onclick = () => {
-                    appState.treasuryViewMonth = { month: parseInt(month), year: parseInt(year) };
-                    renderTreasury();
-                };
+                btn.onclick = () => { appState.treasuryViewMonth = { month: parseInt(month), year: parseInt(year) }; renderTreasury(); };
                 chipContainer.appendChild(btn);
             });
 
             const { month, year } = appState.treasuryViewMonth;
             const calc = getCalculationFor(month, year);
 
-            const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             const dateQ1 = calculatePaymentDate(year, month, 15);
             const daysInMonth = new Date(year, month, 0).getDate();
             const dateQ2 = calculatePaymentDate(year, month, daysInMonth);
@@ -568,54 +683,50 @@
                             <p class="text-sm text-emerald-600 font-medium mt-1"><i class="fa-regular fa-calendar mr-1"></i> Cobro: ${date.toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long'})}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-3xl font-extrabold text-slate-800">${formatCurrency(amount)}</p>
-                            <p class="text-xs text-slate-400">Neto a cobrar</p>
+                            <p class="text-3xl font-extrabold text-slate-800 truncate">${formatCurrency(amount)}</p>
+                            <p class="text-xs text-slate-400">Neto</p>
                         </div>
                     </div>
                     <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div><p class="text-slate-400">Bruto Generado</p><p class="font-semibold text-slate-700">${formatCurrency(details.bruto)}</p></div>
-                        <div><p class="text-slate-400">Descuentos</p><p class="font-semibold text-red-500">-${formatCurrency(details.desc)}</p></div>
+                        <div><p class="text-slate-400">Bruto</p><p class="font-semibold text-slate-700">${formatCurrency(details.bruto)}</p></div>
+                        <div><p class="text-slate-400">Desc.</p><p class="font-semibold text-red-500">-${formatCurrency(details.desc)}</p></div>
                         <div><p class="text-slate-400">Viáticos</p><p class="font-semibold text-orange-500">+${formatCurrency(details.viaticos)}</p></div>
-                        ${details.feriados > 0 ? `<div><p class="text-slate-400">Feriados (${details.feriadosCount})</p><p class="font-semibold text-red-600">+${formatCurrency(details.feriados)}</p></div>` : ''}
-                        ${title.includes('2') ? `<div><p class="text-slate-400">Título</p><p class="font-semibold text-blue-500">+${formatCurrency(appState.config.tituloAmount)}</p></div>` : ''}
+                        ${details.feriados > 0 ? `<div><p class="text-slate-400">Feriados</p><p class="font-semibold text-red-600">+${formatCurrency(details.feriados)}</p></div>` : ''}
+                        ${title.includes('2') && calc.presentismo > 0 ? `<div><p class="text-slate-400">Presentismo</p><p class="font-semibold text-blue-500">+${formatCurrency(calc.presentismo)}</p></div>` : ''}
+                        ${title.includes('2') && calc.hasLateness ? `<div><p class="text-slate-400">Presentismo</p><p class="font-bold text-red-500 line-through">Perdido</p></div>` : ''}
                     </div>
                 </div>
             `;
 
             container.innerHTML = `
-                <div class="mb-4 text-right"><span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold">Viendo: ${monthName}</span></div>
                 ${card('1ª Quincena', calc.quincenas.q1.neto, dateQ1, calc.quincenas.q1)}
-                ${card('2ª Quincena (Cierre)', calc.quincenas.q2.neto, dateQ2, calc.quincenas.q2)}
+                ${card('2ª Quincena', calc.quincenas.q2.neto, dateQ2, calc.quincenas.q2)}
             `;
         }
 
         function renderRanking() {
-            const list = document.getElementById('ranking-list');
-            list.innerHTML = '';
+            const list = document.getElementById('ranking-list'); list.innerHTML = '';
             const ranked = Object.entries(appState.historicalCache).map(([key, data]) => ({ key, ...data })).sort((a, b) => b.results.netoFinal - a.results.netoFinal);
             if (ranked.length === 0) { list.innerHTML = '<p class="text-center text-slate-400 mt-8">Sin datos.</p>'; return; }
 
             ranked.forEach((item, index) => {
                 const [year, month] = item.key.split('-');
                 const monthName = new Date(year, month - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-                let medal = '', border = 'border-slate-100', bg = 'bg-white';
-                if(index===0) { medal='🥇'; border='border-yellow-400'; bg='bg-yellow-50'; }
-                else if(index===1) { medal='🥈'; border='border-slate-300'; }
-                else if(index===2) { medal='🥉'; border='border-orange-300'; }
+                let medal = '', border = 'border-slate-100';
+                if(index===0) { medal='🥇'; border='border-yellow-400'; } else if(index===1) medal='🥈'; else if(index===2) medal='🥉';
 
                 list.innerHTML += `
-                    <div class="p-4 rounded-xl border ${border} ${bg} shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="p-4 rounded-xl border ${border} bg-white shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                         <div class="flex items-center gap-4 w-full md:w-auto">
                             <div class="text-2xl font-bold w-8 text-center">${medal || (index+1)}</div>
                             <div><h4 class="font-bold text-slate-800 capitalize">${monthName}</h4>
                                 <div class="flex gap-2 text-xs mt-1 flex-wrap">
-                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Extras: ${item.results.daysWithExtras || 0}</span>
-                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Viát: ${formatCurrency(item.results.totalViaticos)}</span>
-                                    ${item.results.totalFeriadosAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded">Fer: ${formatCurrency(item.results.totalFeriadosAmt)}</span>` : ''}
+                                    ${item.results.totalFeriadosAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 rounded">Fer: ${formatCurrency(item.results.totalFeriadosAmt)}</span>` : ''}
+                                    ${item.results.presentismo > 0 ? `<span class="bg-blue-100 text-blue-700 px-2 rounded">Pres: OK</span>` : ''}
                                 </div>
                             </div>
                         </div>
-                        <div class="text-right w-full md:w-auto border-t md:border-0 pt-2 md:pt-0"><p class="text-xs text-slate-500">Neto Final</p><p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p></div>
+                        <div class="text-right"><p class="text-xl font-extrabold text-emerald-600">${formatCurrency(item.results.netoFinal)}</p></div>
                     </div>
                 `;
             });
@@ -624,13 +735,17 @@
         // ACTIONS
         window.updateExtra = (d, v) => { const val = parseFloat(v) || 0; if (val > 0) appState.activeData.extras[d] = val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
         window.updateHoliday = (d, c) => { if (c) appState.activeData.manualHolidays[d] = true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
+        window.updateLateness = (d, c) => { 
+            if(!appState.activeData.lateness) appState.activeData.lateness = {};
+            if (c) appState.activeData.lateness[d] = true; else delete appState.activeData.lateness[d]; 
+            triggerLocalRecalculate(); 
+        };
         window.updateTurnOverride = (key, val) => { if(!appState.activeData.shiftOverrides) appState.activeData.shiftOverrides = {}; if(val === 'Original') delete appState.activeData.shiftOverrides[key]; else appState.activeData.shiftOverrides[key] = val; triggerLocalRecalculate(); };
 
         function triggerLocalRecalculate() {
             const { month, year } = appState.viewingMonth;
-            appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides);
-            renderDashboard();
-            renderHome(); // Actualiza el widget de Inicio en tiempo real
+            appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness);
+            renderDashboard(); renderHome();
         }
 
         async function switchDashboardMonth(m, y) {
@@ -640,24 +755,21 @@
                 appState.activeData.extras = appState.historicalCache[key].extras || {};
                 appState.activeData.manualHolidays = appState.historicalCache[key].holidayFlags || {};
                 appState.activeData.shiftOverrides = appState.historicalCache[key].shiftOverrides || {};
+                appState.activeData.lateness = appState.historicalCache[key].lateness || {};
                 triggerLocalRecalculate();
             }
             renderDashboard();
-            // Si cambiamos al mes actual en el dashboard, queremos que Inicio se actualice también
-            const now = new Date();
-            if (m === now.getMonth()+1 && y === now.getFullYear()) renderHome();
+            const now = new Date(); if (m === now.getMonth()+1 && y === now.getFullYear()) renderHome();
         }
 
         async function generateMonth(m, y) {
             if(m > 12) { m=1; y++; }
             appState.viewingMonth = { month: m, year: y };
-            appState.activeData.extras = {};
-            appState.activeData.manualHolidays = {};
-            appState.activeData.shiftOverrides = {};
+            appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
             triggerLocalRecalculate();
             saveCurrentData();
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
-            showMessage(`Mes de ${m}/${y} generado.`);
+            showMessage(`Mes generado.`);
         }
 
         document.getElementById('btn-recalculate').onclick = () => { triggerLocalRecalculate(); saveCurrentData(); showMessage('Guardado.'); };
@@ -667,10 +779,14 @@
             appState.config.discountRate = parseFloat(document.getElementById('cfg-discountRate').value);
             appState.config.tituloAmount = parseFloat(document.getElementById('cfg-tituloAmount').value);
             appState.config.viaticoValue = parseFloat(document.getElementById('cfg-viaticoValue').value);
+            appState.config.presentismoAmount = parseFloat(document.getElementById('cfg-presentismoAmount').value);
             appState.config.lastFrancoDate = document.getElementById('cfg-lastFrancoDate').value;
             appState.config.initialTurn = document.getElementById('cfg-initialTurn').value;
-            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), appState.config);
+            
+            const configToSave = { ...appState.config };
+            if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), configToSave);
             showMessage('Configuración guardada.', 'success'); renderHome();
+            document.getElementById('user-info-name').textContent = appState.config.userName;
         };
 
         function fillConfigInputs() {
@@ -679,48 +795,60 @@
             document.getElementById('cfg-discountRate').value = appState.config.discountRate;
             document.getElementById('cfg-tituloAmount').value = appState.config.tituloAmount;
             document.getElementById('cfg-viaticoValue').value = appState.config.viaticoValue;
+            document.getElementById('cfg-presentismoAmount').value = appState.config.presentismoAmount;
             document.getElementById('cfg-lastFrancoDate').value = appState.config.lastFrancoDate;
             document.getElementById('cfg-initialTurn').value = appState.config.initialTurn;
+            updateProfilePictureUI(appState.config.profilePicUrl);
         }
 
         async function initFirebaseSystem() {
-            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app);
+            app = initializeApp(firebaseConfig); auth = getAuth(app); db = getFirestore(app); storage = getStorage(app);
             const authBtn = document.getElementById('auth-action-btn');
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     userId = user.uid; isFirebaseActive = true;
-                    document.getElementById('user-info').textContent = user.displayName || user.email;
+                    document.getElementById('user-info-email').textContent = user.email;
+                    
+                    // GOOGLE NAME SYNC
+                    if(user.displayName && (!appState.config.userName || appState.config.userName === 'Usuario')) {
+                         appState.config.userName = user.displayName;
+                    }
+                    
                     authBtn.innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir';
                     authBtn.onclick = () => signOut(auth);
                     loadUserData();
                 } else {
                     userId = null; isFirebaseActive = false;
-                    document.getElementById('user-info').textContent = 'Invitado';
+                    document.getElementById('user-info-name').textContent = 'Invitado';
                     authBtn.innerHTML = '<i class="fa-brands fa-google mr-2"></i> Acceder';
                     authBtn.onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+                    updateProfilePictureUI('');
                     triggerLocalRecalculate(); renderHome(); navigateTo('home-view');
                 }
             });
         }
 
         async function loadUserData() {
-            onSnapshot(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), (s) => { if(s.exists()) { appState.config = { ...appState.config, ...s.data() }; renderHome(); }});
+            onSnapshot(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), (s) => { 
+                if(s.exists()) { 
+                    appState.config = { ...appState.config, ...s.data() }; 
+                    renderHome(); 
+                    updateProfilePictureUI(appState.config.profilePicUrl);
+                    document.getElementById('user-info-name').textContent = appState.config.userName;
+                }
+            });
             const snapshot = await getDocs(collection(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data'));
             appState.historicalCache = {};
             snapshot.forEach(d => appState.historicalCache[d.id] = d.data());
             const keys = Object.keys(appState.historicalCache).sort().reverse();
-            if(keys.length > 0) { 
-                const [y, m] = keys[0].split('-'); 
-                switchDashboardMonth(parseInt(m), parseInt(y)); 
-                appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) };
-            }
+            if(keys.length > 0) { const [y, m] = keys[0].split('-'); switchDashboardMonth(parseInt(m), parseInt(y)); appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) }; }
         }
 
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
             const docId = `${year}-${String(month).padStart(2, '0')}`;
-            const data = { extras: appState.activeData.extras, holidayFlags: appState.activeData.manualHolidays, shiftOverrides: appState.activeData.shiftOverrides, results: appState.activeData.calculation };
+            const data = { extras: appState.activeData.extras, holidayFlags: appState.activeData.manualHolidays, shiftOverrides: appState.activeData.shiftOverrides, lateness: appState.activeData.lateness, results: appState.activeData.calculation };
             appState.historicalCache[docId] = data;
             await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
         }
@@ -728,195 +856,61 @@
         function formatCurrency(v) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(v || 0); }
         function formatNumber(v) { return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2 }).format(v || 0); }
         function showMessage(m, t='info') { const el = document.getElementById('status-message'); el.textContent = m; el.className = `mb-6 p-4 rounded-xl shadow-md border-l-4 transition-all-300 ${t === 'error' ? 'bg-red-100 text-red-700 border-red-500' : 'bg-indigo-100 text-indigo-700 border-indigo-500'}`; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
-        document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+1; ty=d.getFullYear(); } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
+        document.getElementById('btn-generate-new').onclick = () => { const keys = Object.keys(appState.historicalCache).sort(); let tm, ty; if(keys.length > 0) { const [ly, lm] = keys[keys.length-1].split('-'); const d = new Date(ly, lm, 1); tm=d.getMonth()+2; ty=d.getFullYear(); if(tm>12) { tm=1; ty++; } } else { tm=new Date().getMonth()+1; ty=new Date().getFullYear(); } generateMonth(tm, ty); };
 
-        // ================= GENERADOR PDF DISEÑADO A MANO ( ESTILO VISUAL ) =================
+        // PDF
         document.getElementById('btn-download-pdf').onclick = () => {
             const { jsPDF } = window.jspdf;
-            // Formato A4 (210mm x 297mm)
             const doc = new jsPDF();
             const calc = appState.activeData.calculation;
             if(!calc) return;
 
             const monthLabel = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'}).toUpperCase();
             
-            // --- FUNCIÓN DE DIBUJO DE TARJETA (TESORERÍA) ---
-            function drawTreasuryCard(yPos, title, dateText, netAmount, details) {
-                // Fondo Tarjeta (Borde gris claro, fondo blanco, esquinas redondeadas)
-                doc.setDrawColor(230, 230, 230);
-                doc.setFillColor(255, 255, 255);
-                doc.roundedRect(10, yPos, 190, 60, 3, 3, 'FD');
+            // HEADER
+            doc.setFillColor(67, 56, 202); doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.setFont("helvetica", "bold"); doc.text(`LIQUIDACIÓN`, 15, 20);
+            doc.setFontSize(12); doc.setFont("helvetica", "normal"); doc.text(`${monthLabel}`, 15, 30); doc.text(`Empleado: ${appState.config.userName}`, 195, 30, { align: 'right' });
 
-                // Título y Fecha (Izquierda)
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(12);
-                doc.setTextColor(55, 65, 81); // Slate 700
-                doc.text(title, 15, yPos + 10);
-
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(10);
-                doc.setTextColor(5, 150, 105); // Emerald 600
-                doc.text(`Cobro: ${dateText}`, 15, yPos + 16);
-
-                // Monto Neto (Derecha, Grande)
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(22);
-                doc.setTextColor(30, 41, 59); // Slate 800
-                doc.text(formatCurrency(netAmount), 195, yPos + 12, { align: 'right' });
-                
-                doc.setFontSize(8);
-                doc.setTextColor(156, 163, 175); // Slate 400
-                doc.text("Neto a cobrar", 195, yPos + 17, { align: 'right' });
-
-                // Línea divisoria sutil
-                doc.setDrawColor(245, 245, 245);
-                doc.line(10, yPos + 22, 200, yPos + 22);
-
-                // Detalles (Grid inferior)
-                const detailY = yPos + 32;
-                doc.setFontSize(9);
-                
-                // Función interna para dibujar un bloque de detalle
-                const drawDetailBlock = (x, label, value, color = [55, 65, 81]) => {
-                    doc.setFont("helvetica", "normal");
-                    doc.setTextColor(156, 163, 175); // Slate 400 label
-                    doc.text(label, x, detailY);
-                    
-                    doc.setFont("helvetica", "bold");
-                    doc.setTextColor(color[0], color[1], color[2]);
-                    doc.text(value, x, detailY + 5);
-                };
-
-                drawDetailBlock(15, "Bruto Generado", formatCurrency(details.bruto));
-                drawDetailBlock(65, "Descuentos", `-${formatCurrency(details.desc)}`, [239, 68, 68]); // Red
-                drawDetailBlock(115, "Viáticos", `+${formatCurrency(details.viaticos)}`, [249, 115, 22]); // Orange
-                
-                // Cuarto bloque condicional (Titulo o Feriados)
-                if(title.includes('2')) {
-                    drawDetailBlock(160, "Título", `+${formatCurrency(appState.config.tituloAmount)}`, [59, 130, 246]); // Blue
-                } else if (details.feriados > 0) {
-                     drawDetailBlock(160, "Feriados", `+${formatCurrency(details.feriados)}`, [220, 38, 38]); // Red Dark
-                }
-            }
-
-            // --- PÁGINA 1: VISTA TESORERÍA ---
+            doc.setTextColor(60, 60, 60); doc.setFontSize(10);
+            let y = 55; doc.text(`Valor Hora: ${formatCurrency(appState.config.valorHora)}`, 15, y);
             
-            // Etiqueta "Viendo: MES AÑO" estilo badge arriba derecha
-            doc.setFillColor(224, 231, 255); // Indigo 100
-            doc.roundedRect(140, 10, 60, 8, 2, 2, 'F');
-            doc.setFontSize(10);
-            doc.setTextColor(67, 56, 202); // Indigo 700
-            doc.setFont("helvetica", "bold");
-            doc.text(`Viendo: ${monthLabel}`, 170, 15.5, { align: 'center' });
+            // Resumen Financiero
+            y += 10;
+            const headers = [['CONCEPTO', '1ª QUINCENA', '2ª QUINCENA', 'TOTAL MES']];
+            const data = [
+                ['Bruto Generado', formatCurrency(calc.quincenas.q1.bruto), formatCurrency(calc.quincenas.q2.bruto), formatCurrency(calc.brutoTotal)],
+                ['Descuentos', `-${formatCurrency(calc.quincenas.q1.desc)}`, `-${formatCurrency(calc.quincenas.q2.desc)}`, `-${formatCurrency(calc.descuentoTotal)}`],
+                ['Viáticos', formatCurrency(calc.quincenas.q1.viaticos), formatCurrency(calc.quincenas.q2.viaticos), formatCurrency(calc.totalViaticos)],
+                ['Presentismo', '-', calc.hasLateness ? 'PERDIDO' : formatCurrency(calc.presentismo), calc.hasLateness ? '0' : formatCurrency(calc.presentismo)],
+                ['NETO A COBRAR', formatCurrency(calc.quincenas.q1.neto), formatCurrency(calc.quincenas.q2.neto), formatCurrency(calc.netoFinal)]
+            ];
 
-            // Tarjeta 1 (1ra Quincena)
-            const dateQ1 = calculatePaymentDate(appState.viewingMonth.year, appState.viewingMonth.month, 15);
-            drawTreasuryCard(30, "1ª Quincena", dateQ1.toLocaleDateString('es-AR'), calc.quincenas.q1.neto, calc.quincenas.q1);
+            doc.autoTable({ startY: y, head: headers, body: data, theme: 'grid', headStyles: { fillColor: [50, 50, 50] }, columnStyles: { 3: { fontStyle: 'bold', fillColor: [240, 253, 244] } } });
 
-            // Tarjeta 2 (2da Quincena)
-            const daysInMonth = new Date(appState.viewingMonth.year, appState.viewingMonth.month, 0).getDate();
-            const dateQ2 = calculatePaymentDate(appState.viewingMonth.year, appState.viewingMonth.month, daysInMonth);
-            drawTreasuryCard(100, "2ª Quincena (Cierre)", dateQ2.toLocaleDateString('es-AR'), calc.quincenas.q2.neto, calc.quincenas.q2);
-
-            // Footer Pag 1
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text("Reporte generado por Calculadora 6x2 PRO", 105, 280, { align: 'center' });
-
-
-            // --- PÁGINA 2: VISTA GESTIÓN (TABLA DETALLADA) ---
+            // Detalle Diario
             doc.addPage();
+            doc.setFontSize(14); doc.setTextColor(55, 65, 81); doc.text("Detalle Diario", 14, 20);
             
-            // Título de la Tabla (Estilo "Detalle Diario enero de 2026")
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(55, 65, 81);
-            doc.text("Detalle Diario", 14, 20);
-            
-            doc.setTextColor(79, 70, 229); // Indigo
-            doc.text(monthLabel.toLowerCase(), 50, 20);
-
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(156, 163, 175);
-            doc.text("Reporte completo de turnos, horas base, extras y feriados.", 14, 26);
-
-            // Totales Superiores (Mini cards)
-            const drawMiniStat = (x, label, value, colorHex) => {
-                 doc.setFontSize(8);
-                 doc.setTextColor(100);
-                 doc.text(label, x, 35);
-                 doc.setFontSize(12);
-                 doc.setFont("helvetica", "bold");
-                 doc.setTextColor(colorHex);
-                 doc.text(value, x, 41);
-            };
-            
-            drawMiniStat(14, "H. EQUIVALENTES", formatNumber(calc.totalEquivHours), "#4f46e5");
-            drawMiniStat(60, "VIÁTICOS", formatCurrency(calc.totalViaticos), "#ea580c");
-            drawMiniStat(110, "TÍTULO", formatCurrency(appState.config.tituloAmount), "#2563eb");
-            drawMiniStat(160, "NETO FINAL", formatCurrency(calc.netoFinal), "#059669");
-
-            // Tabla con Estilo Exacto a la Imagen
-            const tableData = calc.dailyResults.map(d => [
-                `${d.date.split('/')[0]} ${d.dayName.toUpperCase()}`, // 01 JUE
-                d.turn.replace('Mañana', 'Mañana').replace('Noche', 'Noche').replace('Tarde', 'Tarde'), // Turno
-                d.isHoliday ? 'Sí' : '', // Feriado check
-                formatNumber(d.equivBase), // H. Eq Base
-                d.extraReal > 0 ? d.extraReal : '-', // H. Extra
-                formatNumber(d.totalEquiv), // Total Eq
-                formatCurrency(d.bruto) // Bruto Dia
+            const dailyData = calc.dailyResults.map(d => [
+                d.date, d.turn, d.isHoliday ? 'Sí' : '', d.isLate ? 'TARDE' : '',
+                formatNumber(d.equivBase), d.extraReal > 0 ? d.extraReal : '-', formatCurrency(d.bruto)
             ]);
 
             doc.autoTable({
-                startY: 50,
-                head: [['FECHA', 'TURNO', 'FERIADO', 'H.EQ BASE', 'H.EXTRA', 'TOTAL EQ.', 'BRUTO DÍA']],
-                body: tableData,
-                theme: 'plain', // Empezamos limpio para personalizar
-                styles: { fontSize: 9, cellPadding: 4, valign: 'middle' },
-                headStyles: { 
-                    fillColor: [248, 250, 252], // Slate 50 background
-                    textColor: [100, 116, 139], // Slate 500 text
-                    fontStyle: 'bold',
-                    lineWidth: 0,
-                    fontSize: 8
-                },
-                columnStyles: {
-                    0: { fontStyle: 'bold', textColor: [71, 85, 105] }, // Fecha Darker
-                    1: { fontStyle: 'bold', textColor: [79, 70, 229] }, // Turno Indigo
-                    3: { halign: 'center', textColor: [100, 100, 100] },
-                    4: { halign: 'center' },
-                    5: { halign: 'right', fontStyle: 'bold' },
-                    6: { halign: 'right', textColor: [100, 100, 100] }
-                },
+                startY: 25,
+                head: [['FECHA', 'TURNO', 'FERIADO', 'TARDE', 'BASE', 'EXTRAS', 'BRUTO']],
+                body: dailyData,
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229] },
                 didParseCell: (data) => {
-                    // Colorear filas según lógica visual de la web
                     if (data.section === 'body') {
-                         const rowRaw = data.row.raw;
-                         const turn = rowRaw[1];
-                         const isHoliday = rowRaw[2] === 'Sí';
-                         
-                         // Linea separadora sutil
-                         data.cell.styles.borderBottomWidth = 0.1;
-                         data.cell.styles.borderColor = [241, 245, 249];
-
-                         // Estilo Franco (Amarillo muy suave)
-                         if (turn.includes('Franco') && !isHoliday) {
-                             data.cell.styles.fillColor = [255, 252, 235]; // Yellow 50ish
-                             data.cell.styles.textColor = [161, 98, 7]; // Yellow 700 text
-                             // Override column 1 specific color for Francos
-                             if(data.column.index === 1) data.cell.styles.textColor = [202, 138, 4];
-                         }
-                         
-                         // Estilo Feriado (Texto Rojo, fondo suave rojo si se quiere, aqui solo texto)
-                         if (isHoliday) {
-                             data.cell.styles.textColor = [220, 38, 38]; // Red 600
-                         }
+                        if (data.row.raw[3] === 'TARDE') data.cell.styles.textColor = [220, 38, 38];
                     }
                 }
             });
 
-            doc.save(`Nomina_${monthLabel.replace(/\s/g, '_')}.pdf`);
+            doc.save(`Nomina_${monthLabel}.pdf`);
         };
 
     </script>
