@@ -127,7 +127,7 @@
                         <div class="col-span-1 md:col-span-2 border-b pb-6">
                             <h4 class="font-bold text-indigo-600 mb-4">Foto de Perfil</h4>
                             <div class="flex items-center space-x-4">
-                                <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden"><img id="profile-pic-preview" src="" class="w-full h-full object-cover hidden"><i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i></div>
+                                <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden"><img id="profile-pic-preview" src="" alt="Preview" class="w-full h-full object-cover hidden"><i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i></div>
                                 <div><input type="file" id="cfg-profilePicture" accept="image/*" class="hidden"><button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md"><i class="fa-solid fa-upload mr-2"></i> Cambiar Foto</button></div>
                             </div>
                         </div>
@@ -162,7 +162,11 @@
         let app, auth, db, storage, userId = null;
 
         let appState = {
-            config: { userName: 'Usuario', profilePicUrl: '', valorHora: 3758, discountRate: 0.18, tituloAmount: 0, viaticoValue: 6200, presentismoAmount: 0, lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' },
+            config: { 
+                userName: 'Usuario', profilePicUrl: '', valorHora: 3758, discountRate: 0.18, 
+                tituloAmount: 0, viaticoValue: 6200, presentismoAmount: 0,
+                lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' 
+            },
             viewingMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             treasuryViewMonth: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
             activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null },
@@ -170,7 +174,8 @@
         };
 
         window.onload = () => {
-            initFirebaseSystem(); setupUI();
+            initFirebaseSystem();
+            setupUI();
             const d = new Date();
             document.getElementById('header-current-date').textContent = `${d.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()]}`;
             const fileInput = document.getElementById('cfg-profilePicture');
@@ -202,7 +207,7 @@
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
             
-            // SAFETY: Never return null. Use 0 if undefined.
+            // SAFETY: Ensure values are numbers. If valorHora is 0, calculate anyway (returns 0 money, but dates work)
             const safeValHora = Number(valorHora) || 0; 
             const safeViat = Number(viaticoValue) || 0;
             const safePres = Number(presentismoAmount) || 0;
@@ -213,7 +218,17 @@
             const francosList = [];
             const masterCycle = ['Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Mañana', 'Franco', 'Franco', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Noche', 'Franco', 'Franco', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Tarde', 'Franco', 'Franco'];
             let baseOffset = (initialTurn === 'Noche') ? 8 : (initialTurn === 'Tarde' ? 16 : 0);
-            const diffDays = Math.floor((new Date(year, month - 1, 1).getTime() - new Date(new Date(lastFrancoDate+'T00:00:00').setDate(new Date(lastFrancoDate+'T00:00:00').getDate()+1)).getTime()) / 86400000);
+            
+            // Date parsing safety
+            let lastFrancoMs = new Date().getTime();
+            if (lastFrancoDate) {
+                const lfParts = lastFrancoDate.split('-');
+                lastFrancoMs = new Date(lfParts[0], lfParts[1]-1, lfParts[2]).getTime();
+                // Adjust for Day 2 of Franco to start cycle next day
+                lastFrancoMs += 86400000; 
+            }
+            
+            const diffDays = Math.floor((new Date(year, month - 1, 1).getTime() - lastFrancoMs) / 86400000);
             let startOffset = (baseOffset + diffDays) % 24; if (startOffset < 0) startOffset += 24;
 
             let q1_bruto = 0, q2_bruto = 0, q1_viaticos = 0, q2_viaticos = 0, q1_fer = 0, q2_fer = 0;
@@ -270,18 +285,16 @@
         }
 
         function getCalculationFor(m, y) {
-            // Use live config if editing current view, else use cached snapshot
+            // Always return a valid calculation object, never null
             if (appState.viewingMonth.month === m && appState.viewingMonth.year === y) {
                 return performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
             }
             const key = `${y}-${String(m).padStart(2,'0')}`;
             const cached = appState.historicalCache[key];
-            return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, cached?.configSnapshot||null);
+            // If cached exists use it, otherwise calculate fresh (config might be empty but it handles it now)
+            return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, cached?.configSnapshot||appState.config);
         }
 
-        // --- BUTTON LOGIC FIXES ---
-        
-        // 1. DELETE
         document.getElementById('btn-delete-month').onclick = async () => {
             if(!confirm("¿Borrar este mes?")) return;
             const { month, year } = appState.viewingMonth;
@@ -289,7 +302,6 @@
             try {
                 if(userId) await deleteDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId));
                 delete appState.historicalCache[docId];
-                // Go to latest available or current
                 const keys = Object.keys(appState.historicalCache).sort();
                 if (keys.length > 0) {
                     const [ly, lm] = keys[keys.length - 1].split('-');
@@ -304,34 +316,33 @@
             } catch(e) { console.error(e); showMessage('Error.', 'error'); }
         };
 
-        // 2. GENERATE NEXT MONTH (LOGIC REWRITE)
-        document.getElementById('btn-generate-new').onclick = () => { 
+        // 2. GENERATE NEXT MONTH (CRITICAL FIX)
+        document.getElementById('btn-generate-new').onclick = async () => { 
             const keys = Object.keys(appState.historicalCache).sort();
             let m, y;
             if(keys.length > 0) {
-                const [ly, lm] = keys[keys.length-1].split('-'); // Get LAST generated month
+                const [ly, lm] = keys[keys.length-1].split('-'); 
                 m = parseInt(lm) + 1; 
                 y = parseInt(ly);
                 if(m > 12) { m = 1; y++; }
             } else {
-                // No history? Start from CURRENT month
                 const now = new Date();
                 m = now.getMonth() + 1; 
                 y = now.getFullYear();
             }
-            generateMonth(m, y); 
+            await generateMonth(m, y); 
         };
 
         async function generateMonth(m, y) {
             appState.viewingMonth = { month: m, year: y };
             appState.activeData = { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {} };
+            // Ensure calculation happens before saving
             triggerLocalRecalculate(); 
-            await saveCurrentData(); // Wait for save
+            await saveCurrentData(); 
             if(!appState.treasuryViewMonth) appState.treasuryViewMonth = { month: m, year: y };
-            showMessage(`Mes ${m}/${y} creado.`);
+            showMessage(`Mes ${m}/${y} generado.`);
         }
 
-        // --- UI UPDATES ---
         function updateProfilePictureUI(url) {
             const els = ['profile-pic-sidebar', 'profile-pic-preview', 'home-profile-pic'];
             els.forEach(id => {
@@ -358,24 +369,25 @@
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
             const now = new Date();
-            // SAFETY: FORCE CALCULATION TO REMOVE "CALCULANDO..."
             const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear());
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             updateProfilePictureUI(appState.config.profilePicUrl);
 
-            // ALWAYS UPDATE VALUES, EVEN IF 0
-            document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
-            const d = now.getDate();
-            const payDate = d <= 15 ? calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15) : calculatePaymentDate(now.getFullYear(), now.getMonth()+1, new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
-            document.getElementById('home-next-quincena').textContent = formatCurrency(d <= 15 ? calc.quincenas.q1.neto : calc.quincenas.q2.neto);
-            document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
-            
-            const fCont = document.getElementById('home-next-francos-container'); fCont.innerHTML = '';
-            const fList = calc.francosList.filter(f => f.dayNum >= d).slice(0, 5);
-            if(fList.length===0) fCont.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos.</p>';
-            else fList.forEach(f => {
-                fCont.innerHTML += `<div class="flex-shrink-0 w-20 h-24 ${f.isHoliday?'bg-red-100 border-red-200':'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3"><span class="text-xs uppercase font-bold ${f.isHoliday?'text-red-500':'text-indigo-400'}">${f.dayName}</span><span class="text-3xl font-bold ${f.isHoliday?'text-red-700':'text-slate-700'}">${f.dayNum}</span></div>`;
-            });
+            // Immediate rendering of whatever calculation returned (even if 0)
+            if (calc) {
+                document.getElementById('home-month-net').textContent = formatCurrency(calc.netoFinal);
+                const d = now.getDate();
+                const payDate = d <= 15 ? calculatePaymentDate(now.getFullYear(), now.getMonth()+1, 15) : calculatePaymentDate(now.getFullYear(), now.getMonth()+1, new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
+                document.getElementById('home-next-quincena').textContent = formatCurrency(d <= 15 ? calc.quincenas.q1.neto : calc.quincenas.q2.neto);
+                document.getElementById('home-payment-date').innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Cobro est: ${payDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'numeric' })}`;
+                
+                const fCont = document.getElementById('home-next-francos-container'); fCont.innerHTML = '';
+                const fList = calc.francosList.filter(f => f.dayNum >= d).slice(0, 5);
+                if(fList.length===0) fCont.innerHTML = '<p class="text-sm text-slate-400 py-4">No hay más francos.</p>';
+                else fList.forEach(f => {
+                    fCont.innerHTML += `<div class="flex-shrink-0 w-20 h-24 ${f.isHoliday?'bg-red-100 border-red-200':'bg-white border-slate-200'} border rounded-xl flex flex-col items-center justify-center shadow-sm mr-3"><span class="text-xs uppercase font-bold ${f.isHoliday?'text-red-500':'text-indigo-400'}">${f.dayName}</span><span class="text-3xl font-bold ${f.isHoliday?'text-red-700':'text-slate-700'}">${f.dayNum}</span></div>`;
+                });
+            }
         }
 
         function renderDashboard() {
@@ -453,6 +465,11 @@
             });
         }
 
+        window.updateExtra = (d, v) => { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
+        window.updateHoliday = (d, c) => { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
+        window.updateLateness = (d, c) => { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); };
+        window.updateTurnOverride = (k, v) => { if(v==='Original') delete appState.activeData.shiftOverrides[k]; else appState.activeData.shiftOverrides[k]=v; triggerLocalRecalculate(); };
+        
         function triggerLocalRecalculate() {
             const {month, year} = appState.viewingMonth;
             appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config);
@@ -470,6 +487,7 @@
             renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome();
         }
 
+        // CRITICAL FIX: Explicitly insert into cache BEFORE render
         async function saveCurrentData() {
             if(!userId) return;
             const { month, year } = appState.viewingMonth;
@@ -480,7 +498,10 @@
                 results: appState.activeData.calculation,
                 configSnapshot: { ...appState.config }
             };
+            // UPDATE CACHE IMMEDIATELY TO REFLECT IN UI
             appState.historicalCache[docId] = data;
+            renderDashboard(); 
+            
             await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data);
         }
 
@@ -498,7 +519,7 @@
                     document.getElementById('user-info-email').textContent = u.email; 
                     document.getElementById('auth-action-btn').innerHTML = '<i class="fa-solid fa-right-from-bracket mr-2"></i> Salir'; 
                     document.getElementById('auth-action-btn').onclick = () => signOut(auth); 
-                    // FORCE NAME OVERWRITE
+                    // FORCE NAME OVERWRITE from Google
                     if(u.displayName) { 
                         appState.config.userName = u.displayName; 
                         document.getElementById('user-info-name').textContent = u.displayName; 
@@ -514,7 +535,6 @@
                 if(s.exists()) { 
                     const data = s.data();
                     appState.config = { ...appState.config, ...data };
-                    // Preserve Google Name if already set
                     if(auth.currentUser && auth.currentUser.displayName) appState.config.userName = auth.currentUser.displayName;
                     renderHome(); 
                     updateProfilePictureUI(appState.config.profilePicUrl); 
@@ -541,7 +561,7 @@
             doc.save(`Nomina_${ml}.pdf`);
         };
         
-        // SAVE CONFIG HANDLER (Ensure name persistence)
+        // SAVE CONFIG HANDLER
         document.querySelector('#config-view button').onclick = async () => {
             appState.config.userName = document.getElementById('cfg-userName').value;
             appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
