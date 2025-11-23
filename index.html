@@ -12,28 +12,23 @@
     <style>
         @import url('https://fonts.fonts.google.com/specimen/Inter:wght@300;400;600;700;800');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overscroll-behavior-y: contain; }
-        
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .transition-all-300 { transition: all 0.3s ease-in-out; }
-        
-        /* Sidebar */
         #sidebar { transition: transform 0.3s ease-in-out; }
         .sidebar-closed { transform: translateX(-100%); }
         .sidebar-open { transform: translateX(0); }
-
-        /* Inputs */
         .table-select { appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
         input, select, textarea { font-size: 16px !important; }
-        input:disabled, select:disabled { background-color: #f8fafc; color: #64748b; }
-
+        input:disabled, select:disabled { background-color: #f8fafc; color: #64748b; cursor: not-allowed; }
+        
         /* Animación Foto */
         @keyframes spin-border { 0% { --angle: 0deg; } 100% { --angle: 360deg; } }
         .profile-animated-wrapper { position: relative; padding: 2px; border-radius: 50%; background: conic-gradient(from var(--angle), #ea580c, #facc15, #4f46e5, #ea580c); animation: spin 4s linear infinite; display: inline-block; }
         @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
         @keyframes spin { to { --angle: 360deg; } }
 
-        /* Pull Refresh */
+        /* Spinner */
         #refresh-spinner { transition: transform 0.3s; transform: translateY(-100%); }
         #refresh-spinner.visible { transform: translateY(60px); }
     </style>
@@ -41,14 +36,12 @@
 <body class="text-slate-800 bg-slate-50 h-[100dvh] flex overflow-hidden">
 
     <div id="profile-modal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
-        <button id="close-modal-btn" class="absolute top-4 right-4 text-white text-4xl z-[101] hover:text-gray-300">&times;</button>
+        <button id="close-modal-btn" class="absolute top-4 right-4 text-white text-4xl z-[101]">&times;</button>
         <img id="modal-img" src="" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl transform scale-95 transition-transform duration-300">
     </div>
 
     <div id="refresh-spinner" class="fixed top-0 left-0 w-full flex justify-center z-[60] pointer-events-none">
-        <div class="bg-white p-3 rounded-full shadow-xl border border-slate-200">
-            <i class="fa-solid fa-arrows-rotate fa-spin text-indigo-600 text-2xl"></i>
-        </div>
+        <div class="bg-white p-3 rounded-full shadow-xl border border-slate-200"><i class="fa-solid fa-arrows-rotate fa-spin text-indigo-600 text-2xl"></i></div>
     </div>
 
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white sidebar-closed md:relative md:translate-x-0 flex flex-col shadow-2xl">
@@ -68,7 +61,10 @@
         <div class="p-4 border-t border-slate-700 bg-slate-800">
             <div id="user-info-container" class="mb-3">
                 <div id="user-info-name" class="text-sm font-bold text-white truncate">Usuario</div>
-                <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
+                <div class="flex items-center gap-2">
+                    <span id="user-info-team" class="text-xs font-bold bg-indigo-500 text-white px-2 py-0.5 rounded">Eq. A</span>
+                    <div id="user-info-email" class="text-xs text-slate-400 truncate">Invitado</div>
+                </div>
             </div>
             <button id="auth-action-btn" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-lg flex justify-center items-center"><i class="fa-brands fa-google mr-2"></i> <span>Acceder</span></button>
         </div>
@@ -80,7 +76,7 @@
                 <button id="open-sidebar-btn" class="text-slate-600 focus:outline-none p-2 active:bg-slate-100 rounded-lg mr-3"><i class="fa-solid fa-bars text-2xl"></i></button>
                 <h2 class="text-lg font-bold text-indigo-700 truncate">Calculadora 6x2</h2>
             </div>
-            <div class="flex items-center cursor-pointer" onclick="openImageModal()">
+            <div class="flex items-center cursor-pointer" onclick="window.openImageModal()">
                 <div class="profile-animated-wrapper hidden" id="header-profile-wrapper"><div class="w-8 h-8 rounded-full bg-white overflow-hidden border border-white"><img id="header-profile-pic" src="" class="w-full h-full object-cover"></div></div>
                 <i id="header-profile-icon" class="fa-solid fa-circle-user text-3xl text-slate-300"></i>
             </div>
@@ -93,12 +89,18 @@
             <div id="home-view" class="view-section max-w-4xl mx-auto">
                 <div class="flex justify-between items-center mb-8">
                     <div class="flex items-center space-x-4">
-                        <div class="profile-animated-wrapper hidden cursor-pointer hover:scale-105 transition-transform" id="home-profile-wrapper" onclick="openImageModal()">
+                        <div class="profile-animated-wrapper hidden cursor-pointer hover:scale-105 transition-transform" id="home-profile-wrapper" onclick="window.openImageModal()">
                             <div class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-white overflow-hidden border-4 border-white">
                                 <img id="home-profile-pic" src="" class="w-full h-full object-cover">
                             </div>
                         </div>
-                        <div><h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋</h1><p class="text-sm md:text-base text-slate-500 mt-1">Tu estado al día de hoy.</p></div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800">Hola, <span id="welcome-user-name" class="text-indigo-600">Usuario</span> 👋</h1>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="welcome-user-team" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">Equipo A</span>
+                                <p class="text-sm text-slate-500">Resumen actual.</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="text-right hidden md:block"><p class="text-xs text-slate-400 uppercase tracking-wider">Hoy es</p><p id="header-current-date" class="text-xl font-bold text-slate-700">...</p></div>
                 </div>
@@ -141,17 +143,18 @@
                     <button id="btn-toggle-edit" class="text-indigo-600 font-bold text-sm bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition"><i class="fa-solid fa-pencil mr-2"></i> Editar Valores</button>
                 </div>
                 <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6 mb-12 relative">
-                    <div id="config-loader" class="absolute inset-0 bg-white/80 flex items-center justify-center z-20 hidden"><i class="fa-solid fa-circle-notch fa-spin text-indigo-600 text-3xl"></i></div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="col-span-1 md:col-span-2 border-b pb-6">
                             <h4 class="font-bold text-indigo-600 mb-4">Foto de Perfil</h4>
                             <div class="flex items-center space-x-4">
                                 <div class="relative w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 border-2 border-slate-300 overflow-hidden"><img id="profile-pic-preview" src="" alt="Preview" class="w-full h-full object-cover hidden"><i id="profile-icon-preview" class="fa-solid fa-user text-slate-500 text-3xl absolute inset-0 flex items-center justify-center"></i></div>
-                                <div><input type="file" id="cfg-profilePicture" accept="image/*" class="hidden"><button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md"><i class="fa-solid fa-upload mr-2"></i> Cambiar Foto</button><p class="text-[10px] text-slate-400 mt-1">Se ajustará automáticamente</p></div>
+                                <div><input type="file" id="cfg-profilePicture" accept="image/*" class="hidden"><button onclick="document.getElementById('cfg-profilePicture').click()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition shadow-md"><i class="fa-solid fa-upload mr-2"></i> Cambiar Foto</button><p class="text-[10px] text-slate-400 mt-1">Automáticamente optimizada</p></div>
                             </div>
                         </div>
                         <div class="col-span-1 md:col-span-2"><label class="block text-sm font-bold text-slate-700 mb-1">Nombre</label><input type="text" id="cfg-userName" class="w-full p-3 border rounded-lg bg-slate-50" disabled></div>
+                        
+                        <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Tu Equipo</label><select id="cfg-teamLetter" class="w-full p-3 border rounded-lg bg-white" disabled><option value="A">Equipo A</option><option value="B">Equipo B</option><option value="C">Equipo C</option><option value="D">Equipo D</option></select></div>
+
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Hora ($)</label><input type="number" id="cfg-valorHora" class="w-full p-3 border rounded-lg" step="0.01" disabled></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Afiliación</label><select id="cfg-discountRate" class="w-full p-3 border rounded-lg bg-white" disabled><option value="0.18">No Afiliado (18%)</option><option value="0.21">Afiliado (21%)</option></select></div>
                         <div class="col-span-1"><label class="block text-sm font-bold text-slate-700 mb-1">Valor Viático ($)</label><input type="number" id="cfg-viaticoValue" class="w-full p-3 border rounded-lg" disabled></div>
@@ -183,7 +186,7 @@
 
         let appState = {
             config: { 
-                userName: 'Usuario', profilePicUrl: '', valorHora: 3758, discountRate: 0.18, 
+                userName: 'Usuario', profilePicUrl: '', teamLetter: 'A', valorHora: 3758, discountRate: 0.18, 
                 tituloAmount: 0, viaticoValue: 6200, presentismoAmount: 0,
                 lastFrancoDate: new Date().toISOString().split('T')[0], initialTurn: 'Mañana' 
             },
@@ -192,6 +195,14 @@
             activeData: { extras: {}, manualHolidays: {}, shiftOverrides: {}, lateness: {}, calculation: null },
             historicalCache: {}
         };
+
+        // --- EXPOSE TO WINDOW FOR HTML ACCESS ---
+        window.navigateTo = navigateTo;
+        window.openImageModal = openImageModal;
+        window.updateExtra = updateExtra;
+        window.updateHoliday = updateHoliday;
+        window.updateLateness = updateLateness;
+        window.updateTurnOverride = updateTurnOverride;
 
         window.onload = () => {
             initFirebaseSystem();
@@ -205,13 +216,12 @@
             document.getElementById('btn-toggle-edit').addEventListener('click', toggleConfigEdit);
         };
 
-        // --- UI INTERACTION ---
         function toggleConfigEdit() {
             isEditingConfig = !isEditingConfig;
             const inputs = document.querySelectorAll('#config-view input:not([type="file"]), #config-view select');
             const saveBtn = document.getElementById('btn-save-config');
             const editBtn = document.getElementById('btn-toggle-edit');
-            inputs.forEach(inp => { if(inp.id !== 'cfg-userName') inp.disabled = !isEditingConfig; }); // Nombre siempre disabled (GMAIL)
+            inputs.forEach(inp => { if(inp.id !== 'cfg-userName') inp.disabled = !isEditingConfig; });
             if(isEditingConfig) {
                 saveBtn.classList.remove('hidden');
                 editBtn.innerHTML = '<i class="fa-solid fa-times mr-2"></i> Cancelar';
@@ -220,52 +230,41 @@
                 saveBtn.classList.add('hidden');
                 editBtn.innerHTML = '<i class="fa-solid fa-pencil mr-2"></i> Editar Valores';
                 editBtn.classList.replace('bg-red-50', 'bg-indigo-50'); editBtn.classList.replace('text-red-600', 'text-indigo-600');
-                fillConfigInputs();
+                fillConfigInputs(); // Reset to saved
             }
         }
 
-        // IMAGE MODAL LOGIC
-        window.openImageModal = () => {
+        function openImageModal() {
             const src = document.getElementById('header-profile-pic').src;
             if(!src) return;
             const modal = document.getElementById('profile-modal');
             const img = document.getElementById('modal-img');
-            img.src = src;
-            modal.classList.remove('hidden');
+            img.src = src; modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); img.classList.remove('scale-95'); }, 10);
-        };
-        
+        }
         document.getElementById('close-modal-btn').onclick = closeModal;
         document.getElementById('profile-modal').onclick = (e) => { if(e.target.id === 'profile-modal') closeModal(); };
-        
         function closeModal() {
-            const modal = document.getElementById('profile-modal');
-            const img = document.getElementById('modal-img');
-            modal.classList.add('opacity-0'); img.classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
+            const modal = document.getElementById('profile-modal'); const img = document.getElementById('modal-img');
+            modal.classList.add('opacity-0'); img.classList.add('scale-95'); setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
         function setupUI() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
+            const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
             const closeMenu = () => { sidebar.classList.add('sidebar-closed'); sidebar.classList.remove('sidebar-open'); backdrop.classList.add('hidden'); };
             document.getElementById('open-sidebar-btn').onclick = () => { sidebar.classList.remove('sidebar-closed'); sidebar.classList.add('sidebar-open'); backdrop.classList.remove('hidden'); };
-            document.getElementById('close-sidebar-btn').onclick = closeMenu;
-            backdrop.onclick = closeMenu;
-            document.querySelectorAll('.nav-btn').forEach(btn => { 
-                btn.addEventListener('click', (e) => { const target = e.currentTarget.dataset.target; navigateTo(target); if (window.innerWidth < 768) closeMenu(); }); 
-            });
+            document.getElementById('close-sidebar-btn').onclick = closeMenu; backdrop.onclick = closeMenu;
+            document.querySelectorAll('.nav-btn').forEach(btn => { btn.addEventListener('click', (e) => { navigateTo(e.currentTarget.dataset.target); if (window.innerWidth < 768) closeMenu(); }); });
         }
 
         function setupPullToRefresh() {
-            let touchStart = 0;
-            const spinner = document.getElementById('refresh-spinner');
+            let touchStart = 0; const spinner = document.getElementById('refresh-spinner');
             window.addEventListener('touchstart', e => { if (window.scrollY === 0) touchStart = e.touches[0].clientY; }, {passive: true});
             window.addEventListener('touchmove', e => { const touchY = e.touches[0].clientY; if (touchStart > 0 && touchY > touchStart && window.scrollY === 0) { if (touchY - touchStart > 150) spinner.classList.add('visible'); } }, {passive: true});
             window.addEventListener('touchend', e => { const touchY = e.changedTouches[0].clientY; if (touchStart > 0 && touchY - touchStart > 150 && window.scrollY === 0) { location.reload(); } spinner.classList.remove('visible'); touchStart = 0; });
         }
 
-        window.navigateTo = (viewId) => {
+        function navigateTo(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
             document.querySelectorAll('.nav-btn').forEach(btn => { if(btn.dataset.target === viewId) { btn.classList.remove('text-slate-400'); btn.classList.add('text-indigo-400', 'bg-slate-800'); } else { btn.classList.add('text-slate-400'); btn.classList.remove('text-indigo-400', 'bg-slate-800'); } });
@@ -274,23 +273,19 @@
             if (viewId === 'ranking-view') renderRanking();
             if (viewId === 'treasury-view') renderTreasury();
             if (viewId === 'config-view') fillConfigInputs();
-        };
+        }
 
         function compressAndUpload(file) {
             if (!userId) { showMessage('Inicia sesión.', 'error'); return; }
-            showMessage('Procesando imagen...', 'info');
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
+            showMessage('Procesando...', 'info');
+            const reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
+                const img = new Image(); img.src = event.target.result;
                 img.onload = async () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
-                    const scaleSize = MAX_WIDTH / img.width;
+                    const MAX_WIDTH = 800; const scaleSize = MAX_WIDTH / img.width;
                     canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                     try {
                         appState.config.profilePicUrl = dataUrl;
@@ -301,7 +296,6 @@
             };
         }
 
-        // --- CORE LOGIC ---
         function performCalculation(month, year, extras, holidays, overrides, lateness, configOverride) {
             const cfg = configOverride || appState.config;
             const { lastFrancoDate, initialTurn, valorHora, discountRate, tituloAmount, viaticoValue, presentismoAmount } = cfg;
@@ -356,12 +350,11 @@
         }
 
         function getCalculationFor(m, y, isHome = false) {
-            // CRITICAL FIX: If isHome, use LIVE config always.
+            const now = new Date();
+            // FIX: ALWAYS USE LIVE CONFIG FOR CURRENT MONTH ON HOME SCREEN
             if (isHome || (appState.viewingMonth.month === m && appState.viewingMonth.year === y)) {
-                // Look for historical overrides even for current month if they exist
                 const key = `${y}-${String(m).padStart(2,'0')}`;
                 const cached = appState.historicalCache[key];
-                // Use active/cached overrides BUT active config
                 return performCalculation(m, y, cached?.extras||{}, cached?.holidayFlags||{}, cached?.shiftOverrides||{}, cached?.lateness||{}, appState.config);
             }
             const key = `${y}-${String(m).padStart(2,'0')}`;
@@ -400,9 +393,12 @@
 
         function renderHome() {
             document.getElementById('welcome-user-name').textContent = appState.config.userName;
+            document.getElementById('user-info-team').textContent = `Eq. ${appState.config.teamLetter}`;
+            document.getElementById('welcome-user-team').textContent = `Equipo ${appState.config.teamLetter}`;
+            
             const now = new Date();
-            // FIX: Pass isHome=true to force live config usage
-            const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear(), true); 
+            const calc = getCalculationFor(now.getMonth() + 1, now.getFullYear(), true); // TRUE forces live config
+            
             document.getElementById('home-current-month-label').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).toUpperCase();
             updateProfilePictureUI(appState.config.profilePicUrl);
 
@@ -481,10 +477,11 @@
             });
         }
 
-        window.updateExtra = (d, v) => { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); };
-        window.updateHoliday = (d, c) => { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); };
-        window.updateLateness = (d, c) => { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); };
-        window.updateTurnOverride = (k, v) => { if(v==='Original') delete appState.activeData.shiftOverrides[k]; else appState.activeData.shiftOverrides[k]=v; triggerLocalRecalculate(); };
+        function updateExtra(d, v) { const val = parseFloat(v)||0; if(val>0) appState.activeData.extras[d]=val; else delete appState.activeData.extras[d]; triggerLocalRecalculate(); }
+        function updateHoliday(d, c) { if(c) appState.activeData.manualHolidays[d]=true; else delete appState.activeData.manualHolidays[d]; triggerLocalRecalculate(); }
+        function updateLateness(d, c) { if(c) appState.activeData.lateness[d]=true; else delete appState.activeData.lateness[d]; triggerLocalRecalculate(); }
+        function updateTurnOverride(k, v) { if(v==='Original') delete appState.activeData.shiftOverrides[k]; else appState.activeData.shiftOverrides[k]=v; triggerLocalRecalculate(); }
+        
         function triggerLocalRecalculate() { const {month, year} = appState.viewingMonth; appState.activeData.calculation = performCalculation(month, year, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, appState.config); renderDashboard(); renderHome(); }
         async function switchDashboardMonth(m, y) { appState.viewingMonth = { month: m, year: y }; const key = `${y}-${String(m).padStart(2, '0')}`; const cached = appState.historicalCache[key]; if(cached) { appState.activeData = { extras: cached.extras||{}, manualHolidays: cached.holidayFlags||{}, shiftOverrides: cached.shiftOverrides||{}, lateness: cached.lateness||{} }; appState.activeData.calculation = performCalculation(m, y, appState.activeData.extras, appState.activeData.manualHolidays, appState.activeData.shiftOverrides, appState.activeData.lateness, cached.configSnapshot || null); } renderDashboard(); const now = new Date(); if(m===now.getMonth()+1 && y===now.getFullYear()) renderHome(); }
         async function saveCurrentData() { if(!userId) return; const { month, year } = appState.viewingMonth; const docId = `${year}-${String(month).padStart(2, '0')}`; const data = { extras: appState.activeData.extras, holidayFlags: appState.activeData.manualHolidays, shiftOverrides: appState.activeData.shiftOverrides, lateness: appState.activeData.lateness, results: appState.activeData.calculation, configSnapshot: { ...appState.config } }; appState.historicalCache[docId] = data; await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'data', docId), data); renderDashboard(); }
@@ -520,6 +517,18 @@
             if(k.length > 0) { const [y, m] = k[0].split('-'); switchDashboardMonth(parseInt(m), parseInt(y)); appState.treasuryViewMonth = { month: parseInt(m), year: parseInt(y) }; }
         }
 
+        function fillConfigInputs() {
+            document.getElementById('cfg-userName').value = appState.config.userName;
+            document.getElementById('cfg-teamLetter').value = appState.config.teamLetter || 'A';
+            document.getElementById('cfg-valorHora').value = appState.config.valorHora;
+            document.getElementById('cfg-discountRate').value = appState.config.discountRate;
+            document.getElementById('cfg-tituloAmount').value = appState.config.tituloAmount;
+            document.getElementById('cfg-viaticoValue').value = appState.config.viaticoValue;
+            document.getElementById('cfg-presentismoAmount').value = appState.config.presentismoAmount;
+            document.getElementById('cfg-lastFrancoDate').value = appState.config.lastFrancoDate;
+            document.getElementById('cfg-initialTurn').value = appState.config.initialTurn;
+        }
+
         document.getElementById('btn-download-pdf').onclick = () => {
             const { jsPDF } = window.jspdf; const doc = new jsPDF(); const calc = appState.activeData.calculation; if(!calc) return;
             const ml = new Date(appState.viewingMonth.year, appState.viewingMonth.month-1).toLocaleDateString('es-AR', {month:'long', year:'numeric'}).toUpperCase();
@@ -532,8 +541,8 @@
         };
         
         async function saveConfigHandler() {
-            document.getElementById('config-loader').classList.remove('hidden'); // Show Spinner
             appState.config.userName = document.getElementById('cfg-userName').value;
+            appState.config.teamLetter = document.getElementById('cfg-teamLetter').value;
             appState.config.valorHora = parseFloat(document.getElementById('cfg-valorHora').value);
             appState.config.discountRate = parseFloat(document.getElementById('cfg-discountRate').value);
             appState.config.tituloAmount = parseFloat(document.getElementById('cfg-tituloAmount').value);
@@ -543,8 +552,7 @@
             appState.config.initialTurn = document.getElementById('cfg-initialTurn').value;
             
             if(userId) await setDoc(doc(db, 'artifacts', firebaseConfig.appId, 'users', userId, 'config', 'salary'), appState.config, {merge: true});
-            showMessage('Configuración guardada.', 'success'); 
-            renderHome(); document.getElementById('config-loader').classList.add('hidden'); toggleConfigEdit();
+            showMessage('Configuración guardada.', 'success'); renderHome(); toggleConfigEdit();
         }
     </script>
 </body>
